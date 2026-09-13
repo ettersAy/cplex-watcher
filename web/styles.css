@@ -19,6 +19,7 @@ button:hover { background: #96e4bd; }
 button.secondary { background: transparent; border: 1px solid #52617a; color: #dbe3f1; margin: 0; }
 .section-heading { align-items: start; display: flex; justify-content: space-between; gap: 16px; }
 .section-heading h2 { margin-bottom: 6px; }
+.actions { display: flex; gap: 8px; }
 .watches { display: grid; gap: 8px; }
 .watch { align-items: center; background: #151b26; border: 1px solid #293447; border-radius: 10px; display: flex; gap: 12px; justify-content: space-between; padding: 12px 14px; }
 .watch-summary { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: 7px; min-width: 0; }

@@ -1,3 +1,5 @@
+const CINEPLEX_NEXT_BUILD_ID = "sutiBBvJ_DUSdtn7Z8k2n";
+
 async function telegram(env, chatId, text, options = {}) {
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
@@ -48,6 +50,25 @@ async function dispatchRemoval(env, url, requestId) {
   if (!response.ok) throw new Error(`GitHub Actions removal dispatch failed: ${await response.text()}`);
 }
 
+async function dispatchStopWatch(env, title, requestId) {
+  if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
+    throw new Error("GitHub Actions dispatch is not configured");
+  }
+
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/check-tickets.yml/dispatches`, {
+    method: "POST",
+    headers: {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+      "content-type": "application/json",
+      "user-agent": "CineplexTicketWatcher",
+      "x-github-api-version": "2022-11-28",
+    },
+    body: JSON.stringify({ ref: "main", inputs: { title, operation: "remove_by_title", request_id: requestId } }),
+  });
+  if (!response.ok) throw new Error(`GitHub Actions stop-watch dispatch failed: ${await response.text()}`);
+}
+
 function queueCorsHeaders(env) {
   return {
     "access-control-allow-origin": env.UI_ORIGIN,
@@ -81,6 +102,15 @@ function parseMovieTitles(body) {
     return null;
   }
   return titles;
+}
+
+function isCineplexMovieUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.hostname === "www.cineplex.com" && url.pathname.startsWith("/movie/");
+  } catch {
+    return false;
+  }
 }
 
 function queueResponse(env, body, status = 200) {
@@ -125,10 +155,7 @@ async function handleRemoveWatch(request, env) {
     return queueResponse(env, { error: "Request body must be JSON." }, 400);
   }
   const url = typeof body?.url === "string" ? body.url.trim() : "";
-  try {
-    const parsed = new URL(url);
-    if (parsed.hostname !== "www.cineplex.com" || !parsed.pathname.startsWith("/movie/")) throw new Error("invalid URL");
-  } catch {
+  if (!isCineplexMovieUrl(url)) {
     return queueResponse(env, { error: "A valid official Cineplex movie URL is required." }, 400);
   }
 
@@ -141,6 +168,63 @@ async function handleRemoveWatch(request, env) {
   } catch (error) {
     console.error("Could not dispatch web watch removal:", error);
     return queueResponse(env, { error: "Could not start the stop-watching request. Please try again shortly." }, 502);
+  }
+}
+
+function findMovieDetails(value) {
+  if (Array.isArray(value)) {
+    for (const child of value) {
+      const found = findMovieDetails(child);
+      if (found) return found;
+    }
+  } else if (value && typeof value === "object") {
+    if ("hasShowtimes" in value && ("releaseDate" in value || "title" in value)) return value;
+    for (const child of Object.values(value)) {
+      const found = findMovieDetails(child);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+async function scanCineplexMovie(url) {
+  const slug = new URL(url).pathname.replace(/\/$/, "").split("/").at(-1);
+  const dataUrl = `https://www.cineplex.com/next-static-files/_next/data/${CINEPLEX_NEXT_BUILD_ID}/movie/${slug}.json`;
+  const response = await fetch(dataUrl, { headers: { "user-agent": "CineplexTicketWatcher/1.0 (personal ticket availability monitor)" } });
+  if (!response.ok) throw new Error(`Cineplex scan returned HTTP ${response.status}`);
+  const details = findMovieDetails(await response.json());
+  if (!details) throw new Error("Cineplex scan did not include ticket status");
+  return {
+    name: details.title || details.movieTitle || slug,
+    releaseDate: details.releaseDate || null,
+    hasShowtimes: Boolean(details.hasShowtimes),
+    url,
+    lastCheckedAt: new Date().toISOString(),
+    lastCheckStatus: "success",
+  };
+}
+
+async function handleScan(request, env) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return queueResponse(env, { error: "Request body must be JSON." }, 400);
+  }
+  const url = typeof body?.url === "string" ? body.url.trim() : "";
+  if (!isCineplexMovieUrl(url)) return queueResponse(env, { error: "A valid official Cineplex movie URL is required." }, 400);
+
+  console.log(JSON.stringify({ event: "web_scan_started", url }));
+  try {
+    const movie = await scanCineplexMovie(url);
+    console.log(JSON.stringify({ event: "web_scan_completed", url, hasShowtimes: movie.hasShowtimes }));
+    return queueResponse(env, { movie });
+  } catch (error) {
+    console.error("Could not scan Cineplex movie:", error);
+    return queueResponse(env, { error: `Cineplex scan failed: ${error.message}` }, 502);
   }
 }
 
@@ -160,6 +244,21 @@ async function handleWatch(env, chatId, title) {
   }
 
   return telegram(env, chatId, `Searching Cineplex for ${title}. I will reply when the watch is registered.`);
+}
+
+async function handleStopWatch(env, chatId, title) {
+  if (!title) return telegram(env, chatId, "Please provide a movie name. Example: /stopwatch Runner");
+
+  const requestId = crypto.randomUUID();
+  console.log(JSON.stringify({ event: "stop_watch_requested", requestId, title }));
+  try {
+    await dispatchStopWatch(env, title, requestId);
+    console.log(JSON.stringify({ event: "stop_watch_dispatch_accepted", requestId }));
+  } catch (error) {
+    console.error("Could not dispatch GitHub Actions stop watch:", error);
+    return telegram(env, chatId, "I could not start the stop-watching search. Please try again shortly.");
+  }
+  return telegram(env, chatId, `Searching active watches for ${title}. I will reply when the watch is stopped.`);
 }
 
 function movieKey(url) {
@@ -215,8 +314,17 @@ function nextScheduledCheck() {
 function formatTimestamp(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not available";
-  const twoDigits = (number) => String(number).padStart(2, "0");
-  return `${twoDigits(date.getUTCFullYear() % 100)}-${twoDigits(date.getUTCMonth() + 1)}-${twoDigits(date.getUTCDate())} ${twoDigits(date.getUTCHours())}:${twoDigits(date.getUTCMinutes())}:${twoDigits(date.getUTCSeconds())}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date).reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
 function formatWatch(movie, check, stateError) {
@@ -264,13 +372,16 @@ async function handleUpdate(request, env) {
   const chatId = String(message.chat.id);
   if (chatId !== String(env.ADMIN_CHAT_ID)) return new Response("ok");
 
-  const command = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
-  if (command) {
-    await handleWatch(env, chatId, command[1].trim());
+  const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
+  const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);
+  if (watchCommand) {
+    await handleWatch(env, chatId, watchCommand[1].trim());
+  } else if (stopCommand) {
+    await handleStopWatch(env, chatId, stopCommand[1].trim());
   } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
     await handleList(env, chatId);
   } else {
-    await telegram(env, chatId, "Use /watch Movie Name\nExample: /watch Runner\n\nUse /list to see your watched movies.");
+    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nExample: /watch Runner\n\nUse /list to see your watched movies.");
   }
 
   return new Response("ok");
@@ -285,6 +396,7 @@ export default {
     }
     if (url.pathname === "/api/queue" && request.method === "POST") return handleQueue(request, env);
     if (url.pathname === "/api/queue" && request.method === "DELETE") return handleRemoveWatch(request, env);
+    if (url.pathname === "/api/scan" && request.method === "POST") return handleScan(request, env);
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },

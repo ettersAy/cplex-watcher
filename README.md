@@ -22,6 +22,7 @@ Telegram:
 
 ```text
 /watch Runner
+/stopwatch Runner
 /list
 ```
 
@@ -33,6 +34,8 @@ Web page:
 4. Telegram receives the final lookup result. Refresh the page after a successful registration.
 
 Use **Stop watching** on any active-watch card to remove that exact movie URL. Telegram confirms the result after GitHub Actions completes the removal.
+
+Use **Scan all** to manually scan every active movie five seconds apart. Results are temporary to that browser page; the scheduled GitHub Action remains the source of persistent state and sale alerts.
 
 `/list` and the web page show clickable Cineplex links, check status, ticket-sale state, next scheduled check, last check, and any saved error.
 

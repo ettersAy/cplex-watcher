@@ -34,9 +34,13 @@
             <h2 id="watches-heading">Active watches</h2>
             <p class="hint">Data is refreshed from the watcher repository.</p>
           </div>
-          <button id="refresh" class="secondary" type="button">Refresh</button>
+          <div class="actions">
+            <button id="scan" class="secondary" type="button">Scan all</button>
+            <button id="refresh" class="secondary" type="button">Refresh</button>
+          </div>
         </div>
         <p id="load-status" class="result" role="status">Loading watches…</p>
+        <p id="scan-result" class="result" role="status"></p>
         <div id="watches" class="watches"></div>
       </section>
     </main>

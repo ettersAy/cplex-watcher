@@ -57,7 +57,7 @@ Each active movie has:
   Error: …                 # only when a check failed
 ```
 
-- Timestamps are formatted from the stored UTC timestamp.
+- Timestamps are displayed in Montréal time (`America/Toronto`) in `YY-MM-DD HH:MM:SS` format. Stored timestamps remain UTC.
 - `Status: Failed` and `Sales: Unable to determine` mean the last GitHub Action check failed; the error is retained in `state.json`.
 - `Status: Success` with `Sales: Not Yet` means the latest official Cineplex check found no showtimes.
 
@@ -128,6 +128,30 @@ Content-Type: application/json
 
 The Action removes the exact URL from `movies.json` and the matching state entry from `state.json`, then sends a Telegram confirmation.
 
+### Manual Scan all
+
+**Scan all** is a manual, browser-initiated check. The page requests one protected Worker scan for each active Cineplex URL, waits five seconds between each request, and updates the cards as results arrive.
+
+The static GitHub Pages site cannot request Cineplex directly because Cineplex does not permit browser CORS access. The page therefore calls Worker JavaScript, which requests Cineplex's static movie data endpoint. This is not a GitHub Action.
+
+Manual scan results are deliberately temporary:
+
+- They update the current browser page only.
+- They do not write `state.json`.
+- They do not set `alerted` or send Telegram sale alerts.
+- The 30-minute GitHub Action remains the persistent, one-alert-only ticket-sale monitor.
+
+The endpoint is:
+
+```text
+POST https://cplex-watcher.cplexwatcher.workers.dev/api/scan
+Origin: https://ettersay.github.io
+Authorization: Bearer <UI_ACCESS_TOKEN>
+Content-Type: application/json
+
+{"url":"https://www.cineplex.com/movie/example"}
+```
+
 | HTTP status | Meaning |
 |---|---|
 | `202` | Search or stop-watching request was accepted and a GitHub Action was dispatched. |
@@ -136,6 +160,14 @@ The Action removes the exact URL from `movies.json` and the matching state entry
 | `403` | Browser origin is not the configured GitHub Pages origin. |
 | `502` | GitHub Action dispatch failed. |
 | `503` | `UI_ACCESS_TOKEN` has not been configured. |
+
+### Stop a watch from Telegram
+
+```text
+/stopwatch Runner
+```
+
+The bot acknowledges the request, GitHub Actions looks up the official Cineplex URL, then removes the matching active URL and check state. Telegram sends either `Stopped watching …`, `No active watch found …`, or the lookup error. Matching is by canonical Cineplex URL, not just display text.
 
 ### Create or rotate the UI access token
 
@@ -295,6 +327,8 @@ Useful log events:
 | `web_watch_requested` | A valid web queue request was received. |
 | `web_watch_queued` | GitHub accepted a web queue request. |
 | `watch_list_requested` | `/list` successfully loaded active watches. |
+| `web_scan_started` / `web_scan_completed` | A manual Scan all request started or returned a Cineplex status. |
+| `stop_watch_requested` / `stop_watch_dispatch_accepted` | Telegram `/stopwatch` lookup was accepted. |
 | `legacy_cron_ignored` | A retired Cloudflare cron invoked the harmless compatibility handler. |
 
 ### Check GitHub Actions

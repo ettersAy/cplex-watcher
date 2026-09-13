@@ -14,7 +14,7 @@ on:
         required: false
         type: string
       operation:
-        description: watch or remove
+        description: watch, remove, or remove_by_title
         required: false
         default: watch
         type: string
@@ -68,7 +68,7 @@ jobs:
           PY
 
       - name: Save requested movies
-        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove'
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch'
         run: |
           python - <<'PY'
           import json
@@ -98,39 +98,61 @@ jobs:
           PY
 
       - name: Remove requested movie
-        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'remove'
+        if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'remove' || inputs.operation == 'remove_by_title')
         env:
           WATCH_URL: ${{ inputs.url }}
+          WATCH_OPERATION: ${{ inputs.operation }}
+          WATCH_TITLE: ${{ inputs.title }}
         run: |
           python - <<'PY'
           import json
           import os
           from pathlib import Path
 
-          url = os.environ["WATCH_URL"]
+          operation = os.environ["WATCH_OPERATION"]
           movies_path = Path("movies.json")
           state_path = Path("state.json")
           movies = json.loads(movies_path.read_text())
-          removed = [movie for movie in movies if movie["url"] == url]
-          movies = [movie for movie in movies if movie["url"] != url]
-          if removed:
-              movies_path.write_text(json.dumps(movies, indent=2) + "\n")
+          if operation == "remove_by_title":
+              try:
+                  registration = json.loads(Path("registration.json").read_text())
+              except (OSError, json.JSONDecodeError) as error:
+                  removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}, "error": f"Could not look up the movie: {error}"}]
+                  targets = []
+              else:
+                  targets = [item["movie"] for item in registration.get("results", [registration]) if item.get("movie")]
+                  if targets:
+                      removal_results = []
+                  else:
+                      error = next((item.get("error") for item in registration.get("results", [registration]) if item.get("error")), "I could not find a Cineplex movie matching the stop request.")
+                      removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}, "error": error}]
+          else:
+              targets = [{"url": os.environ["WATCH_URL"]}]
+              removal_results = []
+
           state = json.loads(state_path.read_text()) if state_path.exists() else {"movies": {}}
-          state["movies"].pop(url.rstrip("/").rsplit("/", 1)[-1], None)
+          for target in targets:
+              url = target["url"]
+              removed = [movie for movie in movies if movie["url"] == url]
+              movies = [movie for movie in movies if movie["url"] != url]
+              state["movies"].pop(url.rstrip("/").rsplit("/", 1)[-1], None)
+              removal_results.append({"removed": bool(removed), "movie": removed[0] if removed else target})
+          if any(item["removed"] for item in removal_results):
+              movies_path.write_text(json.dumps(movies, indent=2) + "\n")
           state_path.write_text(json.dumps(state, indent=2) + "\n")
-          Path("removal.json").write_text(json.dumps({"removed": bool(removed), "movie": removed[0] if removed else {"url": url}}) + "\n")
-          print(f"Removed watch: {bool(removed)}")
+          Path("removal.json").write_text(json.dumps({"results": removal_results}) + "\n")
+          print(f"Removed watches: {sum(item['removed'] for item in removal_results)}")
           PY
 
       - name: Check movies and notify Telegram
-        if: github.event_name != 'workflow_dispatch' || inputs.operation != 'remove'
+        if: github.event_name != 'workflow_dispatch' || (inputs.operation != 'remove' && inputs.operation != 'remove_by_title')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python watcher.py
 
       - name: Send registration result to Telegram
-        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove' && always()
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch' && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -162,7 +184,7 @@ jobs:
           PY
 
       - name: Send removal result to Telegram
-        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'remove' && always()
+        if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'remove' || inputs.operation == 'remove_by_title') && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -178,10 +200,15 @@ jobs:
           except (OSError, json.JSONDecodeError) as error:
               text = f"Could not stop the watch: {error}"
           else:
-              name = result["movie"].get("name") or result["movie"]["url"]
-              text = f"Stopped watching {name}." if result["removed"] else f"No active watch found for {name}."
-          send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
-          print("Telegram removal result sent")
+              for item in result.get("results", [result]):
+                  movie = item["movie"]
+                  name = movie.get("name") or movie.get("url") or "the requested movie"
+                  if item.get("error"):
+                      text = item["error"]
+                  else:
+                      text = f"Stopped watching {name}." if item["removed"] else f"No active watch found for {name}."
+                  send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
+                  print("Telegram removal result sent")
           PY
 
       - name: Save alert state

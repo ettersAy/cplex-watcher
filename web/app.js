@@ -6,6 +6,11 @@ const queueForm = document.querySelector("#queue-form");
 const queueResult = document.querySelector("#queue-result");
 const watchesElement = document.querySelector("#watches");
 const loadStatus = document.querySelector("#load-status");
+const scanButton = document.querySelector("#scan");
+const scanResult = document.querySelector("#scan-result");
+let currentMovies = [];
+let currentState = {};
+const scanResults = new Map();
 
 tokenInput.value = sessionStorage.getItem("cplex-watcher-ui-token") || "";
 
@@ -16,8 +21,17 @@ function movieKey(url) {
 function formatDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Not available";
-  const twoDigits = (number) => String(number).padStart(2, "0");
-  return `${twoDigits(date.getUTCFullYear() % 100)}-${twoDigits(date.getUTCMonth() + 1)}-${twoDigits(date.getUTCDate())} ${twoDigits(date.getUTCHours())}:${twoDigits(date.getUTCMinutes())}:${twoDigits(date.getUTCSeconds())}`;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    year: "2-digit",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date).reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
+  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
 function nextCheck() {
@@ -29,7 +43,7 @@ function nextCheck() {
 }
 
 function watchCard(movie, state) {
-  const check = state?.[movieKey(movie.url)];
+  const check = scanResults.get(movie.url) || state?.[movieKey(movie.url)];
   const failed = !check || check.lastCheckStatus === "failed" || Boolean(check.lastError);
   const salesStarted = !failed && check.hasShowtimes;
   const article = document.createElement("article");
@@ -80,8 +94,8 @@ function watchCard(movie, state) {
   return article;
 }
 
-async function queueRequest(method, payload, token) {
-  const response = await fetch(`${WORKER_URL}/api/queue`, {
+async function authenticatedRequest(path, method, payload, token) {
+  const response = await fetch(`${WORKER_URL}${path}`, {
     method,
     headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
     body: JSON.stringify(payload),
@@ -89,6 +103,15 @@ async function queueRequest(method, payload, token) {
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || "Could not submit the request.");
   return body;
+}
+
+async function queueRequest(method, payload, token) {
+  return authenticatedRequest("/api/queue", method, payload, token);
+}
+
+function renderWatches() {
+  watchesElement.replaceChildren();
+  for (const movie of currentMovies) watchesElement.append(watchCard(movie, currentState));
 }
 
 async function loadWatches() {
@@ -103,13 +126,14 @@ async function loadWatches() {
     if (!stateResponse.ok) throw new Error(`Could not load check state: HTTP ${stateResponse.status}`);
     const movies = await moviesResponse.json();
     const state = await stateResponse.json();
-    const uniqueMovies = [...new Map(movies.map((movie) => [movie.url, movie])).values()];
-    if (!uniqueMovies.length) {
+    currentMovies = [...new Map(movies.map((movie) => [movie.url, movie])).values()];
+    currentState = state.movies;
+    if (!currentMovies.length) {
       loadStatus.textContent = "No movies are being watched.";
       return;
     }
-    for (const movie of uniqueMovies) watchesElement.append(watchCard(movie, state.movies));
-    loadStatus.textContent = `${uniqueMovies.length} active ${uniqueMovies.length === 1 ? "watch" : "watches"}.`;
+    renderWatches();
+    loadStatus.textContent = `${currentMovies.length} active ${currentMovies.length === 1 ? "watch" : "watches"}.`;
   } catch (error) {
     loadStatus.textContent = error.message;
   }
@@ -129,6 +153,47 @@ queueForm.addEventListener("submit", async (event) => {
   } catch (error) {
     queueResult.textContent = error.message;
   }
+});
+
+function wait(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+scanButton.addEventListener("click", async () => {
+  const token = tokenInput.value.trim();
+  if (!token) {
+    scanResult.textContent = "Enter your UI access token before scanning.";
+    tokenInput.focus();
+    return;
+  }
+  if (!currentMovies.length) {
+    scanResult.textContent = "There are no active watches to scan.";
+    return;
+  }
+  sessionStorage.setItem("cplex-watcher-ui-token", token);
+  scanButton.disabled = true;
+  let failures = 0;
+  for (let index = 0; index < currentMovies.length; index += 1) {
+    const movie = currentMovies[index];
+    scanResult.textContent = `Scanning ${index + 1}/${currentMovies.length}: ${movie.name || movieKey(movie.url)}…`;
+    try {
+      const result = await authenticatedRequest("/api/scan", "POST", { url: movie.url }, token);
+      scanResults.set(movie.url, result.movie);
+    } catch (error) {
+      failures += 1;
+      scanResults.set(movie.url, {
+        ...currentState?.[movieKey(movie.url)],
+        url: movie.url,
+        lastCheckedAt: new Date().toISOString(),
+        lastCheckStatus: "failed",
+        lastError: error.message,
+      });
+    }
+    renderWatches();
+    if (index < currentMovies.length - 1) await wait(5000);
+  }
+  scanResult.textContent = failures ? `Scan finished with ${failures} failed ${failures === 1 ? "check" : "checks"}. Results are shown only in this page session.` : "Scan finished. Results are shown only in this page session.";
+  scanButton.disabled = false;
 });
 
 document.querySelector("#refresh").addEventListener("click", loadWatches);
