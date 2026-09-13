@@ -129,6 +129,147 @@ To create the shared callback value without putting it in a file, run this once 
 openssl rand -hex 32
 ```
 
+## Complete hybrid setup and recovery runbook
+
+Use this section after a fresh clone, when replacing a revoked Telegram token, or when `/watch` says it cannot start the Cineplex search.
+
+### 1. Understand the two services
+
+The Worker accepts Telegram updates and stores the current watch list in Cloudflare KV. It does **not** request Cineplex itself because Cineplex returns HTTP 403 to Cloudflare.
+
+GitHub Actions runs on an Ubuntu runner that can read Cineplex. The Worker starts the `Check Cineplex ticket sales` workflow; the workflow finds the title, adds its official URL to `movies.json`, and calls the Worker back with the result. The scheduled workflow checks every saved URL every 30 minutes.
+
+```text
+Telegram /watch Title
+  -> Cloudflare Worker: acknowledgement and pending watch
+  -> GitHub Actions: Cineplex title lookup
+  -> Cloudflare Worker: confirmed watch or helpful error message
+  -> GitHub Actions schedule: ticket-sale checks every 30 minutes
+```
+
+### 2. Create the GitHub fine-grained token
+
+The Worker needs a token only to start this repository's GitHub Actions workflow. The required GitHub API endpoint needs the repository **Actions: Read and write** permission.
+
+1. Sign in to GitHub as the owner of `ettersAy/cplex-watcher`.
+2. Click your profile picture, then **Settings**.
+3. In the left sidebar, open **Developer settings**.
+4. Open **Personal access tokens** → **Fine-grained tokens**.
+5. Click **Generate new token**.
+6. Set a descriptive token name, such as `cplex-watcher-dispatch`.
+7. Choose an expiry you will remember to renew, for example 90 days.
+8. Under **Resource owner**, choose your personal account.
+9. Under **Repository access**, choose **Only select repositories**, then select `ettersAy/cplex-watcher`.
+10. Under **Repository permissions**, find **Actions** and set it to **Read and write**. Leave all other permissions as **No access**.
+11. Click **Generate token**, then copy the token immediately. GitHub shows it only once. Never commit it, paste it into a chat, or put it in a file.
+
+GitHub's current documentation confirms that creating a workflow-dispatch event requires the fine-grained repository permission **Actions: write**: <https://docs.github.com/en/rest/actions/workflows#create-a-workflow-dispatch-event>.
+
+### 3. Store the GitHub token in Cloudflare
+
+From the repository's Worker folder, run:
+
+```bash
+cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
+npx wrangler secret put GITHUB_ACTIONS_TOKEN
+```
+
+When prompted, paste the token from step 2. Nothing appears while pasting; press Enter once. Do not use `wrangler.toml` for this value.
+
+Confirm only the secret **names** (never values):
+
+```bash
+npx wrangler secret list --name cplex-watcher
+```
+
+The result must include these active Worker secrets:
+
+```text
+ADMIN_CHAT_ID
+TELEGRAM_BOT_TOKEN
+TELEGRAM_WEBHOOK_SECRET
+GITHUB_ACTIONS_TOKEN
+WATCHER_CALLBACK_SECRET
+```
+
+`TELEGRAM_CHAT_ID` is an older unused Worker secret. The Worker uses `ADMIN_CHAT_ID`; do not delete `TELEGRAM_CHAT_ID` until you have verified the bot after this setup.
+
+### 4. Verify the GitHub Actions secrets
+
+Open `https://github.com/ettersAy/cplex-watcher/settings/secrets/actions`. The following must exist:
+
+| Secret | Purpose |
+|---|---|
+| `TELEGRAM_BOT_TOKEN` | Sends ticket-sale alerts from the scheduled GitHub Action. |
+| `TELEGRAM_CHAT_ID` | Receives ticket-sale alerts from the scheduled GitHub Action. |
+| `WORKER_CALLBACK_URL` | `https://cplex-watcher.cplexwatcher.workers.dev/internal/watch-result` |
+| `WATCHER_CALLBACK_SECRET` | Authenticates GitHub's result callback to the Worker. Must match the Worker secret of the same name. |
+
+The callback secret is not the Telegram webhook secret and not the GitHub dispatch token. Keep all three separate.
+
+### 5. Deploy source changes
+
+Whenever files under `cloudflare-worker/` change:
+
+```bash
+cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
+npx wrangler deploy
+```
+
+Whenever `.github/workflows/check-tickets.yml`, `register_watch.py`, `watcher.py`, or `movies.json` changes, push the repository so GitHub Actions uses that revision:
+
+```bash
+cd /Users/Ayoub/Developer/cplex-watcher
+git add .github/workflows/check-tickets.yml register_watch.py watcher.py movies.json
+git commit -m "Update Cineplex watcher"
+git push
+```
+
+Do not include tokens, webhook secrets, `.wrangler/`, or local helper files containing credentials in a commit.
+
+### 6. Test the complete path
+
+First, open live Worker logs in one Terminal:
+
+```bash
+cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
+npx wrangler tail cplex-watcher --format pretty
+```
+
+Then send `/watch Runner` to the bot. Expected sequence:
+
+1. Telegram immediately replies: `Searching Cineplex for Runner. I will reply when the watch is registered.`
+2. A GitHub Actions run appears at <https://github.com/ettersAy/cplex-watcher/actions/workflows/check-tickets.yml>.
+3. The bot sends a second result. At the time this runbook was written, `Runner` was already on sale, so that result should say tickets are already on sale rather than starting a watch.
+4. Send `/list`. It should answer immediately. A pending search appears as `(searching)`; a registered movie shows by title.
+
+Stop `wrangler tail` with `Ctrl-C` after the test.
+
+### 7. Diagnose failures without exposing secrets
+
+| Symptom | Check | Meaning and fix |
+|---|---|---|
+| `/list` does not reply | `npx wrangler tail cplex-watcher --format pretty` | Check for a Telegram send error or an invalid webhook secret. |
+| `/watch` replies that it could not start the search | Worker logs | `GITHUB_ACTIONS_TOKEN` is missing, expired, or lacks **Actions: Read and write**. Replace it with `npx wrangler secret put GITHUB_ACTIONS_TOKEN`. |
+| `/watch` acknowledges but no second reply arrives | Open the triggered GitHub Actions run | Check the `Find requested movie` and `Report registration result to Worker` steps. Verify both callback GitHub secrets from step 4. |
+| Worker log says `Cineplex sitemap returned HTTP 403` | Worker logs | This is the original Cloudflare-origin block. The Worker must not query Cineplex; confirm the deployed Worker has the hybrid source and GitHub Actions is enabled. |
+| GitHub Action says callback returned 403 | GitHub Action log | `WATCHER_CALLBACK_SECRET` differs between GitHub and Cloudflare. Generate a new value, replace both copies, then deploy the Worker. |
+| GitHub Action says callback returned 404 | GitHub Action log | The pending KV watch expired or the callback belongs to an older Worker deployment. Send `/watch` again after confirming the Worker is deployed. |
+
+To inspect Telegram's webhook delivery state privately:
+
+```bash
+python3 - <<'PY'
+from getpass import getpass
+from urllib.request import urlopen
+
+token = getpass("Telegram bot token: ").strip()
+print(urlopen(f"https://api.telegram.org/bot{token}/getWebhookInfo").read().decode())
+PY
+```
+
+Look for `pending_update_count`, `last_error_message`, and the expected URL ending in `/telegram`. Do not paste the token into the command itself or share the output if it includes sensitive values.
+
 ## If Telegram says `404 Not Found`: revoke and replace the bot token
 
 A Telegram `404 Not Found` during the `Bot check` means Telegram does not accept the token. Create a new token in BotFather:
