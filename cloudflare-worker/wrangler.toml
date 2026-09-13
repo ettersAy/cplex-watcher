@@ -7,4 +7,4 @@ crons = ["*/30 * * * *"]
 
 [[kv_namespaces]]
 binding = "WATCHES"
-id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+id = "2f98f1bb544e4cdab29407f55a7a4708"
