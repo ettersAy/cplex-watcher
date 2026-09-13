@@ -2,6 +2,8 @@
 
 This is a static GitHub Pages interface. It loads active watches from the public `movies.json` and `state.json` files, and sends new title requests to the Cloudflare Worker.
 
+For the complete architecture, deployment, logs, and troubleshooting guide, see [docs/OPERATIONS.md](../docs/OPERATIONS.md).
+
 ## First-time setup
 
 1. Create a private random value locally:
