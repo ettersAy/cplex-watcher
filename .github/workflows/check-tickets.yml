@@ -66,10 +66,16 @@ jobs:
 
           movies_path = Path("movies.json")
           movies = json.loads(movies_path.read_text())
-          url = result["movie"]["url"]
-          if not any(movie["url"] == url for movie in movies):
-              movies.append({"url": url})
+          movie = result["movie"]
+          url = movie["url"]
+          if any(existing["url"] == url for existing in movies):
+              result["status"] = "already_watching"
+              Path("registration.json").write_text(json.dumps(result) + "\n")
+              print(f"Movie is already watched: {url}")
+          else:
+              movies.append({"url": url, "name": movie["name"]})
               movies_path.write_text(json.dumps(movies, indent=2) + "\n")
+              print(f"Added watched movie: {url}")
           PY
 
       - name: Check movies and notify Telegram
@@ -97,6 +103,9 @@ jobs:
           if result.get("status") == "watching":
               movie = result["movie"]
               text = f"Started watching {movie['name']}.\nNext check: within 30 minutes.\n{movie['url']}"
+          elif result.get("status") == "already_watching":
+              movie = result["movie"]
+              text = f"Already watching {movie['name']}.\n{movie['url']}"
           elif result.get("status") == "already_on_sale":
               movie = result["movie"]
               text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"

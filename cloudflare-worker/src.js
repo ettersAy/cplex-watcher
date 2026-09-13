@@ -10,14 +10,6 @@ async function telegram(env, chatId, text) {
   }
 }
 
-async function getWatches(env) {
-  return JSON.parse((await env.WATCHES.get("watches")) || "{}");
-}
-
-async function saveWatches(env, watches) {
-  await env.WATCHES.put("watches", JSON.stringify(watches));
-}
-
 async function dispatchWatch(env, title, requestId) {
   if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
     throw new Error("GitHub Actions dispatch is not configured");
@@ -55,42 +47,37 @@ async function handleWatch(env, chatId, title) {
   return telegram(env, chatId, `Searching Cineplex for ${title}. I will reply when the watch is registered.`);
 }
 
-async function handleWatchResult(request, env) {
-  if (request.headers.get("X-Watcher-Callback-Secret") !== env.WATCHER_CALLBACK_SECRET) {
-    console.error(JSON.stringify({
-      event: "watch_callback_rejected",
-      callbackSecretPresent: Boolean(request.headers.get("X-Watcher-Callback-Secret")),
-      workerSecretConfigured: Boolean(env.WATCHER_CALLBACK_SECRET),
-    }));
-    return new Response("Forbidden", { status: 403 });
+function nameFromUrl(url) {
+  const slug = new URL(url).pathname.split("/").filter(Boolean).at(-1) || url;
+  return slug.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+async function getManagedWatches(env) {
+  if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
+
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/movies.json`, {
+    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher" },
+  });
+  if (!response.ok) throw new Error(`Could not load watched movies: HTTP ${response.status}`);
+
+  const movies = await response.json();
+  if (!Array.isArray(movies) || movies.some((movie) => !movie || typeof movie.url !== "string")) {
+    throw new Error("Watched movies file has an invalid format");
   }
+  return movies;
+}
 
-  const result = await request.json();
-  console.log(JSON.stringify({ event: "watch_callback_received", requestId: result.request_id, status: result.status }));
-  const pendingKey = `pending:${result.request_id}`;
-  const watches = await getWatches(env);
-  const pending = watches[pendingKey];
-  if (!pending) return new Response("Unknown request", { status: 404 });
-
-  if (result.status === "watching" && result.movie?.url) {
-    delete watches[pendingKey];
-    watches[result.movie.url] = { ...result.movie, alerted: false };
-    await saveWatches(env, watches);
-    await telegram(env, env.ADMIN_CHAT_ID, `Started watching ${result.movie.name}.\nNext check: within 30 minutes.\n${result.movie.url}`);
-    console.log(JSON.stringify({ event: "watch_registered", requestId: result.request_id, movie: result.movie.name }));
-  } else if (result.status === "already_on_sale" && result.movie?.url) {
-    delete watches[pendingKey];
-    await saveWatches(env, watches);
-    await telegram(env, env.ADMIN_CHAT_ID, `Tickets are already on sale for ${result.movie.name}.\n${result.movie.url}`);
-    console.log(JSON.stringify({ event: "watch_already_on_sale", requestId: result.request_id, movie: result.movie.name }));
-  } else {
-    watches[pendingKey] = { ...pending, status: "failed" };
-    await saveWatches(env, watches);
-    await telegram(env, env.ADMIN_CHAT_ID, result.error || `I could not find a Cineplex movie matching “${pending.title}”.`);
-    console.log(JSON.stringify({ event: "watch_search_failed", requestId: result.request_id }));
+async function handleList(env, chatId) {
+  try {
+    const movies = await getManagedWatches(env);
+    const uniqueMovies = [...new Map(movies.map((movie) => [movie.url, movie])).values()];
+    console.log(JSON.stringify({ event: "watch_list_requested", count: uniqueMovies.length }));
+    const descriptions = uniqueMovies.map((movie) => `• ${movie.name || nameFromUrl(movie.url)}`);
+    await telegram(env, chatId, descriptions.length ? `Watching:\n${descriptions.join("\n")}` : "You are not watching any movies.");
+  } catch (error) {
+    console.error("Could not load watched movies:", error);
+    await telegram(env, chatId, "I could not load the active watches. Please try again shortly.");
   }
-
-  return new Response("ok");
 }
 
 async function handleUpdate(request, env) {
@@ -109,14 +96,7 @@ async function handleUpdate(request, env) {
   if (command) {
     await handleWatch(env, chatId, command[1].trim());
   } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
-    const watches = Object.values(await getWatches(env));
-    console.log(JSON.stringify({ event: "watch_list_requested", count: watches.length }));
-    const descriptions = watches.map((movie) => {
-      if (movie.status === "pending") return `• ${movie.title} (searching)`;
-      if (movie.status === "failed") return `• ${movie.title} (search failed)`;
-      return `• ${movie.name}`;
-    });
-    await telegram(env, chatId, descriptions.length ? `Watching:\n${descriptions.join("\n")}` : "You are not watching any movies.");
+    await handleList(env, chatId);
   } else {
     await telegram(env, chatId, "Use /watch Movie Name\nExample: /watch Runner\n\nUse /list to see your watched movies.");
   }
@@ -128,7 +108,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
-    if (request.method === "POST" && url.pathname === "/internal/watch-result") return handleWatchResult(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },
   async scheduled(_event, _env, _ctx) {
