@@ -331,17 +331,16 @@ function formatWatch(movie, check, stateError) {
   const name = movie.name || check?.name || nameFromUrl(movie.url);
   const link = `<a href="${escapeHtml(movie.url)}">${escapeHtml(name)}</a>`;
   const failed = Boolean(stateError || !check || check.lastCheckStatus === "failed" || check.lastError);
-  const status = failed ? "Failed" : "Success";
-  const sales = failed ? "Unable to determine" : (check.hasShowtimes ? "Started" : "Not Yet");
   const error = stateError || check?.lastError;
+  const icon = failed ? "🔴" : (check.hasShowtimes ? "🎉" : "⏳");
+  const lastCheckIcon = failed ? "❌" : "☀️";
   return [
-    `• ${link}`,
-    `  Status: ${status}`,
-    `  Sales: ${sales}`,
-    `  Next check ${nextScheduledCheck()}`,
-    `  Last check: ${formatTimestamp(check?.lastCheckedAt)}`,
-    ...(error ? [`  Error: ${escapeHtml(error)}`] : []),
-  ].join("\n");
+    icon,
+    link,
+    `👁️ ${nextScheduledCheck()}`,
+    `${lastCheckIcon} Last check ${formatTimestamp(check?.lastCheckedAt)}`,
+    ...(error ? [`📢 ${escapeHtml(error)}`] : []),
+  ].join(" ");
 }
 
 async function handleList(env, chatId) {
