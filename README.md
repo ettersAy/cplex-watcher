@@ -110,6 +110,38 @@ Generate a webhook secret, then copy its output when `wrangler secret put TELEGR
 openssl rand -hex 32
 ```
 
+## If Telegram says `404 Not Found`: revoke and replace the bot token
+
+A Telegram `404 Not Found` during the `Bot check` means Telegram does not accept the token. Create a new token in BotFather:
+
+1. Open Telegram and search for **@BotFather**.
+2. Send:
+
+   ```text
+   /mybots
+   ```
+
+3. Select your Cineplex watcher bot.
+4. Select **API Token**.
+5. Select **Revoke current token** and confirm.
+6. BotFather gives you a new token. Copy it immediately and keep it private.
+7. In Terminal, return to the `cloudflare-worker` folder and replace the Cloudflare secret:
+
+   ```bash
+   wrangler secret put TELEGRAM_BOT_TOKEN
+   ```
+
+8. Paste the new token when Terminal asks. Nothing appears while pasting; press Enter.
+9. Run **Step 6** again and paste the same new token when it asks for the Telegram bot token.
+
+Paste only the raw token, similar to this:
+
+```text
+1234567890:AAExampleTokenText
+```
+
+Do not paste `bot` before it, the API URL, the bot username, quotes, or spaces.
+
 ### 6. Connect Telegram to the Worker
 
 Run this command. It asks for values privately:
