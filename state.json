@@ -135,14 +135,6 @@
       "url": "https://www.cineplex.com/movie/big-girls-dont-cry",
       "lastCheckedAt": "2026-09-13T06:54:35.517751+00:00",
       "lastCheckStatus": "success"
-    },
-    "digger": {
-      "name": "Digger",
-      "releaseDate": "2026-10-02T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/digger",
-      "lastCheckedAt": "2026-09-13T06:54:35.783987+00:00",
-      "lastCheckStatus": "success"
     }
   }
 }
