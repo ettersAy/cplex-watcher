@@ -5,28 +5,40 @@
       "releaseDate": "2026-11-06T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/cat-in-the-hat",
-      "lastCheckedAt": "2026-09-13T04:04:36.515097+00:00"
+      "lastCheckedAt": "2026-09-13T05:17:17.850734+00:00",
+      "lastCheckStatus": "success"
     },
     "sense-and-sensibility-2026": {
       "name": "Sense and Sensibility",
       "releaseDate": "2026-10-16T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026",
-      "lastCheckedAt": "2026-09-13T04:04:36.760401+00:00"
+      "lastCheckedAt": "2026-09-13T05:17:18.323620+00:00",
+      "lastCheckStatus": "success"
     },
     "jumanji-open-world": {
       "name": "Jumanji: Open World",
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-09-13T04:04:37.019998+00:00"
+      "lastCheckedAt": "2026-09-13T05:17:18.900484+00:00",
+      "lastCheckStatus": "success"
     },
     "george-michael-the-faith-tour": {
       "name": "George Michael: The Faith Tour",
       "releaseDate": "2026-12-11T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-09-13T04:04:37.223732+00:00"
+      "lastCheckedAt": "2026-09-13T05:17:19.202289+00:00",
+      "lastCheckStatus": "success"
+    },
+    "azaad-singh-haryanvi-west": {
+      "name": "Azaad Singh (Haryanvi w/e.s.t.)",
+      "releaseDate": "2026-09-18T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/azaad-singh-haryanvi-west",
+      "lastCheckedAt": "2026-09-13T05:17:19.529365+00:00",
+      "lastCheckStatus": "success"
     }
   }
 }
