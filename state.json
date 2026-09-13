@@ -80,14 +80,6 @@
       "lastCheckedAt": "2026-09-13T06:54:33.925666+00:00",
       "lastCheckStatus": "success"
     },
-    "primetime": {
-      "name": "Primetime",
-      "releaseDate": "2026-09-25T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/primetime",
-      "lastCheckedAt": "2026-09-13T06:54:34.221192+00:00",
-      "lastCheckStatus": "success"
-    },
     "the-stunt-driver": {
       "name": "The Stunt Driver",
       "releaseDate": "2026-09-25T00:00:00",
