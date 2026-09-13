@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Cineplex Watcher access</title>
+    <link rel="stylesheet" href="styles.css?v=20260913-5">
+  </head>
+  <body class="login-page">
+    <main class="login-main">
+      <form id="access-form" class="panel">
+        <p>This is a personal app. Please enter your access token.</p>
+        <label for="access-token">UI access token</label>
+        <input id="access-token" name="token" type="password" autocomplete="current-password" placeholder="Enter your private token" required>
+        <button type="submit">Open Cineplex Watcher</button>
+        <p id="access-result" class="result" role="status"></p>
+      </form>
+    </main>
+    <script src="login.js?v=20260913-5"></script>
+  </body>
+</html>

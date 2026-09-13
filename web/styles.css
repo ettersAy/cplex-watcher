@@ -1,8 +1,8 @@
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #10131a; color: #eef1f7; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
-.access-gate { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 16px; }
-.access-gate form { width: min(460px, 100%); }
+.login-page { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 16px; }
+.login-main { width: min(460px, 100%); }
 main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0; }
 header { margin-bottom: 32px; }
 h1, h2, p { margin-top: 0; }

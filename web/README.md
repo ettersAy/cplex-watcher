@@ -19,6 +19,6 @@ For the complete architecture, deployment, logs, and troubleshooting guide, see 
    npx wrangler secret put UI_ACCESS_TOKEN
    ```
 
-3. Enter the same value into the access form shown on first page load. The page validates it with Cloudflare, then stores it in the browser's `localStorage` as `UI_ACCESS_TOKEN`.
+3. Open `login.html`, then enter the same value in the access form. The page validates it with Cloudflare, stores it in the browser's `localStorage` as `UI_ACCESS_TOKEN`, and redirects to the watcher listing. The listing redirects back to `login.html` if the token is missing or invalid.
 
 The Worker accepts `POST /api/queue` only from `https://ettersay.github.io` and only with `Authorization: Bearer <UI_ACCESS_TOKEN>`.

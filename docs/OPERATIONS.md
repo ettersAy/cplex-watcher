@@ -183,7 +183,7 @@ The bot acknowledges the request, GitHub Actions matches the title against activ
 
 3. Enter the same value in the web page's **UI access token** field.
 
-When the page opens it hides all watch data until it validates the token with Cloudflare. A valid token is stored in that browser's `localStorage` as `UI_ACCESS_TOKEN`; an invalid token is removed and the access form remains visible. Do not put the token in `web/app.js`, `wrangler.toml`, a committed `.env` file, GitHub secrets visible in logs, or documentation.
+The access page is `login.html`; after Cloudflare validates the token it redirects to the watcher listing at `/cplex-watcher/`. The listing immediately redirects back to `login.html` when `UI_ACCESS_TOKEN` is absent or invalid. A valid token is stored in that browser's `localStorage` as `UI_ACCESS_TOKEN`. Do not put the token in `web/app.js`, `wrangler.toml`, a committed `.env` file, GitHub secrets visible in logs, or documentation.
 
 ## Fresh setup
 

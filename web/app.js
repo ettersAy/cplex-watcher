@@ -2,10 +2,6 @@ const REPOSITORY_RAW_URL = "https://raw.githubusercontent.com/ettersAy/cplex-wat
 const WORKER_URL = "https://cplex-watcher.cplexwatcher.workers.dev";
 const UI_TOKEN_STORAGE_KEY = "UI_ACCESS_TOKEN";
 
-const accessGate = document.querySelector("#access-gate");
-const accessForm = document.querySelector("#access-form");
-const accessTokenInput = document.querySelector("#access-token");
-const accessResult = document.querySelector("#access-result");
 const app = document.querySelector("#app");
 const titlesInput = document.querySelector("#movie-titles");
 const queueForm = document.querySelector("#queue-form");
@@ -27,16 +23,12 @@ function getToken() {
   return localStorage.getItem(UI_TOKEN_STORAGE_KEY) || "";
 }
 
-function showAccessGate(message = "This is a personal app. Please enter your access token.") {
-  app.hidden = true;
-  accessGate.hidden = false;
-  accessResult.textContent = message;
-  accessTokenInput.focus();
+function showApp() {
+  app.hidden = false;
 }
 
-function showApp() {
-  accessGate.hidden = true;
-  app.hidden = false;
+function redirectToLogin() {
+  window.location.replace("./login.html");
 }
 
 function formatDate(value) {
@@ -73,7 +65,7 @@ async function authenticatedRequest(path, method, payload, token = getToken()) {
   if (!response.ok) {
     if (response.status === 401) {
       localStorage.removeItem(UI_TOKEN_STORAGE_KEY);
-      showAccessGate("Your access token is invalid. Enter the current token.");
+      redirectToLogin();
     }
     throw new Error(body.error || "Could not submit the request.");
   }
@@ -194,22 +186,6 @@ async function waitForRemoval(url) {
   return false;
 }
 
-accessForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const token = accessTokenInput.value.trim();
-  if (!token) return;
-  accessResult.textContent = "Checking access token…";
-  try {
-    await verifyToken(token);
-    localStorage.setItem(UI_TOKEN_STORAGE_KEY, token);
-    accessTokenInput.value = "";
-    showApp();
-    await loadWatches();
-  } catch (error) {
-    accessResult.textContent = error.message;
-  }
-});
-
 queueForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const titles = titlesInput.value.trim();
@@ -258,11 +234,10 @@ document.querySelector("#refresh").addEventListener("click", loadWatches);
 
 const savedToken = getToken();
 if (savedToken) {
-  accessResult.textContent = "Checking saved access token…";
   verifyToken(savedToken).then(() => {
     showApp();
     return loadWatches();
-  }).catch(() => showAccessGate("Your saved access token is invalid. Enter the current token."));
+  }).catch(redirectToLogin);
 } else {
-  showAccessGate();
+  redirectToLogin();
 }
