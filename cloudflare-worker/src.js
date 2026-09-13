@@ -136,4 +136,9 @@ export default {
     if (request.method === "POST" && url.pathname === "/internal/watch-result") return handleWatchResult(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },
+  async scheduled(_event, _env, _ctx) {
+    // An older Cloudflare cron trigger may remain active after the schedule
+    // moved to GitHub Actions. Keep it harmless and visible until removed.
+    console.log(JSON.stringify({ event: "legacy_cron_ignored", scheduler: "github-actions" }));
+  },
 };
