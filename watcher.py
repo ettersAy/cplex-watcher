@@ -9,13 +9,17 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).parent
 MOVIES_FILE = ROOT / "movies.json"
 STATE_FILE = ROOT / "state.json"
 USER_AGENT = "CineplexTicketWatcher/1.0 (personal ticket availability monitor)"
+# Cineplex serves this static Next.js data endpoint even when a hosted runner
+# receives an anti-bot HTML page without __NEXT_DATA__. Update only if Cineplex
+# changes its Next.js build and the fallback reports HTTP 404.
+NEXT_BUILD_ID = "sutiBBvJ_DUSdtn7Z8k2n"
 
 
 def request_json(url, data=None):
@@ -52,10 +56,14 @@ def get_movie(url):
         page,
         flags=re.DOTALL | re.IGNORECASE,
     )
-    if not match:
-        raise ValueError("Cineplex page did not contain __NEXT_DATA__")
-
-    details = find_movie_details(json.loads(html.unescape(match.group(1))))
+    if match:
+        details = find_movie_details(json.loads(html.unescape(match.group(1))))
+    else:
+        slug = urlparse(url).path.rstrip("/").rsplit("/", 1)[-1]
+        data_url = f"https://www.cineplex.com/next-static-files/_next/data/{NEXT_BUILD_ID}/movie/{slug}.json"
+        fallback_request = Request(data_url, headers={"User-Agent": USER_AGENT})
+        with urlopen(fallback_request, timeout=30) as response:
+            details = find_movie_details(json.loads(response.read().decode("utf-8")))
     if not details:
         raise ValueError("Cineplex page did not contain movie ticket status")
 
