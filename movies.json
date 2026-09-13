@@ -1,5 +1,14 @@
 [
-  {"url": "https://www.cineplex.com/movie/cat-in-the-hat"},
-  {"url": "https://www.cineplex.com/movie/sense-and-sensibility-2026"},
-  {"url": "https://www.cineplex.com/movie/jumanji-open-world"}
+  {
+    "url": "https://www.cineplex.com/movie/cat-in-the-hat"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/jumanji-open-world"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour"
+  }
 ]
