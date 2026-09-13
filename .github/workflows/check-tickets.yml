@@ -26,6 +26,10 @@ on:
         description: Worker request identifier
         required: true
         type: string
+      chat_id:
+        description: Telegram chat to receive this command's final result
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -174,14 +178,14 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || (inputs.operation != 'remove' && inputs.operation != 'remove_by_title')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
         run: python watcher.py
 
       - name: Send registration result to Telegram
         if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch' && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_RECIPIENTS: ${{ inputs.chat_id || secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
         run: |
           python - <<'PY'
           import json
@@ -205,7 +209,7 @@ jobs:
                   text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
               else:
                   text = item.get("error", "I could not complete the Cineplex search.")
-              send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
+              send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text)
               print(f"Telegram registration result sent: status={item.get('status')}")
           PY
 
@@ -213,7 +217,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'remove' || inputs.operation == 'remove_by_title') && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_RECIPIENTS: ${{ inputs.chat_id || secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
         run: |
           python - <<'PY'
           import json
@@ -233,7 +237,7 @@ jobs:
                       text = item["error"]
                   else:
                       text = f"Stopped watching {name}." if item["removed"] else f"No active watch found for {name}."
-                  send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
+                  send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text)
                   print("Telegram removal result sent")
           PY
 

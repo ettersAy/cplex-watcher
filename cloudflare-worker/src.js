@@ -12,7 +12,12 @@ async function telegram(env, chatId, text, options = {}) {
   }
 }
 
-async function dispatchWatch(env, titles, requestId) {
+function allowedTelegramChatIds(env) {
+  const value = env.TELEGRAM_CHAT_IDS || env.ADMIN_CHAT_ID || "";
+  return new Set(value.split(/[\s,]+/).map((chatId) => chatId.trim()).filter(Boolean));
+}
+
+async function dispatchWatch(env, titles, requestId, chatId = "") {
   if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
     throw new Error("GitHub Actions dispatch is not configured");
   }
@@ -26,7 +31,7 @@ async function dispatchWatch(env, titles, requestId) {
       "user-agent": "CineplexTicketWatcher",
       "x-github-api-version": "2022-11-28",
     },
-    body: JSON.stringify({ ref: "main", inputs: { title: titles[0], titles: titles.join("\n"), operation: "watch", request_id: requestId } }),
+    body: JSON.stringify({ ref: "main", inputs: { title: titles[0], titles: titles.join("\n"), operation: "watch", request_id: requestId, chat_id: chatId } }),
   });
   if (!response.ok) throw new Error(`GitHub Actions dispatch failed: ${await response.text()}`);
 }
@@ -50,7 +55,7 @@ async function dispatchRemoval(env, url, requestId) {
   if (!response.ok) throw new Error(`GitHub Actions removal dispatch failed: ${await response.text()}`);
 }
 
-async function dispatchStopWatch(env, title, requestId) {
+async function dispatchStopWatch(env, title, requestId, chatId = "") {
   if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
     throw new Error("GitHub Actions dispatch is not configured");
   }
@@ -64,7 +69,7 @@ async function dispatchStopWatch(env, title, requestId) {
       "user-agent": "CineplexTicketWatcher",
       "x-github-api-version": "2022-11-28",
     },
-    body: JSON.stringify({ ref: "main", inputs: { title, operation: "remove_by_title", request_id: requestId } }),
+    body: JSON.stringify({ ref: "main", inputs: { title, operation: "remove_by_title", request_id: requestId, chat_id: chatId } }),
   });
   if (!response.ok) throw new Error(`GitHub Actions stop-watch dispatch failed: ${await response.text()}`);
 }
@@ -242,7 +247,7 @@ async function handleWatch(env, chatId, title) {
 
   try {
     console.log(JSON.stringify({ event: "github_dispatch_started", requestId }));
-    await dispatchWatch(env, [title], requestId);
+    await dispatchWatch(env, [title], requestId, chatId);
     console.log(JSON.stringify({ event: "github_dispatch_accepted", requestId }));
   } catch (error) {
     console.error("Could not dispatch GitHub Actions watch:", error);
@@ -258,7 +263,7 @@ async function handleStopWatch(env, chatId, title) {
   const requestId = crypto.randomUUID();
   console.log(JSON.stringify({ event: "stop_watch_requested", requestId, title }));
   try {
-    await dispatchStopWatch(env, title, requestId);
+    await dispatchStopWatch(env, title, requestId, chatId);
     console.log(JSON.stringify({ event: "stop_watch_dispatch_accepted", requestId }));
   } catch (error) {
     console.error("Could not dispatch GitHub Actions stop watch:", error);
@@ -396,7 +401,11 @@ async function handleUpdate(request, env) {
   if (!message?.text) return new Response("ok");
 
   const chatId = String(message.chat.id);
-  if (chatId !== String(env.ADMIN_CHAT_ID)) return new Response("ok");
+  if (/^\/id(?:@\w+)?$/i.test(message.text)) {
+    await telegram(env, chatId, `Your Telegram chat ID is ${chatId}. Send it to the watcher owner so they can authorize you.`);
+    return new Response("ok");
+  }
+  if (!allowedTelegramChatIds(env).has(chatId)) return new Response("ok");
 
   const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
   const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);

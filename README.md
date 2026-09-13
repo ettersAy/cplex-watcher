@@ -5,6 +5,7 @@ Personal Cineplex movie-availability watcher with Telegram notifications and a s
 - Web interface: <https://ettersay.github.io/cplex-watcher/>
 - Worker health endpoint: <https://cplex-watcher.cplexwatcher.workers.dev/>
 - Detailed setup, operations, and troubleshooting: [docs/OPERATIONS.md](docs/OPERATIONS.md)
+- Share the watcher safely with friends: [docs/FRIENDS-ACCESS.md](docs/FRIENDS-ACCESS.md)
 
 ## What it does
 
@@ -12,7 +13,7 @@ Personal Cineplex movie-availability watcher with Telegram notifications and a s
 2. The Cloudflare Worker starts a GitHub Actions lookup.
 3. The Action finds the official Cineplex movie URL and deduplicates watches by URL.
 4. GitHub Actions checks every active movie every 30 minutes.
-5. When Cineplex reports ticket sales started, the Action alerts the admin in Telegram once.
+5. When Cineplex reports ticket sales started, the Action alerts every authorized recipient in Telegram once.
 
 The app uses GitHub Actions for Cineplex requests because Cineplex blocks Cloudflare Worker requests.
 
@@ -42,7 +43,7 @@ Use **Scan all** to manually scan every active movie five seconds apart. Results
 ## Important security rules
 
 - Never commit or paste bot tokens, GitHub tokens, Telegram API credentials, or `UI_ACCESS_TOKEN` into source files.
-- The web page does not contain the UI token. It stores the value you enter only in browser `sessionStorage`.
+- The web page does not contain the UI token. It stores the value you enter only in browser `localStorage`.
 - GitHub Pages is static; the private token is sent only over HTTPS to the Cloudflare Worker.
 
 ## Main commands

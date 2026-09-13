@@ -76,11 +76,17 @@ def get_movie(url):
     }
 
 
-def send_telegram(token, chat_id, text):
-    request_json(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"},
-    )
+def telegram_chat_ids(value):
+    """Return distinct chat IDs from a comma- or whitespace-separated secret."""
+    return list(dict.fromkeys(chat_id for chat_id in re.split(r"[\s,]+", value or "") if chat_id))
+
+
+def send_telegram(token, chat_ids, text, parse_mode=None):
+    for chat_id in telegram_chat_ids(chat_ids):
+        data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
+        if parse_mode:
+            data["parse_mode"] = parse_mode
+        request_json(f"https://api.telegram.org/bot{token}/sendMessage", data)
 
 
 def main():
@@ -88,8 +94,8 @@ def main():
     sales_started = json.loads(SALES_STARTED_FILE.read_text()) if SALES_STARTED_FILE.exists() else []
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"movies": {}}
     token = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = os.getenv("TELEGRAM_CHAT_ID")
-    can_notify = bool(token and chat_id)
+    chat_ids = os.getenv("TELEGRAM_RECIPIENTS") or os.getenv("TELEGRAM_CHAT_IDS") or os.getenv("TELEGRAM_CHAT_ID")
+    can_notify = bool(token and telegram_chat_ids(chat_ids))
     changed = False
     active_movies = []
 
@@ -122,11 +128,10 @@ def main():
             if can_notify:
                 send_telegram(
                     token,
-                    chat_id,
-                    "Tickets are now on sale!\n\n"
-                    f"{current['name']}\n"
-                    f"Release date: {current['releaseDate'] or 'Unknown'}\n"
-                    f"{current['url']}",
+                    chat_ids,
+                    "Go run buy your ticket for the movie "
+                    f"<a href=\"{html.escape(current['url'], quote=True)}\">{html.escape(current['name'])}</a>.",
+                    parse_mode="HTML",
                 )
                 previous["alerted"] = True
                 print("  Telegram alert sent")

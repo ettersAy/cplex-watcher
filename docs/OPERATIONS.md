@@ -213,7 +213,7 @@ Run the following from `cloudflare-worker/`. Each command prompts privately; nev
 
 ```bash
 npx wrangler secret put TELEGRAM_BOT_TOKEN
-npx wrangler secret put ADMIN_CHAT_ID
+npx wrangler secret put TELEGRAM_CHAT_IDS
 npx wrangler secret put TELEGRAM_WEBHOOK_SECRET
 npx wrangler secret put GITHUB_ACTIONS_TOKEN
 npx wrangler secret put UI_ACCESS_TOKEN
@@ -222,7 +222,7 @@ npx wrangler secret put UI_ACCESS_TOKEN
 | Secret | Purpose |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Lets the Worker acknowledge Telegram commands and answer `/list`. |
-| `ADMIN_CHAT_ID` | Limits Telegram bot commands to the admin chat. |
+| `TELEGRAM_CHAT_IDS` | Comma-separated private Telegram chat IDs authorized to use bot commands. Falls back to `ADMIN_CHAT_ID` when absent. |
 | `TELEGRAM_WEBHOOK_SECRET` | Verifies that incoming updates came through Telegram's webhook. |
 | `GITHUB_ACTIONS_TOKEN` | Fine-grained GitHub token used only to dispatch `check-tickets.yml`. |
 | `UI_ACCESS_TOKEN` | Shared private token required by the GitHub Pages queue form. |
@@ -252,7 +252,7 @@ In GitHub: **Repository** → **Settings** → **Secrets and variables** → **A
 | Secret | Purpose |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Lets Actions send registration results and sale alerts. |
-| `TELEGRAM_CHAT_ID` | Admin chat that receives those Action messages. |
+| `TELEGRAM_CHAT_IDS` | Comma-separated private Telegram chat IDs that receive ticket-sale alerts. Falls back to `TELEGRAM_CHAT_ID` when absent. |
 
 The current flow does **not** use `WORKER_CALLBACK_URL` or `WATCHER_CALLBACK_SECRET`. Do not recreate them for this design.
 
@@ -357,7 +357,7 @@ Expected workflow steps:
 
 | Symptom | Check | Likely resolution |
 |---|---|---|
-| Telegram command has no response | `wrangler tail`; webhook result | Verify webhook URL, `TELEGRAM_WEBHOOK_SECRET`, bot token, and `ADMIN_CHAT_ID`. |
+| Telegram command has no response | `wrangler tail`; webhook result | Verify webhook URL, `TELEGRAM_WEBHOOK_SECRET`, bot token, and the sender's ID in `TELEGRAM_CHAT_IDS`. |
 | Worker says it cannot start the search | Worker logs show dispatch failure | Replace or correct `GITHUB_ACTIONS_TOKEN`; it needs **Actions: Read and write** for this repository. |
 | Action title lookup fails with Cineplex 403 | Action log | Keep lookup in GitHub Actions. Do not move it back to Cloudflare. The current static Next-data fallback is designed for hosted-runner anti-bot pages. |
 | Web form returns 503 | `UI_ACCESS_TOKEN` missing | Run `npx wrangler secret put UI_ACCESS_TOKEN`. |
