@@ -9,6 +9,7 @@ Telegram /watch ─┐
                  ├─> Cloudflare Worker ─> GitHub Actions lookup/check
 Web page /queue ─┘                              │
        ▲                                        ├─> movies.json (active URLs)
+       │                                        ├─> sales-started.json (completed sales)
        │                                        ├─> state.json (latest checks)
 GitHub Pages <── reads public JSON ─────────────┘
                                                  └─> Telegram admin alert
@@ -21,8 +22,9 @@ GitHub Pages <── reads public JSON ─────────────�
 | Cloudflare Worker | Validates Telegram updates, protects the web queue API, dispatches GitHub Actions, and formats `/list`. |
 | GitHub Actions | Looks up titles, deduplicates Cineplex URLs, performs 30-minute checks, persists check state, and sends Telegram messages. |
 | `movies.json` | Source of truth for active watches. Each entry is one official Cineplex URL. |
+| `sales-started.json` | Movies moved out of the active queue after Cineplex reports that sales started. |
 | `state.json` | Last successful or failed check for each active watch, including `hasShowtimes`, timestamp, and error. |
-| GitHub Pages | Static admin page. It reads `movies.json` and `state.json` directly and posts new titles to the Worker. |
+| GitHub Pages | Static admin page. It validates a local browser token, then reads the public JSON lists and posts new titles to the Worker. |
 | Telegram | Admin command and notification channel. |
 
 ## Commands and expected results
@@ -46,15 +48,10 @@ The Action then sends one result:
 
 ### `/list`
 
-Each active movie has:
+Sales-started movies are listed first, then active watches. Each movie uses one compact line:
 
 ```text
-• Clickable movie title
-  Status: Success | Failed
-  Sales: Started | Not Yet | Unable to determine
-  Next check in X min
-  Last check: YY-MM-DD HH:MM:SS
-  Error: …                 # only when a check failed
+⏳ Clickable movie title 👁️ in X min ☀️ Last check YY-MM-DD HH:MM:SS
 ```
 
 - Timestamps are displayed in Montréal time (`America/Toronto`) in `YY-MM-DD HH:MM:SS` format. Stored timestamps remain UTC.
@@ -74,7 +71,7 @@ The scheduled `Check Cineplex ticket sales` workflow runs on this cron schedule:
 | `hasShowtimes` | Displayed sales status | Telegram alert |
 |---|---|---|
 | `false` | Not Yet | No alert. |
-| `true` | Started | Sends one alert, then stores `alerted: true`. |
+| `true` | Started | Sends one alert, moves the movie to `sales-started.json`, then removes it from `movies.json`. |
 | Check error | Unable to determine | No sale alert; stores the error. |
 
 The alert is sent directly from GitHub Actions with its Telegram secrets. This avoids the previous Worker callback HTTP 403 issue.
@@ -85,10 +82,10 @@ URL: <https://ettersay.github.io/cplex-watcher/>
 
 The page is intentionally basic:
 
-- Shows the same active-watch data as `/list`.
+- Shows sales-started movies first, followed by the active-watch data from `/list`.
 - Links every title to the official Cineplex page.
 - Lets the admin submit 1 to 10 titles, one title per line, through the protected queue endpoint.
-- Lets the admin stop watching an active movie by its exact official Cineplex URL.
+- Lets the admin stop watching an active movie by its exact official Cineplex URL. After the request is accepted, the page waits for the GitHub Action and reloads the list.
 - Does not include a database or a separate persistent web queue. A successful search or removal appears after the GitHub Action updates `movies.json`; refresh the page then.
 
 Each light-weight card uses icons to summarize the latest state:
@@ -186,7 +183,7 @@ The bot acknowledges the request, GitHub Actions matches the title against activ
 
 3. Enter the same value in the web page's **UI access token** field.
 
-The token stays in `sessionStorage` only. Closing the browser session clears it. Do not put it in `web/app.js`, `wrangler.toml`, a `.env` file, GitHub secrets visible in logs, or documentation.
+When the page opens it hides all watch data until it validates the token with Cloudflare. A valid token is stored in that browser's `localStorage` as `UI_ACCESS_TOKEN`; an invalid token is removed and the access form remains visible. Do not put the token in `web/app.js`, `wrangler.toml`, a committed `.env` file, GitHub secrets visible in logs, or documentation.
 
 ## Fresh setup
 

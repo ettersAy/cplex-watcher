@@ -228,6 +228,12 @@ async function handleScan(request, env) {
   }
 }
 
+function handleVerifyUiToken(request, env) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+  return queueResponse(env, { valid: true });
+}
+
 async function handleWatch(env, chatId, title) {
   if (!title) return telegram(env, chatId, "Please provide a movie name. Example: /watch Runner");
 
@@ -298,6 +304,18 @@ async function getWatchState(env) {
   return state.movies;
 }
 
+async function getSalesStarted(env) {
+  if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
+
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/sales-started.json`, {
+    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+  });
+  if (!response.ok) throw new Error(`Could not load sales-started list: HTTP ${response.status}`);
+  const movies = await response.json();
+  if (!Array.isArray(movies)) throw new Error("Sales-started list has an invalid format");
+  return movies;
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
 }
@@ -327,32 +345,41 @@ function formatTimestamp(value) {
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 
-function formatWatch(movie, check, stateError) {
+function formatWatch(movie, check, stateError, salesStarted = false) {
   const name = movie.name || check?.name || nameFromUrl(movie.url);
   const link = `<a href="${escapeHtml(movie.url)}">${escapeHtml(name)}</a>`;
-  const failed = Boolean(stateError || !check || check.lastCheckStatus === "failed" || check.lastError);
+  const hasSalesStarted = salesStarted || check?.hasShowtimes;
+  const failed = !salesStarted && Boolean(stateError || !check || check.lastCheckStatus === "failed" || check.lastError);
   const error = stateError || check?.lastError;
-  const icon = failed ? "🔴" : (check.hasShowtimes ? "🎉" : "⏳");
+  const icon = failed ? "🔴" : (hasSalesStarted ? "🎉" : "⏳");
   const lastCheckIcon = failed ? "❌" : "☀️";
   return [
     icon,
     link,
-    `👁️ ${nextScheduledCheck()}`,
-    `${lastCheckIcon} Last check ${formatTimestamp(check?.lastCheckedAt)}`,
+    ...(!salesStarted ? [`👁️ ${nextScheduledCheck()}`] : []),
+    `${lastCheckIcon} Last check ${formatTimestamp(check?.lastCheckedAt || movie.salesStartedAt)}`,
     ...(error ? [`📢 ${escapeHtml(error)}`] : []),
   ].join(" ");
 }
 
 async function handleList(env, chatId) {
   try {
-    const [movies, stateResult] = await Promise.all([
+    const [salesStarted, movies, stateResult] = await Promise.all([
+      getSalesStarted(env),
       getManagedWatches(env),
       getWatchState(env).then((state) => ({ state })).catch((error) => ({ error: error.message })),
     ]);
     const uniqueMovies = [...new Map(movies.map((movie) => [movie.url, movie])).values()];
-    console.log(JSON.stringify({ event: "watch_list_requested", count: uniqueMovies.length }));
-    const descriptions = uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error));
-    await telegram(env, chatId, descriptions.length ? `Watching:\n\n${descriptions.join("\n\n")}` : "You are not watching any movies.", { parse_mode: "HTML" });
+    const uniqueSalesStarted = [...new Map(salesStarted.map((movie) => [movie.url, movie])).values()];
+    console.log(JSON.stringify({ event: "watch_list_requested", activeCount: uniqueMovies.length, salesStartedCount: uniqueSalesStarted.length }));
+    const sections = [];
+    if (uniqueSalesStarted.length) {
+      sections.push(`🎉 Sales started:\n${uniqueSalesStarted.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error, true)).join("\n")}`);
+    }
+    if (uniqueMovies.length) {
+      sections.push(`⏳ Watching:\n${uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error)).join("\n")}`);
+    }
+    await telegram(env, chatId, sections.length ? sections.join("\n\n") : "You are not watching any movies.", { parse_mode: "HTML" });
   } catch (error) {
     console.error("Could not load watched movies:", error);
     await telegram(env, chatId, "I could not load the active watches. Please try again shortly.");
@@ -389,13 +416,14 @@ async function handleUpdate(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if ((url.pathname === "/api/queue" || url.pathname === "/api/scan") && request.method === "OPTIONS") {
+    if ((url.pathname === "/api/queue" || url.pathname === "/api/scan" || url.pathname === "/api/verify") && request.method === "OPTIONS") {
       if (request.headers.get("Origin") !== env.UI_ORIGIN) return new Response("Forbidden", { status: 403 });
       return new Response(null, { status: 204, headers: queueCorsHeaders(env) });
     }
     if (url.pathname === "/api/queue" && request.method === "POST") return handleQueue(request, env);
     if (url.pathname === "/api/queue" && request.method === "DELETE") return handleRemoveWatch(request, env);
     if (url.pathname === "/api/scan" && request.method === "POST") return handleScan(request, env);
+    if (url.pathname === "/api/verify" && request.method === "POST") return handleVerifyUiToken(request, env);
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },

@@ -72,28 +72,41 @@ jobs:
         run: |
           python - <<'PY'
           import json
+          from datetime import datetime, timezone
           from pathlib import Path
 
           registration_path = Path("registration.json")
           registration = json.loads(registration_path.read_text())
           results = registration.get("results", [registration])
           movies_path = Path("movies.json")
+          sales_started_path = Path("sales-started.json")
           movies = json.loads(movies_path.read_text())
+          sales_started = json.loads(sales_started_path.read_text()) if sales_started_path.exists() else []
           changed = False
           for result in results:
-              if result["status"] != "watching":
-                  continue
-              movie = result["movie"]
-              url = movie["url"]
-              if any(existing["url"] == url for existing in movies):
-                  result["status"] = "already_watching"
-                  print(f"Movie is already watched: {url}")
-              else:
-                  movies.append({"url": url, "name": movie["name"]})
-                  changed = True
-                  print(f"Added watched movie: {url}")
+              if result["status"] == "watching":
+                  movie = result["movie"]
+                  url = movie["url"]
+                  if any(existing["url"] == url for existing in movies):
+                      result["status"] = "already_watching"
+                      print(f"Movie is already watched: {url}")
+                  else:
+                      movies.append({"url": url, "name": movie["name"]})
+                      changed = True
+                      print(f"Added watched movie: {url}")
+              elif result["status"] == "already_on_sale":
+                  movie = result["movie"]
+                  if not any(existing["url"] == movie["url"] for existing in sales_started):
+                      sales_started.append({
+                          "url": movie["url"],
+                          "name": movie["name"],
+                          "salesStartedAt": datetime.now(timezone.utc).isoformat(),
+                      })
+                      changed = True
+                      print(f"Added sales-started movie: {movie['url']}")
           if changed:
               movies_path.write_text(json.dumps(movies, indent=2) + "\n")
+              sales_started_path.write_text(json.dumps(sales_started, indent=2) + "\n")
           registration_path.write_text(json.dumps(registration) + "\n")
           PY
 
@@ -111,8 +124,10 @@ jobs:
 
           operation = os.environ["WATCH_OPERATION"]
           movies_path = Path("movies.json")
+          sales_started_path = Path("sales-started.json")
           state_path = Path("state.json")
           movies = json.loads(movies_path.read_text())
+          sales_started = json.loads(sales_started_path.read_text()) if sales_started_path.exists() else []
           state = json.loads(state_path.read_text()) if state_path.exists() else {"movies": {}}
           if operation == "remove_by_title":
               def normalise(value):
@@ -142,10 +157,14 @@ jobs:
               url = target["url"]
               removed = [movie for movie in movies if movie["url"] == url]
               movies = [movie for movie in movies if movie["url"] != url]
+              removed_sales_started = [movie for movie in sales_started if movie["url"] == url]
+              sales_started = [movie for movie in sales_started if movie["url"] != url]
               state["movies"].pop(url.rstrip("/").rsplit("/", 1)[-1], None)
-              removal_results.append({"removed": bool(removed), "movie": removed[0] if removed else target})
+              removed_movie = removed[0] if removed else (removed_sales_started[0] if removed_sales_started else target)
+              removal_results.append({"removed": bool(removed or removed_sales_started), "movie": removed_movie})
           if any(item["removed"] for item in removal_results):
               movies_path.write_text(json.dumps(movies, indent=2) + "\n")
+              sales_started_path.write_text(json.dumps(sales_started, indent=2) + "\n")
           state_path.write_text(json.dumps(state, indent=2) + "\n")
           Path("removal.json").write_text(json.dumps({"results": removal_results}) + "\n")
           print(f"Removed watches: {sum(item['removed'] for item in removal_results)}")
@@ -222,6 +241,6 @@ jobs:
         run: |
           git config user.name "Cineplex Ticket Watcher"
           git config user.email "actions@github.com"
-          git add movies.json state.json
+          git add movies.json sales-started.json state.json
           git diff --cached --quiet || git commit -m "Update ticket watcher state"
           git push

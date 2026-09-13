@@ -1,6 +1,8 @@
 :root { color-scheme: dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; background: #10131a; color: #eef1f7; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; }
+.access-gate { align-items: center; display: flex; justify-content: center; min-height: 100vh; padding: 16px; }
+.access-gate form { width: min(460px, 100%); }
 main { width: min(920px, calc(100% - 32px)); margin: 0 auto; padding: 64px 0; }
 header { margin-bottom: 32px; }
 h1, h2, p { margin-top: 0; }
@@ -21,6 +23,8 @@ button.secondary { background: transparent; border: 1px solid #52617a; color: #d
 .section-heading h2 { margin-bottom: 6px; }
 .actions { display: flex; gap: 8px; }
 .watches { display: grid; gap: 8px; }
+.watch-section-heading { font-size: 1rem; margin: 18px 0 2px; }
+.watch-section-heading:first-child { margin-top: 0; }
 .watch { align-items: center; background: #151b26; border: 1px solid #293447; border-radius: 10px; display: flex; gap: 12px; justify-content: space-between; padding: 12px 14px; }
 .watch-summary { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: 7px; min-width: 0; }
 .watch-icon { font-size: 1.05rem; }

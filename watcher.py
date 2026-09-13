@@ -14,6 +14,7 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).parent
 MOVIES_FILE = ROOT / "movies.json"
+SALES_STARTED_FILE = ROOT / "sales-started.json"
 STATE_FILE = ROOT / "state.json"
 USER_AGENT = "CineplexTicketWatcher/1.0 (personal ticket availability monitor)"
 # Cineplex serves this static Next.js data endpoint even when a hosted runner
@@ -84,11 +85,13 @@ def send_telegram(token, chat_id, text):
 
 def main():
     movies = json.loads(MOVIES_FILE.read_text())
+    sales_started = json.loads(SALES_STARTED_FILE.read_text()) if SALES_STARTED_FILE.exists() else []
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"movies": {}}
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     can_notify = bool(token and chat_id)
     changed = False
+    active_movies = []
 
     for movie in movies:
         url = movie["url"]
@@ -107,6 +110,7 @@ def main():
             })
             state["movies"][key] = previous
             changed = True
+            active_movies.append(movie)
             continue
 
         status = "Started" if current["hasShowtimes"] else "Not Yet"
@@ -136,7 +140,21 @@ def main():
         state["movies"][key] = previous
         changed = True
 
+        if current["hasShowtimes"]:
+            if not any(existing["url"] == url for existing in sales_started):
+                sales_started.append({
+                    "url": url,
+                    "name": current["name"],
+                    "salesStartedAt": previous["lastCheckedAt"],
+                })
+                print("  Moved to sales-started list")
+            continue
+
+        active_movies.append(movie)
+
     if changed:
+        MOVIES_FILE.write_text(json.dumps(active_movies, indent=2) + "\n")
+        SALES_STARTED_FILE.write_text(json.dumps(sales_started, indent=2) + "\n")
         STATE_FILE.write_text(json.dumps(state, indent=2) + "\n")
 
 
