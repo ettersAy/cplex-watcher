@@ -390,7 +390,7 @@ async function handleUpdate(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if (url.pathname === "/api/queue" && request.method === "OPTIONS") {
+    if ((url.pathname === "/api/queue" || url.pathname === "/api/scan") && request.method === "OPTIONS") {
       if (request.headers.get("Origin") !== env.UI_ORIGIN) return new Response("Forbidden", { status: 403 });
       return new Response(null, { status: 204, headers: queueCorsHeaders(env) });
     }
