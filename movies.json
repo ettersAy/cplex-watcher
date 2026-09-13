@@ -62,5 +62,13 @@
   {
     "url": "https://www.cineplex.com/movie/digger",
     "name": "Digger"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/sacrifice",
+    "name": "Sacrifice"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/big-girls-dont-cry",
+    "name": "Big Girls Don't Cry"
   }
 ]
