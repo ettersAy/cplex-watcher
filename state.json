@@ -5,72 +5,81 @@
       "releaseDate": "2026-11-06T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/cat-in-the-hat",
-      "lastCheckedAt": "2026-09-13T06:17:04.989844+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.271510+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "sense-and-sensibility-2026": {
       "name": "Sense and Sensibility",
       "releaseDate": "2026-10-16T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026",
-      "lastCheckedAt": "2026-09-13T06:17:05.289506+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.343221+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "jumanji-open-world": {
       "name": "Jumanji: Open World",
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-09-13T06:17:05.485977+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.412429+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "george-michael-the-faith-tour": {
       "name": "George Michael: The Faith Tour",
       "releaseDate": "2026-12-11T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-09-13T06:17:05.680125+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.486895+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "azaad-singh-haryanvi-west": {
       "name": "Azaad Singh (Haryanvi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/azaad-singh-haryanvi-west",
-      "lastCheckedAt": "2026-09-13T06:17:05.937762+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.561952+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "daayra-hindi-west": {
       "name": "Daayra (Hindi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/daayra-hindi-west",
-      "lastCheckedAt": "2026-09-13T06:17:06.214809+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.633122+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "hanuman-ansh-hindi-west": {
       "name": "Hanuman Ansh (Hindi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/hanuman-ansh-hindi-west",
-      "lastCheckedAt": "2026-09-13T06:17:06.436332+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.698872+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "mitti-de-putt-punjabi-west": {
       "name": "Mitti De Putt (Punjabi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/mitti-de-putt-punjabi-west",
-      "lastCheckedAt": "2026-09-13T06:17:06.689689+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.766753+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
     "red-flag-arabic-west": {
       "name": "Red Flag (Arabic w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/red-flag-arabic-west",
-      "lastCheckedAt": "2026-09-13T06:17:06.967882+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-13T06:19:30.862301+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "Expecting value: line 1 column 1 (char 0)"
     }
   }
 }
