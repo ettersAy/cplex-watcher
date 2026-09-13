@@ -5,7 +5,7 @@
       "releaseDate": "2026-11-06T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/cat-in-the-hat",
-      "lastCheckedAt": "2026-09-13T05:20:40.445648+00:00",
+      "lastCheckedAt": "2026-09-13T05:44:20.870473+00:00",
       "lastCheckStatus": "failed",
       "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
@@ -14,7 +14,7 @@
       "releaseDate": "2026-10-16T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026",
-      "lastCheckedAt": "2026-09-13T05:20:40.540825+00:00",
+      "lastCheckedAt": "2026-09-13T05:44:20.960868+00:00",
       "lastCheckStatus": "failed",
       "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
@@ -23,7 +23,7 @@
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-09-13T05:20:40.631525+00:00",
+      "lastCheckedAt": "2026-09-13T05:44:21.051527+00:00",
       "lastCheckStatus": "failed",
       "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
@@ -32,7 +32,7 @@
       "releaseDate": "2026-12-11T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-09-13T05:20:40.722896+00:00",
+      "lastCheckedAt": "2026-09-13T05:44:21.149315+00:00",
       "lastCheckStatus": "failed",
       "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
@@ -41,7 +41,7 @@
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/azaad-singh-haryanvi-west",
-      "lastCheckedAt": "2026-09-13T05:20:40.807434+00:00",
+      "lastCheckedAt": "2026-09-13T05:44:21.242508+00:00",
       "lastCheckStatus": "failed",
       "lastError": "Expecting value: line 1 column 1 (char 0)"
     },
@@ -50,7 +50,7 @@
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/daayra-hindi-west",
-      "lastCheckedAt": "2026-09-13T05:20:40.919240+00:00",
+      "lastCheckedAt": "2026-09-13T05:44:21.329007+00:00",
       "lastCheckStatus": "failed",
       "lastError": "Expecting value: line 1 column 1 (char 0)"
     }
