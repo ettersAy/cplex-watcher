@@ -78,42 +78,32 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python watcher.py
 
-      - name: Report registration result to Worker
+      - name: Send registration result to Telegram
         if: github.event_name == 'workflow_dispatch' && always()
         env:
-          REQUEST_ID: ${{ inputs.request_id }}
-          WORKER_CALLBACK_URL: ${{ secrets.WORKER_CALLBACK_URL }}
-          WATCHER_CALLBACK_SECRET: ${{ secrets.WATCHER_CALLBACK_SECRET }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python - <<'PY'
           import json
           import os
           from pathlib import Path
-          from urllib.request import Request, urlopen
+          from watcher import send_telegram
 
           try:
               result = json.loads(Path("registration.json").read_text())
           except (OSError, json.JSONDecodeError) as error:
               result = {"status": "error", "error": f"GitHub registration failed: {error}"}
-          result["request_id"] = os.environ["REQUEST_ID"]
-          print(f"Sending Worker callback: request_id={result['request_id']}, status={result.get('status')}")
-          request = Request(
-              os.environ["WORKER_CALLBACK_URL"],
-              data=json.dumps(result).encode("utf-8"),
-              headers={
-                  "Content-Type": "application/json",
-                  "X-Watcher-Callback-Secret": os.environ["WATCHER_CALLBACK_SECRET"],
-              },
-              method="POST",
-          )
-          try:
-              with urlopen(request, timeout=30) as response:
-                  if response.status != 200:
-                      raise RuntimeError(f"Worker callback returned HTTP {response.status}")
-                  print("Worker callback accepted")
-          except Exception as error:
-              print(f"Worker callback failed: {error}")
-              raise
+          if result.get("status") == "watching":
+              movie = result["movie"]
+              text = f"Started watching {movie['name']}.\nNext check: within 30 minutes.\n{movie['url']}"
+          elif result.get("status") == "already_on_sale":
+              movie = result["movie"]
+              text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
+          else:
+              text = result.get("error", "I could not complete the Cineplex search.")
+          send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
+          print(f"Telegram registration result sent: status={result.get('status')}")
           PY
 
       - name: Save alert state

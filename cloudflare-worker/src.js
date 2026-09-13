@@ -42,17 +42,12 @@ async function handleWatch(env, chatId, title) {
 
   const requestId = crypto.randomUUID();
   console.log(JSON.stringify({ event: "watch_requested", requestId, title }));
-  const watches = await getWatches(env);
-  watches[`pending:${requestId}`] = { title, status: "pending", requestedAt: new Date().toISOString() };
-  await saveWatches(env, watches);
 
   try {
     console.log(JSON.stringify({ event: "github_dispatch_started", requestId }));
     await dispatchWatch(env, title, requestId);
     console.log(JSON.stringify({ event: "github_dispatch_accepted", requestId }));
   } catch (error) {
-    delete watches[`pending:${requestId}`];
-    await saveWatches(env, watches);
     console.error("Could not dispatch GitHub Actions watch:", error);
     return telegram(env, chatId, "I could not start the Cineplex search. Please try again shortly.");
   }
