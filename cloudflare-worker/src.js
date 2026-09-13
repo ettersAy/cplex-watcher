@@ -94,7 +94,14 @@ function nextScheduledCheck() {
   next.setUTCSeconds(0, 0);
   next.setUTCMinutes(now.getUTCMinutes() < 30 ? 30 : 60);
   const minutes = Math.max(1, Math.ceil((next - now) / 60_000));
-  return `in ${minutes} min (${next.toISOString().replace(/\.\d{3}Z$/, " UTC")})`;
+  return `in ${minutes} min (${formatTimestamp(next)})`;
+}
+
+function formatTimestamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not available";
+  const twoDigits = (number) => String(number).padStart(2, "0");
+  return `${twoDigits(date.getUTCFullYear() % 100)}-${twoDigits(date.getUTCMonth() + 1)}-${twoDigits(date.getUTCDate())} ${twoDigits(date.getUTCHours())}:${twoDigits(date.getUTCMinutes())}:${twoDigits(date.getUTCSeconds())}`;
 }
 
 function formatWatch(movie, check, stateError) {
@@ -109,7 +116,7 @@ function formatWatch(movie, check, stateError) {
     `  Status: ${status}`,
     `  Sales: ${sales}`,
     `  Next scheduled check: ${nextScheduledCheck()}`,
-    `  Last check: ${check?.lastCheckedAt || "Not available"}`,
+    `  Last check: ${formatTimestamp(check?.lastCheckedAt)}`,
     ...(error ? [`  Error: ${escapeHtml(error)}`] : []),
   ].join("\n");
 }
