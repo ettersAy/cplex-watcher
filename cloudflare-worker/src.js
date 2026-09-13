@@ -377,7 +377,7 @@ async function handleList(env, chatId) {
       sections.push(`🎉 Sales started:\n${uniqueSalesStarted.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error, true)).join("\n")}`);
     }
     if (uniqueMovies.length) {
-      sections.push(`⏳ Watching:\n${uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error)).join("\n")}`);
+      sections.push(`⏳ \n${uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error)).join("\n")}`);
     }
     await telegram(env, chatId, sections.length ? sections.join("\n\n") : "You are not watching any movies.", { parse_mode: "HTML" });
   } catch (error) {
