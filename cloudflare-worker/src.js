@@ -41,12 +41,15 @@ async function handleWatch(env, chatId, title) {
   if (!title) return telegram(env, chatId, "Please provide a movie name. Example: /watch Runner");
 
   const requestId = crypto.randomUUID();
+  console.log(JSON.stringify({ event: "watch_requested", requestId, title }));
   const watches = await getWatches(env);
   watches[`pending:${requestId}`] = { title, status: "pending", requestedAt: new Date().toISOString() };
   await saveWatches(env, watches);
 
   try {
+    console.log(JSON.stringify({ event: "github_dispatch_started", requestId }));
     await dispatchWatch(env, title, requestId);
+    console.log(JSON.stringify({ event: "github_dispatch_accepted", requestId }));
   } catch (error) {
     delete watches[`pending:${requestId}`];
     await saveWatches(env, watches);
@@ -59,10 +62,16 @@ async function handleWatch(env, chatId, title) {
 
 async function handleWatchResult(request, env) {
   if (request.headers.get("X-Watcher-Callback-Secret") !== env.WATCHER_CALLBACK_SECRET) {
+    console.error(JSON.stringify({
+      event: "watch_callback_rejected",
+      callbackSecretPresent: Boolean(request.headers.get("X-Watcher-Callback-Secret")),
+      workerSecretConfigured: Boolean(env.WATCHER_CALLBACK_SECRET),
+    }));
     return new Response("Forbidden", { status: 403 });
   }
 
   const result = await request.json();
+  console.log(JSON.stringify({ event: "watch_callback_received", requestId: result.request_id, status: result.status }));
   const pendingKey = `pending:${result.request_id}`;
   const watches = await getWatches(env);
   const pending = watches[pendingKey];
@@ -73,14 +82,17 @@ async function handleWatchResult(request, env) {
     watches[result.movie.url] = { ...result.movie, alerted: false };
     await saveWatches(env, watches);
     await telegram(env, env.ADMIN_CHAT_ID, `Started watching ${result.movie.name}.\nNext check: within 30 minutes.\n${result.movie.url}`);
+    console.log(JSON.stringify({ event: "watch_registered", requestId: result.request_id, movie: result.movie.name }));
   } else if (result.status === "already_on_sale" && result.movie?.url) {
     delete watches[pendingKey];
     await saveWatches(env, watches);
     await telegram(env, env.ADMIN_CHAT_ID, `Tickets are already on sale for ${result.movie.name}.\n${result.movie.url}`);
+    console.log(JSON.stringify({ event: "watch_already_on_sale", requestId: result.request_id, movie: result.movie.name }));
   } else {
     watches[pendingKey] = { ...pending, status: "failed" };
     await saveWatches(env, watches);
     await telegram(env, env.ADMIN_CHAT_ID, result.error || `I could not find a Cineplex movie matching “${pending.title}”.`);
+    console.log(JSON.stringify({ event: "watch_search_failed", requestId: result.request_id }));
   }
 
   return new Response("ok");
@@ -103,6 +115,7 @@ async function handleUpdate(request, env) {
     await handleWatch(env, chatId, command[1].trim());
   } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
     const watches = Object.values(await getWatches(env));
+    console.log(JSON.stringify({ event: "watch_list_requested", count: watches.length }));
     const descriptions = watches.map((movie) => {
       if (movie.status === "pending") return `• ${movie.title} (searching)`;
       if (movie.status === "failed") return `• ${movie.title} (search failed)`;

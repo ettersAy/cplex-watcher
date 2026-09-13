@@ -33,6 +33,26 @@ jobs:
           WATCH_TITLE: ${{ inputs.title }}
         run: python register_watch.py "$WATCH_TITLE" > registration.json
 
+      - name: Show registration outcome
+        if: github.event_name == 'workflow_dispatch' && always()
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          try:
+              result = json.loads(Path("registration.json").read_text())
+          except (OSError, json.JSONDecodeError) as error:
+              print(f"Registration result unavailable: {error}")
+          else:
+              print(f"Registration status: {result.get('status')}")
+              if result.get("movie"):
+                  print(f"Matched movie: {result['movie'].get('name')}")
+                  print(f"Matched URL: {result['movie'].get('url')}")
+              if result.get("error"):
+                  print(f"Registration error: {result['error']}")
+          PY
+
       - name: Save requested movie
         if: github.event_name == 'workflow_dispatch'
         run: |
@@ -76,6 +96,7 @@ jobs:
           except (OSError, json.JSONDecodeError) as error:
               result = {"status": "error", "error": f"GitHub registration failed: {error}"}
           result["request_id"] = os.environ["REQUEST_ID"]
+          print(f"Sending Worker callback: request_id={result['request_id']}, status={result.get('status')}")
           request = Request(
               os.environ["WORKER_CALLBACK_URL"],
               data=json.dumps(result).encode("utf-8"),
@@ -85,9 +106,14 @@ jobs:
               },
               method="POST",
           )
-          with urlopen(request, timeout=30) as response:
-              if response.status != 200:
-                  raise RuntimeError(f"Worker callback returned HTTP {response.status}")
+          try:
+              with urlopen(request, timeout=30) as response:
+                  if response.status != 200:
+                      raise RuntimeError(f"Worker callback returned HTTP {response.status}")
+                  print("Worker callback accepted")
+          except Exception as error:
+              print(f"Worker callback failed: {error}")
+              raise
           PY
 
       - name: Save alert state
