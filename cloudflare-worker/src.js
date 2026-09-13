@@ -1,8 +1,8 @@
-async function telegram(env, chatId, text) {
+async function telegram(env, chatId, text, options = {}) {
   const response = await fetch(`https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+    body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true, ...options }),
   });
 
   if (!response.ok) {
@@ -47,8 +47,12 @@ async function handleWatch(env, chatId, title) {
   return telegram(env, chatId, `Searching Cineplex for ${title}. I will reply when the watch is registered.`);
 }
 
+function movieKey(url) {
+  return new URL(url).pathname.split("/").filter(Boolean).at(-1);
+}
+
 function nameFromUrl(url) {
-  const slug = new URL(url).pathname.split("/").filter(Boolean).at(-1) || url;
+  const slug = movieKey(url) || url;
   return slug.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
@@ -67,13 +71,59 @@ async function getManagedWatches(env) {
   return movies;
 }
 
+async function getWatchState(env) {
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/state.json`, {
+    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+  });
+  if (!response.ok) throw new Error(`Could not load watch state: HTTP ${response.status}`);
+
+  const state = await response.json();
+  if (!state || typeof state !== "object" || !state.movies || typeof state.movies !== "object") {
+    throw new Error("Watch state file has an invalid format");
+  }
+  return state.movies;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character]);
+}
+
+function nextScheduledCheck() {
+  const now = new Date();
+  const next = new Date(now);
+  next.setUTCSeconds(0, 0);
+  next.setUTCMinutes(now.getUTCMinutes() < 30 ? 30 : 60);
+  const minutes = Math.max(1, Math.ceil((next - now) / 60_000));
+  return `in ${minutes} min (${next.toISOString().replace(/\.\d{3}Z$/, " UTC")})`;
+}
+
+function formatWatch(movie, check, stateError) {
+  const name = movie.name || check?.name || nameFromUrl(movie.url);
+  const link = `<a href="${escapeHtml(movie.url)}">${escapeHtml(name)}</a>`;
+  const failed = Boolean(stateError || !check || check.lastCheckStatus === "failed" || check.lastError);
+  const status = failed ? "Failed" : "Success";
+  const sales = failed ? "Unable to determine" : (check.hasShowtimes ? "Started" : "Not Yet");
+  const error = stateError || check?.lastError;
+  return [
+    `• ${link}`,
+    `  Status: ${status}`,
+    `  Sales: ${sales}`,
+    `  Next scheduled check: ${nextScheduledCheck()}`,
+    `  Last check: ${check?.lastCheckedAt || "Not available"}`,
+    ...(error ? [`  Error: ${escapeHtml(error)}`] : []),
+  ].join("\n");
+}
+
 async function handleList(env, chatId) {
   try {
-    const movies = await getManagedWatches(env);
+    const [movies, stateResult] = await Promise.all([
+      getManagedWatches(env),
+      getWatchState(env).then((state) => ({ state })).catch((error) => ({ error: error.message })),
+    ]);
     const uniqueMovies = [...new Map(movies.map((movie) => [movie.url, movie])).values()];
     console.log(JSON.stringify({ event: "watch_list_requested", count: uniqueMovies.length }));
-    const descriptions = uniqueMovies.map((movie) => `• ${movie.name || nameFromUrl(movie.url)}`);
-    await telegram(env, chatId, descriptions.length ? `Watching:\n${descriptions.join("\n")}` : "You are not watching any movies.");
+    const descriptions = uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error));
+    await telegram(env, chatId, descriptions.length ? `Watching:\n\n${descriptions.join("\n\n")}` : "You are not watching any movies.", { parse_mode: "HTML" });
   } catch (error) {
     console.error("Could not load watched movies:", error);
     await telegram(env, chatId, "I could not load the active watches. Please try again shortly.");

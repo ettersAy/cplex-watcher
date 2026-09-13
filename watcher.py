@@ -92,14 +92,23 @@ def main():
 
     for movie in movies:
         url = movie["url"]
+        key = url.rsplit("/", 1)[-1]
+        previous = state["movies"].get(key, {})
         try:
             current = get_movie(url)
         except (HTTPError, URLError, ValueError, json.JSONDecodeError) as error:
             print(f"WARNING: Could not check {url}: {error}", file=sys.stderr)
+            previous.update({
+                "name": movie.get("name") or previous.get("name") or key,
+                "url": url,
+                "lastCheckedAt": datetime.now(timezone.utc).isoformat(),
+                "lastCheckStatus": "failed",
+                "lastError": str(error),
+            })
+            state["movies"][key] = previous
+            changed = True
             continue
 
-        key = url.rsplit("/", 1)[-1]
-        previous = state["movies"].get(key, {})
         status = "Started" if current["hasShowtimes"] else "Not Yet"
         print(f"{current['name']}: {status}")
 
@@ -122,6 +131,8 @@ def main():
 
         previous.update(current)
         previous["lastCheckedAt"] = datetime.now(timezone.utc).isoformat()
+        previous["lastCheckStatus"] = "success"
+        previous.pop("lastError", None)
         state["movies"][key] = previous
         changed = True
 
