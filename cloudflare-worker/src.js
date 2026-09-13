@@ -94,7 +94,7 @@ function nextScheduledCheck() {
   next.setUTCSeconds(0, 0);
   next.setUTCMinutes(now.getUTCMinutes() < 30 ? 30 : 60);
   const minutes = Math.max(1, Math.ceil((next - now) / 60_000));
-  return `in ${minutes} min (${formatTimestamp(next)})`;
+  return `in ${minutes} min`;
 }
 
 function formatTimestamp(value) {
@@ -115,7 +115,7 @@ function formatWatch(movie, check, stateError) {
     `• ${link}`,
     `  Status: ${status}`,
     `  Sales: ${sales}`,
-    `  Next scheduled check: ${nextScheduledCheck()}`,
+    `  Next check ${nextScheduledCheck()}`,
     `  Last check: ${formatTimestamp(check?.lastCheckedAt)}`,
     ...(error ? [`  Error: ${escapeHtml(error)}`] : []),
   ].join("\n");
