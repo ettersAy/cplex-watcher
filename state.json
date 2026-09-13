@@ -5,81 +5,136 @@
       "releaseDate": "2026-11-06T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/cat-in-the-hat",
-      "lastCheckedAt": "2026-09-13T06:19:30.271510+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:20.425723+00:00",
+      "lastCheckStatus": "success"
     },
     "sense-and-sensibility-2026": {
       "name": "Sense and Sensibility",
       "releaseDate": "2026-10-16T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026",
-      "lastCheckedAt": "2026-09-13T06:19:30.343221+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:20.905290+00:00",
+      "lastCheckStatus": "success"
     },
     "jumanji-open-world": {
       "name": "Jumanji: Open World",
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-09-13T06:19:30.412429+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:21.298776+00:00",
+      "lastCheckStatus": "success"
     },
     "george-michael-the-faith-tour": {
       "name": "George Michael: The Faith Tour",
       "releaseDate": "2026-12-11T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-09-13T06:19:30.486895+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:21.860190+00:00",
+      "lastCheckStatus": "success"
     },
     "azaad-singh-haryanvi-west": {
       "name": "Azaad Singh (Haryanvi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/azaad-singh-haryanvi-west",
-      "lastCheckedAt": "2026-09-13T06:19:30.561952+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:22.633162+00:00",
+      "lastCheckStatus": "success"
     },
     "daayra-hindi-west": {
       "name": "Daayra (Hindi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/daayra-hindi-west",
-      "lastCheckedAt": "2026-09-13T06:19:30.633122+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:23.234576+00:00",
+      "lastCheckStatus": "success"
     },
     "hanuman-ansh-hindi-west": {
       "name": "Hanuman Ansh (Hindi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/hanuman-ansh-hindi-west",
-      "lastCheckedAt": "2026-09-13T06:19:30.698872+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:23.552759+00:00",
+      "lastCheckStatus": "success"
     },
     "mitti-de-putt-punjabi-west": {
       "name": "Mitti De Putt (Punjabi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/mitti-de-putt-punjabi-west",
-      "lastCheckedAt": "2026-09-13T06:19:30.766753+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:24.199615+00:00",
+      "lastCheckStatus": "success"
     },
     "red-flag-arabic-west": {
       "name": "Red Flag (Arabic w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/red-flag-arabic-west",
-      "lastCheckedAt": "2026-09-13T06:19:30.862301+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "Expecting value: line 1 column 1 (char 0)"
+      "lastCheckedAt": "2026-09-13T06:21:24.743351+00:00",
+      "lastCheckStatus": "success"
+    },
+    "lutt-mubarak-punjabi-west": {
+      "name": "Lutt Mubarak (Punjabi w/e.s.t.)",
+      "releaseDate": "2026-09-25T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/lutt-mubarak-punjabi-west",
+      "lastCheckedAt": "2026-09-13T06:21:25.039725+00:00",
+      "lastCheckStatus": "success"
+    },
+    "primetime": {
+      "name": "Primetime",
+      "releaseDate": "2026-09-25T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/primetime",
+      "lastCheckedAt": "2026-09-13T06:21:25.346498+00:00",
+      "lastCheckStatus": "success"
+    },
+    "the-stunt-driver": {
+      "name": "The Stunt Driver",
+      "releaseDate": "2026-09-25T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/the-stunt-driver",
+      "lastCheckedAt": "2026-09-13T06:21:25.858702+00:00",
+      "lastCheckStatus": "success"
+    },
+    "the-vvaan-force-of-the-forrest-hindi-west": {
+      "name": "The Vvaan: Force of the Forrest (Hindi w/e.s.t.)",
+      "releaseDate": "2026-09-25T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/the-vvaan-force-of-the-forrest-hindi-west",
+      "lastCheckedAt": "2026-09-13T06:21:26.425319+00:00",
+      "lastCheckStatus": "success"
+    },
+    "tutt-paini-english-ne-punjabi-west": {
+      "name": "Tutt Paini English Ne (Punjabi w/e.s.t.)",
+      "releaseDate": "2026-09-25T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/tutt-paini-english-ne-punjabi-west",
+      "lastCheckedAt": "2026-09-13T06:21:26.940006+00:00",
+      "lastCheckStatus": "success"
+    },
+    "between-the-mountain-and-the-sky": {
+      "name": "BETWEEN THE MOUNTAIN AND THE SKY",
+      "releaseDate": "2026-09-28T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/between-the-mountain-and-the-sky",
+      "lastCheckedAt": "2026-09-13T06:21:27.069612+00:00",
+      "lastCheckStatus": "success"
+    },
+    "beware-boiuna": {
+      "name": "Beware Boiuna",
+      "releaseDate": "2026-10-02T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/beware-boiuna",
+      "lastCheckedAt": "2026-09-13T06:21:27.484396+00:00",
+      "lastCheckStatus": "success"
+    },
+    "digger": {
+      "name": "Digger",
+      "releaseDate": "2026-10-02T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/digger",
+      "lastCheckedAt": "2026-09-13T06:21:28.047646+00:00",
+      "lastCheckStatus": "success"
     }
   }
 }
