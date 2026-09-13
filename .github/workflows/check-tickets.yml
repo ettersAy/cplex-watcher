@@ -41,13 +41,13 @@ jobs:
           python-version: "3.11"
 
       - name: Find requested movies
-        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove'
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch'
         env:
           WATCH_TITLES: ${{ inputs.titles || inputs.title }}
         run: python register_watch.py --many "$WATCH_TITLES" > registration.json
 
       - name: Show registration outcome
-        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove' && always()
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch' && always()
         run: |
           python - <<'PY'
           import json
@@ -114,18 +114,25 @@ jobs:
           state_path = Path("state.json")
           movies = json.loads(movies_path.read_text())
           if operation == "remove_by_title":
-              try:
-                  registration = json.loads(Path("registration.json").read_text())
-              except (OSError, json.JSONDecodeError) as error:
-                  removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}, "error": f"Could not look up the movie: {error}"}]
+              def normalise(value):
+                  return "".join(character for character in value.lower() if character.isalnum())
+
+              query = normalise(os.environ["WATCH_TITLE"])
+              candidates = []
+              for movie in movies:
+                  slug = movie["url"].rstrip("/").rsplit("/", 1)[-1]
+                  name = movie.get("name") or state["movies"].get(slug, {}).get("name") or slug.replace("-", " ")
+                  if query and query in normalise(name):
+                      candidates.append({**movie, "name": name})
+              if len(candidates) == 1:
+                  targets = candidates
+                  removal_results = []
+              elif len(candidates) > 1:
                   targets = []
+                  removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}, "error": "Several active watches match that title. Use the web page to stop the exact movie."}]
               else:
-                  targets = [item["movie"] for item in registration.get("results", [registration]) if item.get("movie")]
-                  if targets:
-                      removal_results = []
-                  else:
-                      error = next((item.get("error") for item in registration.get("results", [registration]) if item.get("error")), "I could not find a Cineplex movie matching the stop request.")
-                      removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}, "error": error}]
+                  targets = []
+                  removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}}]
           else:
               targets = [{"url": os.environ["WATCH_URL"]}]
               removal_results = []

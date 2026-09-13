@@ -167,7 +167,7 @@ Content-Type: application/json
 /stopwatch Runner
 ```
 
-The bot acknowledges the request, GitHub Actions looks up the official Cineplex URL, then removes the matching active URL and check state. Telegram sends either `Stopped watching …`, `No active watch found …`, or the lookup error. Matching is by canonical Cineplex URL, not just display text.
+The bot acknowledges the request, GitHub Actions matches the title against active watch names and URL slugs, then removes the matching active URL and check state. Telegram sends either `Stopped watching …`, `No active watch found …`, or an ambiguity message directing you to the web page. It never needs a fresh Cineplex lookup to stop a watch.
 
 ### Create or rotate the UI access token
 
