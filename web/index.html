@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <title>Cineplex Watcher</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">Personal ticket availability monitor</p>
+        <h1>Cineplex Watcher</h1>
+        <p class="intro">See active movie watches and submit a title for Cineplex lookup.</p>
+      </header>
+
+      <section class="panel" aria-labelledby="add-watch-heading">
+        <h2 id="add-watch-heading">Add a movie</h2>
+        <form id="queue-form">
+          <label for="movie-title">Movie title</label>
+          <input id="movie-title" name="title" maxlength="140" placeholder="Example: Runner" required>
+          <label for="ui-token">UI access token</label>
+          <input id="ui-token" name="token" type="password" autocomplete="current-password" placeholder="Enter your private token" required>
+          <p class="hint">The token stays in this browser session only. It is never saved in the page source.</p>
+          <button type="submit">Queue movie</button>
+        </form>
+        <p id="queue-result" class="result" role="status"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="watches-heading">
+        <div class="section-heading">
+          <div>
+            <h2 id="watches-heading">Active watches</h2>
+            <p class="hint">Data is refreshed from the watcher repository.</p>
+          </div>
+          <button id="refresh" class="secondary" type="button">Refresh</button>
+        </div>
+        <p id="load-status" class="result" role="status">Loading watches…</p>
+        <div id="watches" class="watches"></div>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -29,6 +29,58 @@ async function dispatchWatch(env, title, requestId) {
   if (!response.ok) throw new Error(`GitHub Actions dispatch failed: ${await response.text()}`);
 }
 
+function queueCorsHeaders(env) {
+  return {
+    "access-control-allow-origin": env.UI_ORIGIN,
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "authorization, content-type",
+    "access-control-max-age": "86400",
+    vary: "Origin",
+  };
+}
+
+function queueResponse(env, body, status = 200) {
+  return Response.json(body, { status, headers: queueCorsHeaders(env) });
+}
+
+async function handleQueue(request, env) {
+  if (request.headers.get("Origin") !== env.UI_ORIGIN) {
+    return queueResponse(env, { error: "This request origin is not allowed." }, 403);
+  }
+  if (!env.UI_ACCESS_TOKEN) {
+    console.error("UI_ACCESS_TOKEN is not configured");
+    return queueResponse(env, { error: "The web queue is not configured yet." }, 503);
+  }
+
+  const authorization = request.headers.get("Authorization") || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (token !== env.UI_ACCESS_TOKEN) {
+    return queueResponse(env, { error: "Invalid UI access token." }, 401);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return queueResponse(env, { error: "Request body must be JSON." }, 400);
+  }
+  const title = typeof body?.title === "string" ? body.title.trim() : "";
+  if (!title || title.length > 140) {
+    return queueResponse(env, { error: "Movie title must contain 1 to 140 characters." }, 400);
+  }
+
+  const requestId = crypto.randomUUID();
+  console.log(JSON.stringify({ event: "web_watch_requested", requestId, title }));
+  try {
+    await dispatchWatch(env, title, requestId);
+    console.log(JSON.stringify({ event: "web_watch_queued", requestId }));
+    return queueResponse(env, { requestId, message: `Searching Cineplex for ${title}.` }, 202);
+  } catch (error) {
+    console.error("Could not dispatch web watch:", error);
+    return queueResponse(env, { error: "Could not start the Cineplex search. Please try again shortly." }, 502);
+  }
+}
+
 async function handleWatch(env, chatId, title) {
   if (!title) return telegram(env, chatId, "Please provide a movie name. Example: /watch Runner");
 
@@ -164,6 +216,11 @@ async function handleUpdate(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/queue" && request.method === "OPTIONS") {
+      if (request.headers.get("Origin") !== env.UI_ORIGIN) return new Response("Forbidden", { status: 403 });
+      return new Response(null, { status: 204, headers: queueCorsHeaders(env) });
+    }
+    if (url.pathname === "/api/queue" && request.method === "POST") return handleQueue(request, env);
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },

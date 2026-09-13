@@ -4,3 +4,4 @@ compatibility_date = "2026-09-13"
 
 [vars]
 GITHUB_REPOSITORY = "ettersAy/cplex-watcher"
+UI_ORIGIN = "https://ettersay.github.io"
