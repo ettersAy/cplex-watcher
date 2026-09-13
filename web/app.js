@@ -1,7 +1,7 @@
 const REPOSITORY_RAW_URL = "https://raw.githubusercontent.com/ettersAy/cplex-watcher/main";
 const WORKER_URL = "https://cplex-watcher.cplexwatcher.workers.dev";
 const tokenInput = document.querySelector("#ui-token");
-const titleInput = document.querySelector("#movie-title");
+const titlesInput = document.querySelector("#movie-titles");
 const queueForm = document.querySelector("#queue-form");
 const queueResult = document.querySelector("#queue-result");
 const watchesElement = document.querySelector("#watches");
@@ -31,30 +31,64 @@ function nextCheck() {
 function watchCard(movie, state) {
   const check = state?.[movieKey(movie.url)];
   const failed = !check || check.lastCheckStatus === "failed" || Boolean(check.lastError);
+  const salesStarted = !failed && check.hasShowtimes;
   const article = document.createElement("article");
   article.className = "watch";
+  const summary = document.createElement("div");
+  summary.className = "watch-summary";
+  const icon = document.createElement("span");
+  icon.className = "watch-icon";
+  icon.textContent = failed ? "🔴" : (salesStarted ? "🎉" : "⏳");
   const link = document.createElement("a");
   link.href = movie.url;
   link.target = "_blank";
   link.rel = "noreferrer";
   link.textContent = movie.name || check?.name || movieKey(movie.url).replace(/-/g, " ");
-  const details = document.createElement("dl");
-  const rows = [
-    ["Status", failed ? "Failed" : "Success"],
-    ["Sales", failed ? "Unable to determine" : (check.hasShowtimes ? "Started" : "Not Yet")],
-    ["Next check", `in ${nextCheck()} min`],
-    ["Last check", formatDate(check?.lastCheckedAt)],
-  ];
-  if (check?.lastError) rows.push(["Error", check.lastError]);
-  for (const [label, value] of rows) {
-    const term = document.createElement("dt");
-    term.textContent = label;
-    const description = document.createElement("dd");
-    description.textContent = value;
-    details.append(term, description);
+  const details = document.createElement("span");
+  details.className = "watch-details";
+  details.textContent = `${failed ? "Check failed" : (salesStarted ? "Sales started" : "Watching")} · 👁️ in ${nextCheck()} min · ${failed ? "❌" : "☀️"} Last check ${formatDate(check?.lastCheckedAt)}`;
+  if (check?.lastError) {
+    const error = document.createElement("span");
+    error.className = "watch-error";
+    error.textContent = ` · 📢 ${check.lastError}`;
+    details.append(error);
   }
-  article.append(link, details);
+  const stopButton = document.createElement("button");
+  stopButton.type = "button";
+  stopButton.className = "stop";
+  stopButton.textContent = "Stop watching";
+  stopButton.addEventListener("click", async () => {
+    const token = tokenInput.value.trim();
+    if (!token) {
+      queueResult.textContent = "Enter your UI access token before stopping a watch.";
+      tokenInput.focus();
+      return;
+    }
+    sessionStorage.setItem("cplex-watcher-ui-token", token);
+    stopButton.disabled = true;
+    queueResult.textContent = "Submitting stop-watching request…";
+    try {
+      const body = await queueRequest("DELETE", { url: movie.url }, token);
+      queueResult.textContent = body.message;
+    } catch (error) {
+      queueResult.textContent = error.message;
+      stopButton.disabled = false;
+    }
+  });
+  summary.append(icon, link, details);
+  article.append(summary, stopButton);
   return article;
+}
+
+async function queueRequest(method, payload, token) {
+  const response = await fetch(`${WORKER_URL}/api/queue`, {
+    method,
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(body.error || "Could not submit the request.");
+  return body;
 }
 
 async function loadWatches() {
@@ -83,21 +117,15 @@ async function loadWatches() {
 
 queueForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const title = titleInput.value.trim();
+  const titles = titlesInput.value.trim();
   const token = tokenInput.value.trim();
-  if (!title || !token) return;
+  if (!titles || !token) return;
   sessionStorage.setItem("cplex-watcher-ui-token", token);
-  queueResult.textContent = "Submitting search…";
+  queueResult.textContent = "Submitting searches…";
   try {
-    const response = await fetch(`${WORKER_URL}/api/queue`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-      body: JSON.stringify({ title }),
-    });
-    const body = await response.json();
-    if (!response.ok) throw new Error(body.error || "Could not queue the movie.");
+    const body = await queueRequest("POST", { titles }, token);
     queueResult.textContent = `${body.message} Telegram will notify you of the result.`;
-    titleInput.value = "";
+    titlesInput.value = "";
   } catch (error) {
     queueResult.textContent = error.message;
   }

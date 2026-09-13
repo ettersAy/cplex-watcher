@@ -1,6 +1,6 @@
 # Cineplex Watcher web interface
 
-This is a static GitHub Pages interface. It loads active watches from the public `movies.json` and `state.json` files, and sends new title requests to the Cloudflare Worker.
+This is a static GitHub Pages interface. It loads active watches from the public `movies.json` and `state.json` files, submits up to 10 newline-separated titles, and can stop an active watch through the Cloudflare Worker.
 
 For the complete architecture, deployment, logs, and troubleshooting guide, see [docs/OPERATIONS.md](../docs/OPERATIONS.md).
 

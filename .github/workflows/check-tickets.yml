@@ -6,8 +6,21 @@ on:
   workflow_dispatch:
     inputs:
       title:
-        description: Movie title requested through Telegram
-        required: true
+        description: One movie title requested through Telegram (legacy single-title input)
+        required: false
+        type: string
+      titles:
+        description: Newline-separated movie titles requested through the web interface
+        required: false
+        type: string
+      operation:
+        description: watch or remove
+        required: false
+        default: watch
+        type: string
+      url:
+        description: Canonical Cineplex URL to remove when operation is remove
+        required: false
         type: string
       request_id:
         description: Worker request identifier
@@ -27,14 +40,14 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Find requested movie
-        if: github.event_name == 'workflow_dispatch'
+      - name: Find requested movies
+        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove'
         env:
-          WATCH_TITLE: ${{ inputs.title }}
-        run: python register_watch.py "$WATCH_TITLE" > registration.json
+          WATCH_TITLES: ${{ inputs.titles || inputs.title }}
+        run: python register_watch.py --many "$WATCH_TITLES" > registration.json
 
       - name: Show registration outcome
-        if: github.event_name == 'workflow_dispatch' && always()
+        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove' && always()
         run: |
           python - <<'PY'
           import json
@@ -45,47 +58,79 @@ jobs:
           except (OSError, json.JSONDecodeError) as error:
               print(f"Registration result unavailable: {error}")
           else:
-              print(f"Registration status: {result.get('status')}")
-              if result.get("movie"):
-                  print(f"Matched movie: {result['movie'].get('name')}")
-                  print(f"Matched URL: {result['movie'].get('url')}")
-              if result.get("error"):
-                  print(f"Registration error: {result['error']}")
+              for item in result.get("results", [result]):
+                  print(f"Registration status: {item.get('status')}")
+                  if item.get("movie"):
+                      print(f"Matched movie: {item['movie'].get('name')}")
+                      print(f"Matched URL: {item['movie'].get('url')}")
+                  if item.get("error"):
+                      print(f"Registration error: {item['error']}")
           PY
 
-      - name: Save requested movie
-        if: github.event_name == 'workflow_dispatch'
+      - name: Save requested movies
+        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove'
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
 
-          result = json.loads(Path("registration.json").read_text())
-          if result["status"] != "watching":
-              raise SystemExit(0)
-
+          registration_path = Path("registration.json")
+          registration = json.loads(registration_path.read_text())
+          results = registration.get("results", [registration])
           movies_path = Path("movies.json")
           movies = json.loads(movies_path.read_text())
-          movie = result["movie"]
-          url = movie["url"]
-          if any(existing["url"] == url for existing in movies):
-              result["status"] = "already_watching"
-              Path("registration.json").write_text(json.dumps(result) + "\n")
-              print(f"Movie is already watched: {url}")
-          else:
-              movies.append({"url": url, "name": movie["name"]})
+          changed = False
+          for result in results:
+              if result["status"] != "watching":
+                  continue
+              movie = result["movie"]
+              url = movie["url"]
+              if any(existing["url"] == url for existing in movies):
+                  result["status"] = "already_watching"
+                  print(f"Movie is already watched: {url}")
+              else:
+                  movies.append({"url": url, "name": movie["name"]})
+                  changed = True
+                  print(f"Added watched movie: {url}")
+          if changed:
               movies_path.write_text(json.dumps(movies, indent=2) + "\n")
-              print(f"Added watched movie: {url}")
+          registration_path.write_text(json.dumps(registration) + "\n")
+          PY
+
+      - name: Remove requested movie
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'remove'
+        env:
+          WATCH_URL: ${{ inputs.url }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          url = os.environ["WATCH_URL"]
+          movies_path = Path("movies.json")
+          state_path = Path("state.json")
+          movies = json.loads(movies_path.read_text())
+          removed = [movie for movie in movies if movie["url"] == url]
+          movies = [movie for movie in movies if movie["url"] != url]
+          if removed:
+              movies_path.write_text(json.dumps(movies, indent=2) + "\n")
+          state = json.loads(state_path.read_text()) if state_path.exists() else {"movies": {}}
+          state["movies"].pop(url.rstrip("/").rsplit("/", 1)[-1], None)
+          state_path.write_text(json.dumps(state, indent=2) + "\n")
+          Path("removal.json").write_text(json.dumps({"removed": bool(removed), "movie": removed[0] if removed else {"url": url}}) + "\n")
+          print(f"Removed watch: {bool(removed)}")
           PY
 
       - name: Check movies and notify Telegram
+        if: github.event_name != 'workflow_dispatch' || inputs.operation != 'remove'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python watcher.py
 
       - name: Send registration result to Telegram
-        if: github.event_name == 'workflow_dispatch' && always()
+        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'remove' && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -99,20 +144,44 @@ jobs:
           try:
               result = json.loads(Path("registration.json").read_text())
           except (OSError, json.JSONDecodeError) as error:
-              result = {"status": "error", "error": f"GitHub registration failed: {error}"}
-          if result.get("status") == "watching":
-              movie = result["movie"]
-              text = f"Started watching {movie['name']}.\nNext check: within 30 minutes.\n{movie['url']}"
-          elif result.get("status") == "already_watching":
-              movie = result["movie"]
-              text = f"Already watching {movie['name']}.\n{movie['url']}"
-          elif result.get("status") == "already_on_sale":
-              movie = result["movie"]
-              text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
+              result = {"results": [{"status": "error", "error": f"GitHub registration failed: {error}"}]}
+          for item in result.get("results", [result]):
+              if item.get("status") == "watching":
+                  movie = item["movie"]
+                  text = f"Started watching {movie['name']}.\nNext check: within 30 minutes.\n{movie['url']}"
+              elif item.get("status") == "already_watching":
+                  movie = item["movie"]
+                  text = f"Already watching {movie['name']}.\n{movie['url']}"
+              elif item.get("status") == "already_on_sale":
+                  movie = item["movie"]
+                  text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
+              else:
+                  text = item.get("error", "I could not complete the Cineplex search.")
+              send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
+              print(f"Telegram registration result sent: status={item.get('status')}")
+          PY
+
+      - name: Send removal result to Telegram
+        if: github.event_name == 'workflow_dispatch' && inputs.operation == 'remove' && always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from watcher import send_telegram
+
+          try:
+              result = json.loads(Path("removal.json").read_text())
+          except (OSError, json.JSONDecodeError) as error:
+              text = f"Could not stop the watch: {error}"
           else:
-              text = result.get("error", "I could not complete the Cineplex search.")
+              name = result["movie"].get("name") or result["movie"]["url"]
+              text = f"Stopped watching {name}." if result["removed"] else f"No active watch found for {name}."
           send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"], text)
-          print(f"Telegram registration result sent: status={result.get('status')}")
+          print("Telegram removal result sent")
           PY
 
       - name: Save alert state

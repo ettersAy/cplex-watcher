@@ -11,17 +11,23 @@ h2 { font-size: 1.15rem; margin-bottom: 20px; }
 .panel { background: #1a202c; border: 1px solid #2e3749; border-radius: 16px; margin-bottom: 20px; padding: 24px; }
 form { display: grid; gap: 9px; max-width: 580px; }
 label { font-size: .9rem; font-weight: 700; margin-top: 8px; }
-input { background: #10131a; border: 1px solid #3d485e; border-radius: 8px; color: inherit; font: inherit; padding: 12px; }
-input:focus { border-color: #75d7a9; outline: 2px solid #75d7a933; }
+input, textarea { background: #10131a; border: 1px solid #3d485e; border-radius: 8px; color: inherit; font: inherit; padding: 12px; }
+textarea { resize: vertical; }
+input:focus, textarea:focus { border-color: #75d7a9; outline: 2px solid #75d7a933; }
 button { background: #75d7a9; border: 0; border-radius: 8px; color: #0e1713; cursor: pointer; font: inherit; font-weight: 800; margin-top: 10px; padding: 12px 16px; width: fit-content; }
 button:hover { background: #96e4bd; }
 button.secondary { background: transparent; border: 1px solid #52617a; color: #dbe3f1; margin: 0; }
 .section-heading { align-items: start; display: flex; justify-content: space-between; gap: 16px; }
 .section-heading h2 { margin-bottom: 6px; }
-.watches { display: grid; gap: 12px; }
-.watch { background: #10131a; border-left: 3px solid #75d7a9; border-radius: 8px; padding: 16px; }
-.watch > a { color: #9ad6ff; font-size: 1.05rem; font-weight: 750; text-decoration: none; }
-.watch > a:hover { text-decoration: underline; }
-dl { display: grid; grid-template-columns: 140px 1fr; gap: 6px 12px; margin: 14px 0 0; }
-dt { color: #8e9ab0; } dd { margin: 0; overflow-wrap: anywhere; }
-@media (max-width: 560px) { main { padding-top: 36px; } .panel { padding: 18px; } dl { grid-template-columns: 1fr; gap: 2px; } dd { margin-bottom: 8px; } }
+.watches { display: grid; gap: 8px; }
+.watch { align-items: center; background: #151b26; border: 1px solid #293447; border-radius: 10px; display: flex; gap: 12px; justify-content: space-between; padding: 12px 14px; }
+.watch-summary { align-items: center; display: flex; flex: 1; flex-wrap: wrap; gap: 7px; min-width: 0; }
+.watch-icon { font-size: 1.05rem; }
+.watch a { color: #b9e1ff; font-weight: 750; text-decoration: none; }
+.watch a:hover { text-decoration: underline; }
+.watch-details { color: #aeb7c8; font-size: .9rem; overflow-wrap: anywhere; }
+.watch-error { color: #ffb0a8; }
+button.stop { background: transparent; border: 1px solid #52617a; color: #dbe3f1; flex: 0 0 auto; font-size: .82rem; margin: 0; padding: 7px 10px; }
+button.stop:hover { border-color: #ff8a80; color: #ffb0a8; }
+button:disabled { cursor: wait; opacity: .6; }
+@media (max-width: 560px) { main { padding-top: 36px; } .panel { padding: 18px; } .watch { align-items: flex-start; flex-direction: column; } }

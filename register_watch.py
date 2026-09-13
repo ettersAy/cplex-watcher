@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Find one Cineplex movie by title for the GitHub Actions registration flow."""
+"""Find one or more Cineplex movies for the GitHub Actions registration flow."""
 
 import argparse
 import json
@@ -55,12 +55,23 @@ def find_movie(title):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("title")
+    parser.add_argument("title", nargs="?")
+    parser.add_argument("--many", help="Newline-separated movie titles to look up")
     args = parser.parse_args()
-    try:
-        result = find_movie(args.title)
-    except (HTTPError, URLError, ValueError, json.JSONDecodeError) as error:
-        result = {"status": "error", "error": f"Cineplex search failed: {error}"}
+
+    def lookup(title):
+        try:
+            return find_movie(title)
+        except (HTTPError, URLError, ValueError, json.JSONDecodeError) as error:
+            return {"status": "error", "error": f"Cineplex search failed: {error}"}
+
+    if args.many is not None:
+        titles = [line.strip() for line in args.many.splitlines() if line.strip()]
+        result = {"results": [lookup(title) for title in titles]}
+    elif args.title:
+        result = lookup(args.title)
+    else:
+        parser.error("provide a movie title or --many")
     print(json.dumps(result))
 
 

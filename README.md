@@ -28,9 +28,11 @@ Telegram:
 Web page:
 
 1. Open <https://ettersay.github.io/cplex-watcher/>.
-2. Enter a movie title and your private UI access token.
-3. Click **Queue movie**.
+2. Enter one movie title per line and your private UI access token.
+3. Click **Queue movies**.
 4. Telegram receives the final lookup result. Refresh the page after a successful registration.
+
+Use **Stop watching** on any active-watch card to remove that exact movie URL. Telegram confirms the result after GitHub Actions completes the removal.
 
 `/list` and the web page show clickable Cineplex links, check status, ticket-sale state, next scheduled check, last check, and any saved error.
 

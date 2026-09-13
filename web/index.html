@@ -12,18 +12,18 @@
       <header>
         <p class="eyebrow">Personal ticket availability monitor</p>
         <h1>Cineplex Watcher</h1>
-        <p class="intro">See active movie watches and submit a title for Cineplex lookup.</p>
+        <p class="intro">See active movie watches and submit one movie title per line for Cineplex lookup.</p>
       </header>
 
       <section class="panel" aria-labelledby="add-watch-heading">
         <h2 id="add-watch-heading">Add a movie</h2>
         <form id="queue-form">
-          <label for="movie-title">Movie title</label>
-          <input id="movie-title" name="title" maxlength="140" placeholder="Example: Runner" required>
+          <label for="movie-titles">Movie titles</label>
+          <textarea id="movie-titles" name="titles" maxlength="1410" rows="5" placeholder="Runner&#10;George Michael: The Faith Tour" required></textarea>
           <label for="ui-token">UI access token</label>
           <input id="ui-token" name="token" type="password" autocomplete="current-password" placeholder="Enter your private token" required>
           <p class="hint">The token stays in this browser session only. It is never saved in the page source.</p>
-          <button type="submit">Queue movie</button>
+          <button type="submit">Queue movies</button>
         </form>
         <p id="queue-result" class="result" role="status"></p>
       </section>

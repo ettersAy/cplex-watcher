@@ -10,7 +10,7 @@ async function telegram(env, chatId, text, options = {}) {
   }
 }
 
-async function dispatchWatch(env, title, requestId) {
+async function dispatchWatch(env, titles, requestId) {
   if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
     throw new Error("GitHub Actions dispatch is not configured");
   }
@@ -24,26 +24,41 @@ async function dispatchWatch(env, title, requestId) {
       "user-agent": "CineplexTicketWatcher",
       "x-github-api-version": "2022-11-28",
     },
-    body: JSON.stringify({ ref: "main", inputs: { title, request_id: requestId } }),
+    body: JSON.stringify({ ref: "main", inputs: { title: titles[0], titles: titles.join("\n"), operation: "watch", request_id: requestId } }),
   });
   if (!response.ok) throw new Error(`GitHub Actions dispatch failed: ${await response.text()}`);
+}
+
+async function dispatchRemoval(env, url, requestId) {
+  if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
+    throw new Error("GitHub Actions dispatch is not configured");
+  }
+
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/check-tickets.yml/dispatches`, {
+    method: "POST",
+    headers: {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+      "content-type": "application/json",
+      "user-agent": "CineplexTicketWatcher",
+      "x-github-api-version": "2022-11-28",
+    },
+    body: JSON.stringify({ ref: "main", inputs: { operation: "remove", url, request_id: requestId } }),
+  });
+  if (!response.ok) throw new Error(`GitHub Actions removal dispatch failed: ${await response.text()}`);
 }
 
 function queueCorsHeaders(env) {
   return {
     "access-control-allow-origin": env.UI_ORIGIN,
-    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-methods": "POST, DELETE, OPTIONS",
     "access-control-allow-headers": "authorization, content-type",
     "access-control-max-age": "86400",
     vary: "Origin",
   };
 }
 
-function queueResponse(env, body, status = 200) {
-  return Response.json(body, { status, headers: queueCorsHeaders(env) });
-}
-
-async function handleQueue(request, env) {
+function queueAuthenticationError(request, env) {
   if (request.headers.get("Origin") !== env.UI_ORIGIN) {
     return queueResponse(env, { error: "This request origin is not allowed." }, 403);
   }
@@ -51,12 +66,30 @@ async function handleQueue(request, env) {
     console.error("UI_ACCESS_TOKEN is not configured");
     return queueResponse(env, { error: "The web queue is not configured yet." }, 503);
   }
-
   const authorization = request.headers.get("Authorization") || "";
   const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
   if (token !== env.UI_ACCESS_TOKEN) {
     return queueResponse(env, { error: "Invalid UI access token." }, 401);
   }
+  return null;
+}
+
+function parseMovieTitles(body) {
+  const value = typeof body?.titles === "string" ? body.titles : (typeof body?.title === "string" ? body.title : "");
+  const titles = [...new Map(value.split(/\r?\n/).map((title) => title.trim()).filter(Boolean).map((title) => [title.toLocaleLowerCase(), title])).values()];
+  if (!titles.length || titles.length > 10 || titles.some((title) => title.length > 140)) {
+    return null;
+  }
+  return titles;
+}
+
+function queueResponse(env, body, status = 200) {
+  return Response.json(body, { status, headers: queueCorsHeaders(env) });
+}
+
+async function handleQueue(request, env) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
 
   let body;
   try {
@@ -64,20 +97,50 @@ async function handleQueue(request, env) {
   } catch {
     return queueResponse(env, { error: "Request body must be JSON." }, 400);
   }
-  const title = typeof body?.title === "string" ? body.title.trim() : "";
-  if (!title || title.length > 140) {
-    return queueResponse(env, { error: "Movie title must contain 1 to 140 characters." }, 400);
+  const titles = parseMovieTitles(body);
+  if (!titles) {
+    return queueResponse(env, { error: "Provide 1 to 10 movie titles, one per line, with at most 140 characters each." }, 400);
   }
 
   const requestId = crypto.randomUUID();
-  console.log(JSON.stringify({ event: "web_watch_requested", requestId, title }));
+  console.log(JSON.stringify({ event: "web_watch_requested", requestId, count: titles.length, titles }));
   try {
-    await dispatchWatch(env, title, requestId);
+    await dispatchWatch(env, titles, requestId);
     console.log(JSON.stringify({ event: "web_watch_queued", requestId }));
-    return queueResponse(env, { requestId, message: `Searching Cineplex for ${title}.` }, 202);
+    return queueResponse(env, { requestId, message: `Searching Cineplex for ${titles.length} ${titles.length === 1 ? "movie" : "movies"}.` }, 202);
   } catch (error) {
     console.error("Could not dispatch web watch:", error);
     return queueResponse(env, { error: "Could not start the Cineplex search. Please try again shortly." }, 502);
+  }
+}
+
+async function handleRemoveWatch(request, env) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return queueResponse(env, { error: "Request body must be JSON." }, 400);
+  }
+  const url = typeof body?.url === "string" ? body.url.trim() : "";
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== "www.cineplex.com" || !parsed.pathname.startsWith("/movie/")) throw new Error("invalid URL");
+  } catch {
+    return queueResponse(env, { error: "A valid official Cineplex movie URL is required." }, 400);
+  }
+
+  const requestId = crypto.randomUUID();
+  console.log(JSON.stringify({ event: "web_watch_removal_requested", requestId, url }));
+  try {
+    await dispatchRemoval(env, url, requestId);
+    console.log(JSON.stringify({ event: "web_watch_removal_queued", requestId }));
+    return queueResponse(env, { requestId, message: "Stop-watching request queued. Telegram will confirm the result." }, 202);
+  } catch (error) {
+    console.error("Could not dispatch web watch removal:", error);
+    return queueResponse(env, { error: "Could not start the stop-watching request. Please try again shortly." }, 502);
   }
 }
 
@@ -89,7 +152,7 @@ async function handleWatch(env, chatId, title) {
 
   try {
     console.log(JSON.stringify({ event: "github_dispatch_started", requestId }));
-    await dispatchWatch(env, title, requestId);
+    await dispatchWatch(env, [title], requestId);
     console.log(JSON.stringify({ event: "github_dispatch_accepted", requestId }));
   } catch (error) {
     console.error("Could not dispatch GitHub Actions watch:", error);
@@ -221,6 +284,7 @@ export default {
       return new Response(null, { status: 204, headers: queueCorsHeaders(env) });
     }
     if (url.pathname === "/api/queue" && request.method === "POST") return handleQueue(request, env);
+    if (url.pathname === "/api/queue" && request.method === "DELETE") return handleRemoveWatch(request, env);
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },

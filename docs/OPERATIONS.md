@@ -87,8 +87,20 @@ The page is intentionally basic:
 
 - Shows the same active-watch data as `/list`.
 - Links every title to the official Cineplex page.
-- Lets the admin submit one title through the protected queue endpoint.
-- Does not include a database or a separate persistent web queue. A successful search appears after the GitHub Action updates `movies.json`; refresh the page then.
+- Lets the admin submit 1 to 10 titles, one title per line, through the protected queue endpoint.
+- Lets the admin stop watching an active movie by its exact official Cineplex URL.
+- Does not include a database or a separate persistent web queue. A successful search or removal appears after the GitHub Action updates `movies.json`; refresh the page then.
+
+Each light-weight card uses icons to summarize the latest state:
+
+| Icon | Meaning |
+|---|---|
+| `⏳` | Watching; ticket sales have not started. |
+| `🎉` | Ticket sales started. |
+| `🔴` | Last check failed. |
+| `☀️` | Last check succeeded. |
+| `❌` | Last check failed; ticket availability is unknown. |
+| `📢` | Saved check error follows. |
 
 ### Web queue API
 
@@ -98,13 +110,28 @@ Origin: https://ettersay.github.io
 Authorization: Bearer <UI_ACCESS_TOKEN>
 Content-Type: application/json
 
-{"title":"Movie Name"}
+{"titles":"Movie Name\nAnother Movie Name"}
 ```
+
+The Worker trims blank lines, keeps the first occurrence of repeated titles without case sensitivity, and accepts at most 10 titles of 140 characters each. One request dispatches one Action, which processes the titles sequentially before updating shared state.
+
+Stop watching uses the same protected endpoint:
+
+```text
+DELETE https://cplex-watcher.cplexwatcher.workers.dev/api/queue
+Origin: https://ettersay.github.io
+Authorization: Bearer <UI_ACCESS_TOKEN>
+Content-Type: application/json
+
+{"url":"https://www.cineplex.com/movie/example"}
+```
+
+The Action removes the exact URL from `movies.json` and the matching state entry from `state.json`, then sends a Telegram confirmation.
 
 | HTTP status | Meaning |
 |---|---|
-| `202` | Search was accepted and a GitHub Action was dispatched. |
-| `400` | Invalid JSON or title is missing/longer than 140 characters. |
+| `202` | Search or stop-watching request was accepted and a GitHub Action was dispatched. |
+| `400` | Invalid JSON, invalid Cineplex URL, or no valid titles (more than 10 titles or a title longer than 140 characters). |
 | `401` | UI access token is missing or incorrect. |
 | `403` | Browser origin is not the configured GitHub Pages origin. |
 | `502` | GitHub Action dispatch failed. |
@@ -280,8 +307,8 @@ gh run view RUN_ID --log-failed
 
 Expected workflow steps:
 
-1. **Find requested movie** for `/watch` or web requests.
-2. **Save requested movie**, which deduplicates by official URL.
+1. **Find requested movies** for `/watch` or web requests; multi-line web titles run sequentially in one Action.
+2. **Save requested movies**, which deduplicates by official URL, or **Remove requested movie** for a stop request.
 3. **Check movies and notify Telegram**.
 4. **Send registration result to Telegram**.
 5. **Save alert state**, which commits changed `movies.json` and `state.json`.
@@ -289,7 +316,7 @@ Expected workflow steps:
 ### End-to-end smoke test
 
 1. Start `wrangler tail`.
-2. Send `/watch Runner` or submit a title through the web page.
+2. Send `/watch Runner`, submit one or more lines through the web page, or stop one active watch.
 3. Confirm the immediate acknowledgement or `202` queued response.
 4. Find the corresponding Action run and wait for completion.
 5. Confirm the final Telegram result.
