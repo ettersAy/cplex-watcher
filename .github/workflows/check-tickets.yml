@@ -113,6 +113,7 @@ jobs:
           movies_path = Path("movies.json")
           state_path = Path("state.json")
           movies = json.loads(movies_path.read_text())
+          state = json.loads(state_path.read_text()) if state_path.exists() else {"movies": {}}
           if operation == "remove_by_title":
               def normalise(value):
                   return "".join(character for character in value.lower() if character.isalnum())
@@ -137,7 +138,6 @@ jobs:
               targets = [{"url": os.environ["WATCH_URL"]}]
               removal_results = []
 
-          state = json.loads(state_path.read_text()) if state_path.exists() else {"movies": {}}
           for target in targets:
               url = target["url"]
               removed = [movie for movie in movies if movie["url"] == url]
