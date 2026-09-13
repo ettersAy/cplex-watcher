@@ -1,6 +1,6 @@
 # Immediate Telegram bot (Cloudflare Worker)
 
-This is the immediate-reply version of the Cineplex watcher. It accepts Telegram commands through a webhook and checks watched movies every 30 minutes.
+This Worker accepts Telegram commands immediately. GitHub Actions performs Cineplex searches and the 30-minute checks because Cineplex rejects requests from the Cloudflare network.
 
 ## Commands
 
@@ -40,6 +40,8 @@ This is the immediate-reply version of the Cineplex watcher. It accepts Telegram
    wrangler secret put TELEGRAM_BOT_TOKEN
    wrangler secret put ADMIN_CHAT_ID
    wrangler secret put TELEGRAM_WEBHOOK_SECRET
+   wrangler secret put GITHUB_ACTIONS_TOKEN
+   wrangler secret put WATCHER_CALLBACK_SECRET
    ```
 
    For `TELEGRAM_WEBHOOK_SECRET`, use a long random value. For example:
@@ -48,7 +50,14 @@ This is the immediate-reply version of the Cineplex watcher. It accepts Telegram
    openssl rand -hex 32
    ```
 
-7. Register the Telegram webhook. Replace the Worker URL only; Terminal asks for the token and webhook secret without showing them.
+7. Create a fine-grained GitHub personal access token for this repository with **Actions: Read and write**, then enter it for `GITHUB_ACTIONS_TOKEN`.
+
+8. Generate a separate callback secret with `openssl rand -hex 32`. Enter it for `WATCHER_CALLBACK_SECRET`, and add both of these repository Actions secrets in GitHub:
+
+   - `WORKER_CALLBACK_URL`: `https://cplex-watcher.<your-subdomain>.workers.dev/internal/watch-result`
+   - `WATCHER_CALLBACK_SECRET`: the same callback value entered in the Worker.
+
+9. Register the Telegram webhook. Replace the Worker URL only; Terminal asks for the token and webhook secret without showing them.
 
    ```bash
    python3 - <<'PY'
@@ -67,10 +76,10 @@ This is the immediate-reply version of the Cineplex watcher. It accepts Telegram
    PY
    ```
 
-8. In Telegram, press **Start** on your bot and send:
+10. In Telegram, press **Start** on your bot and send:
 
    ```text
    /watch Runner
    ```
 
-The existing GitHub Actions watcher can remain as a backup, but disable it to avoid duplicate checks once this Worker is running.
+Keep the GitHub Actions watcher enabled: it is the component that can reach Cineplex and sends the final registration result back to this Worker.

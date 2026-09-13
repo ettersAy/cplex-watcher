@@ -2,8 +2,8 @@ name = "cplex-watcher"
 main = "src.js"
 compatibility_date = "2026-09-13"
 
-[triggers]
-crons = ["*/30 * * * *"]
+[vars]
+GITHUB_REPOSITORY = "ettersAy/cplex-watcher"
 
 [[kv_namespaces]]
 binding = "WATCHES"

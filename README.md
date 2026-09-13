@@ -2,7 +2,7 @@
 
 A free Telegram bot that watches official Cineplex movie pages and alerts you when tickets start selling.
 
-The recommended version is the **Cloudflare Worker** in `cloudflare-worker/`. It replies immediately to Telegram commands and checks watched movies every 30 minutes.
+The recommended version combines a **Cloudflare Worker** for immediate Telegram commands with **GitHub Actions** for Cineplex searches and 30-minute checks. Cineplex currently rejects requests from Cloudflare, while the GitHub Ubuntu runner can read the official movie pages.
 
 ## Bot commands
 
@@ -11,7 +11,7 @@ The recommended version is the **Cloudflare Worker** in `cloudflare-worker/`. It
 /list
 ```
 
-`/watch Runner` finds the matching Cineplex page, replies immediately, and starts monitoring it. If several titles match, the bot asks you for a more specific title.
+`/watch Runner` replies immediately that it is searching. GitHub Actions finds the matching Cineplex page, then the bot sends a second message confirming the watch (or asking for a more specific title).
 
 ## Install and deploy the immediate bot
 
@@ -86,7 +86,7 @@ https://cplex-watcher.<your-subdomain>.workers.dev
 
 There is no separate build command: `wrangler deploy` builds and deploys this plain JavaScript Worker.
 
-### 5. Add the three private Worker secrets
+### 5. Add the Worker secrets
 
 Run each command below. Terminal asks for the value privately; it does not show what you paste.
 
@@ -94,6 +94,8 @@ Run each command below. Terminal asks for the value privately; it does not show 
 wrangler secret put TELEGRAM_BOT_TOKEN
 wrangler secret put ADMIN_CHAT_ID
 wrangler secret put TELEGRAM_WEBHOOK_SECRET
+wrangler secret put GITHUB_ACTIONS_TOKEN
+wrangler secret put WATCHER_CALLBACK_SECRET
 ```
 
 Use these values:
@@ -103,8 +105,25 @@ Use these values:
 | `TELEGRAM_BOT_TOKEN` | The current token from BotFather. Never commit or paste it into GitHub. |
 | `ADMIN_CHAT_ID` | Your numeric Telegram chat ID. |
 | `TELEGRAM_WEBHOOK_SECRET` | A long random value only used between Telegram and Cloudflare. |
+| `GITHUB_ACTIONS_TOKEN` | A fine-grained GitHub personal access token for this repository with **Actions: Read and write** permission. |
+| `WATCHER_CALLBACK_SECRET` | A new long random value shared with the GitHub Action only. |
 
 Generate a webhook secret, then copy its output when `wrangler secret put TELEGRAM_WEBHOOK_SECRET` asks for it:
+
+```bash
+openssl rand -hex 32
+```
+
+### 6. Connect GitHub Actions to the Worker
+
+The repository already has the `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` GitHub Actions secrets for sale notifications. Add these two more repository secrets at **GitHub → Settings → Secrets and variables → Actions**:
+
+| GitHub secret | Value |
+|---|---|
+| `WORKER_CALLBACK_URL` | `https://cplex-watcher.cplexwatcher.workers.dev/internal/watch-result` |
+| `WATCHER_CALLBACK_SECRET` | The exact same new value entered for the Worker secret above. |
+
+To create the shared callback value without putting it in a file, run this once and use the printed value for both prompts:
 
 ```bash
 openssl rand -hex 32
@@ -142,7 +161,7 @@ Paste only the raw token, similar to this:
 
 Do not paste `bot` before it, the API URL, the bot username, quotes, or spaces.
 
-### 6. Connect Telegram to the Worker
+### 7. Connect Telegram to the Worker
 
 Run this command. It asks for values privately:
 
@@ -183,7 +202,7 @@ The result must contain:
 {"ok":true}
 ```
 
-### 7. Test it
+### 8. Test it
 
 1. Open your Telegram bot and press **Start**.
 2. Send:
@@ -192,14 +211,13 @@ The result must contain:
    /watch Runner
    ```
 
-3. The bot should answer immediately:
+3. The bot should first answer immediately:
 
    ```text
-   Started watching Runner.
-   Next check: within 30 minutes.
+   Searching Cineplex for Runner. I will reply when the watch is registered.
    ```
 
-4. Send `/list` to see every watched movie.
+4. Within a few minutes, it sends either the matching watch confirmation or a title-specific error. Send `/list` to see pending and confirmed watches.
 
 ## Updating the Worker later
 
@@ -213,14 +231,9 @@ git commit -m "Update Cineplex watcher"
 git push
 ```
 
-## Original GitHub Actions watcher
+## GitHub Actions watcher
 
-The older GitHub Actions watcher checks the three fixed URLs in `movies.json`. Once the Cloudflare Worker works, disable the GitHub workflow to avoid duplicate checks:
-
-1. Open [Actions](https://github.com/ettersAy/cplex-watcher/actions).
-2. Open **Check Cineplex ticket sales**.
-3. Click the **…** menu.
-4. Click **Disable workflow**.
+Keep **Check Cineplex ticket sales** enabled. It performs the Cineplex title lookup requested by the Worker, saves newly registered URLs in `movies.json`, and checks every saved URL every 30 minutes.
 
 ## How ticket availability is detected
 
