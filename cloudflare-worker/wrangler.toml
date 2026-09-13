@@ -4,7 +4,3 @@ compatibility_date = "2026-09-13"
 
 [vars]
 GITHUB_REPOSITORY = "ettersAy/cplex-watcher"
-
-[[kv_namespaces]]
-binding = "WATCHES"
-id = "2f98f1bb544e4cdab29407f55a7a4708"
