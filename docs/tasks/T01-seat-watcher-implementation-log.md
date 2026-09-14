@@ -290,3 +290,15 @@ currently available selected seats by row, shows each enabled successful
 showtime exactly once in either the availability or no-availability section,
 keeps failures separate, and links every showtime to Cineplex preview. The
 same message-rendering script covers both `/listseats` and `/seatinfo`.
+
+## 2026-09-13 — Stage 11: `/seatinfo` live proof
+
+The Worker was deployed as version `bb0c1c56-253f-40cc-841d-2584e9613258`.
+A real Telegram `/seatinfo Dune` request returned a clickable `#405853`, the
+current nine E-row seats (`E9` through `E17`), latest saved check time, and the
+approved add, stop, and web-interface follow-ups. No occupied or out-of-rule
+seat was included.
+
+Lesson retained: use the saved selected-seat statuses for the detailed view,
+not all raw availability-response seats. That makes the user-facing details
+match the configured label rule exactly.

@@ -556,8 +556,9 @@ async function handleSeatInfo(env, chatId, name) {
     const withAvailability = successful.filter((item) => item.availableRows.length);
     const withoutAvailability = successful.filter((item) => !item.availableRows.length);
     const availableCount = withAvailability.reduce((count, item) => count + item.availableCount, 0);
+    const showtimeCount = enabledSeatShowtimeIds(watch).length;
     const sections = [
-      `🎟 <b>${escapeHtml(watch.name)}</b> — ${availableCount} seats available, ${enabledSeatShowtimeIds(watch).length} showtimes`,
+      `🎟 <b>${escapeHtml(watch.name)}</b> — ${availableCount} seats available, ${showtimeCount} ${showtimeCount === 1 ? "showtime" : "showtimes"}`,
       `${escapeHtml(watch.theatreName)} (#${escapeHtml(watch.theatreId)}) · next 👁 ${nextScheduledCheck()}`,
       `Checked at ${formatTimestamp(watchState.lastCheckedAt)}`,
     ];
