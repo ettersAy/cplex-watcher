@@ -561,24 +561,10 @@ function seatWatchSummaryHtml(watch, watchState) {
   const firstAvailableShowtimeId = availableSeats.find((seat) => seat.showtimeId)?.showtimeId;
   const linkShowtimeId = firstAvailableShowtimeId || showtimeIds[0];
   const failed = watchState?.lastCheckStatus === "failed" || showtimeIds.some((showtimeId) => watchState?.showtimes?.[showtimeId]?.lastCheckStatus === "failed");
-  const icon = failed ? "❌" : "⏳";
+  const icon = failed ? "❌" : (availableSeats.length ? "🟢" : "⚪");
   const scanStatus = failed ? "⚠️ failed" : `👁 ${nextScheduledCheck()}`;
-  const line = `${icon} ${escapeHtml(watch.name)} · 🪑 ${availableSeats.length} · #${escapeHtml(watch.theatreId)} · 🎬 ${showtimeIds.length} · ${scanStatus}`;
-  return `<a href="${escapeHtml(`https://www.cineplex.com/ticketing/preview?theatreId=${watch.theatreId}&showtimeId=${linkShowtimeId}`, true)}">${line}</a>`;
-}
-
-function seatLabelsByRow(selectedSeats) {
-  const rows = new Map();
-  for (const seat of Object.values(selectedSeats || {})) {
-    if (seat?.status !== "Available" || typeof seat.label !== "string") continue;
-    const match = /^([A-Z]+)(\d+)$/.exec(seat.label);
-    if (!match) continue;
-    const [_, row, number] = match;
-    rows.set(row, [...(rows.get(row) || []), Number(number)]);
-  }
-  return [...rows.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([row, numbers]) => `${row}: ${numbers.sort((left, right) => left - right).join(", ")}`);
+  const line = `${icon} <b>${escapeHtml(watch.name)}</b> · ${escapeHtml(watch.theatreName)} · #${escapeHtml(watch.theatreId)} · ${availableSeats.length} 🪑 · ${showtimeIds.length} 🎬`;
+  return `<a href="${escapeHtml(`https://www.cineplex.com/ticketing/preview?theatreId=${watch.theatreId}&showtimeId=${linkShowtimeId}`, true)}">${line}</a>\n↳ 📖 <code>/seatinfo ${escapeHtml(watch.name)}</code> · ${scanStatus}`;
 }
 
 function availableSeatCount(selectedSeats) {
@@ -684,17 +670,12 @@ async function handleSeatList(env, chatId) {
       await telegram(env, chatId, "🎟 <b>Seat watches</b>\n\nNo enabled seat watches. Add one from the web interface.", { parse_mode: "HTML" });
       return;
     }
-    const blocks = enabledWatches.map((watch) => [
-      seatWatchSummaryHtml(watch, stateResult.states?.[watch.id]),
-      `   📖 /seatinfo ${escapeHtml(watch.name)}`,
-      `   ➕ /watchshowtime ${escapeHtml(watch.name)} ShowtimeId`,
-      `   ⏹ /stopseats ${escapeHtml(watch.name)}`,
-    ].join("\n"));
+    const blocks = enabledWatches.map((watch) => seatWatchSummaryHtml(watch, stateResult.states?.[watch.id]));
     await telegram(env, chatId, [
       "🎟 <b>Seat watches</b>",
       ...(stateResult.error ? ["⚠️ Latest seat-scan details are temporarily unavailable. The watch list is still shown."] : []),
       blocks.join("\n\n"),
-      "🌐 <a href=\"https://ettersay.github.io/cplex-watcher/\">Open web interface</a>",
+      "—\n🌐 <a href=\"https://ettersay.github.io/cplex-watcher/\">Web interface</a>\n➕ <code>/watchshowtime WatchName ShowtimeId</code>",
     ].join("\n\n"), { parse_mode: "HTML" });
   } catch (error) {
     console.error("Could not load seat watches:", error);

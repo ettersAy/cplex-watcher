@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from seat_watcher import apply_available_seats, availability_url, grouped_alert_html, layout_url, parse_rule, scan_all, select_seats
-from seat_watch_command import run, showtime_display_metadata, validate_showtimes, validate_watch
+from seat_watch_command import command_result_html, run, showtime_display_metadata, validate_showtimes, validate_watch
 
 
 def layout_fixture():
@@ -91,7 +91,11 @@ def main():
         seat_availabilities=availability, checked_at="2026-09-13T18:40:02Z",
     )
     assert [seat["seatLabel"] for seat in new_seats] == ["E10", "F20"]
-    assert "E: 10\nF: 20" in grouped_alert_html("Dune", "9406", "405743", new_seats)
+    alert = grouped_alert_html("Dune", "9406", "405743", new_seats, theatre_name="Scotia Bank", showtime={"displayTime": "Dec 14, 6:00 PM"})
+    assert "🪑 <b>New selected seats — Dune</b>" in alert
+    assert "Scotia Bank · #9406" in alert
+    assert "<b>Dec 14 · #405743 · 6:00 PM</b>" in alert
+    assert "E: 10" in alert and "F: 20" in alert
 
     duplicate_seats, unchanged_list = apply_available_seats(
         available_list, watch_name="Dune", theatre_id="9406", showtime_id="405743", selected_seats=selected,
@@ -158,6 +162,7 @@ def main():
         assert saved["showtimes"]["405853"]["enabled"] is True
         assert saved["showtimes"]["405854"]["enabled"] is False
         assert sorted(saved_available) == ["Dune|9406|405853|one"]
+        assert "<b>Showtime stopped</b>" in command_result_html(result)
 
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)

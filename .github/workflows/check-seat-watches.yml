@@ -68,17 +68,19 @@ jobs:
           TELEGRAM_RECIPIENTS: ${{ inputs.chat_id }}
         run: |
           python - <<'PY'
+          import html
           import json
           import os
           from pathlib import Path
+          from seat_watch_command import command_result_html
           from watcher import send_telegram
 
           try:
               result = json.loads(Path("command-result.json").read_text())
-              text = result.get("error") or f"✅ {result['message']}"
+              text = f"❌ <b>Seat-watch request failed</b>\n\n{html.escape(result['error'])}" if result.get("error") else command_result_html(result)
           except (OSError, json.JSONDecodeError, KeyError) as error:
-              text = f"❌ Seat-watch request failed: {error}"
-          send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text)
+              text = f"❌ <b>Seat-watch request failed</b>\n\n{html.escape(str(error))}"
+          send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text, parse_mode="HTML")
           PY
 
       - name: Save seat-watch state and logs

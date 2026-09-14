@@ -313,18 +313,30 @@ Alert delivery is **at least once**: a rare duplicate is acceptable; silently mi
 Example grouped availability alert:
 
 ```text
-🎟 Dune — new seats available
-Theatre 9406 · <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743">#405743</a>
-E: 10, 12
-F: 22
+🪑 <b>New selected seats — Dune</b>
+Scotia Bank · #9406
+
+<b>Dec 14 · #405743 · 6:00 PM</b>
+<a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743">E: 10, 12</a>
+<a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743">F: 22</a>
+
+—
+⏹ <code>/stopshowtime Dune 405743</code>
+🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a>
 ```
 
 Example final failure alert:
 
 ```text
-❌ Dune — Cineplex seat check failed
-Showtime #405750 · Theatre 9406
+❌ <b>Seat scan failed — Dune</b>
+Scotia Bank · #9406
+
+<a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405750">#405750 · Dec 14, 10:30 PM</a>
+
 HTTP 503 from Cineplex seat availability
+The watcher will retry automatically in about 5 min.
+
+📖 <code>/seatinfo Dune</code>
 ```
 
 If Telegram delivery fails, log that delivery failure. Telegram cannot receive an alert about its own delivery outage.
@@ -368,28 +380,42 @@ Use these Telegram HTML templates. Replace `PREVIEW_URL` with the official Cinep
 **New seats alert**
 
 ```html
-🎟 <b>Dune</b> — new seats available
-Theatre #9406 · <a href="PREVIEW_URL">#405743 · Dec 14, 6:00 PM</a>
-E: 10, 12
-F: 22
+🪑 <b>New selected seats — Dune</b>
+Scotia Bank · #9406
+
+<b>Dec 14 · #405743 · 6:00 PM</b>
+<a href="PREVIEW_URL">E: 10, 12</a>
+<a href="PREVIEW_URL">F: 22</a>
+
+—
+⏹ <code>/stopshowtime Dune 405743</code>
+🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a>
 ```
 
 **Final scan failure**
 
 ```html
-❌ <b>Dune</b> — seat check failed
-Theatre #9406 · <a href="PREVIEW_URL">#405750 · Dec 14, 10:30 PM</a>
+❌ <b>Seat scan failed — Dune</b>
+Scotia Bank · #9406
+
+<a href="PREVIEW_URL">#405750 · Dec 14, 10:30 PM</a>
+
 HTTP 503 from Cineplex
-Next automatic retry: about 5 min
+The watcher will retry automatically in about 5 min.
+
+📖 <code>/seatinfo Dune</code>
 ```
 
 **Successful add-showtime command**
 
 ```html
-✅ Watching added showtime
-<b>Dune</b> · Theatre #9406
+✅ <b>Showtime added</b>
+
+<b>Dune</b> · Scotia Bank · #9406
 <a href="PREVIEW_URL">#405765 · Dec 14, 9:15 PM</a>
-First scan completed: 0 selected seats available.
+
+📖 <code>/seatinfo Dune</code>
+🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a>
 ```
 
 ### 9.2 `/listseats`
@@ -401,23 +427,18 @@ The complete first line for each watch is one Telegram HTML link. Its target is 
 ```html
 🎟 Seat watches
 
-<a href="FIRST_AVAILABLE_SHOWTIME_PREVIEW_URL">⏳ Dune · 🪑 5 · #9406 · 🎬 10 · 👁 4 min</a>
-   📖 /seatinfo Dune
-   ➕ /watchshowtime Dune 405765
-   ⏹ /stopseats Dune
+<a href="FIRST_AVAILABLE_SHOWTIME_PREVIEW_URL">🟢 <b>Dune</b> · Scotia Bank · #9406 · 5 🪑 · 10 🎬</a>
+↳ 📖 <code>/seatinfo Dune</code> · 👁 in 4 min
 
-<a href="FIRST_AVAILABLE_SHOWTIME_PREVIEW_URL">❌ Dune 2 · 🪑 20 · #8303 · 🎬 5 · ⚠️ failed</a>
-   📖 /seatinfo Dune 2
-   ➕ /watchshowtime Dune 2 405765
-   ⏹ /stopseats Dune 2
+<a href="FIRST_AVAILABLE_SHOWTIME_PREVIEW_URL">❌ <b>Dune 2</b> · #8303 · 20 🪑 · 5 🎬</a>
+↳ 📖 <code>/seatinfo Dune 2</code> · ⚠️ failed
 
-<a href="EARLIEST_ENABLED_SHOWTIME_PREVIEW_URL">⏳ Odyssey · 🪑 0 · #9406 · 🎬 1 · 👁 6 min</a>
-   📖 /seatinfo Odyssey
-   ➕ /watchshowtime Odyssey 405765
-   ⏹ /stopseats Odyssey
+<a href="EARLIEST_ENABLED_SHOWTIME_PREVIEW_URL">⚪ <b>Odyssey</b> · Scotia Bank · #9406 · 0 🪑 · 1 🎬</a>
+↳ 📖 <code>/seatinfo Odyssey</code> · 👁 in 6 min
 
-🌐 Open web interface:
-https://ettersay.github.io/cplex-watcher/
+—
+🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a>
+➕ <code>/watchshowtime WatchName ShowtimeId</code>
 ```
 
 Use `⏳` after a latest complete successful scan and `❌` after a latest failed scan. Failed watches retain their last known count and use `⚠️ failed` instead of a next-check estimate. Times in other output use Montreal time in `YY-MM-DD HH:MM:SS`.
@@ -429,23 +450,23 @@ Show the watch summary, then two complete sections for successfully scanned show
 For the Dune rule, E18 and E19 must not appear because the E range ends at E17.
 
 ```text
-🎟 Dune — 10 seats available, 6 showtimes
-  Scotiabank Theatre Toronto (#9406) · next 👁️ in 6 min
-  Checked at 26-09-13 14:35:02
+🎟 <b>Dune</b> · Scotia Bank · #9406 · 10 🪑 · 6 🎬
 
-Showtimes with available selected seats:
-  • <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743">#405743</a> — 3 seats · Dec 14, 6:00 PM
-    E: 10, 12
-    F: 22
+🟢 <b>Available</b>
 
-  • <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405765">#405765</a> — 7 seats · Dec 14, 9:15 PM
-    G: 14, 15, 16
-    H: 18, 20
-    I: 19, 23
+<b>Monday, Dec 14 · 10 🪑 · 🎬 2</b>
+• <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743">#405743 · 6:00 PM · 3 🪑</a>
+• <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405765">#405765 · 9:15 PM · 7 🪑</a>
 
-Showtimes with no selected seats available:
-  • <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405740">#405740</a> — Dec 14, 3:00 PM
-  • <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405745">#405745</a> — Dec 14, 7:30 PM
+⚪ <b>Still watching</b>
+
+<b>Tuesday, Dec 15 · 0 🪑 · 🎬 2</b>
+• <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405740">#405740 · 3:00 PM · 0 🪑</a>
+• <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405745">#405745 · 7:30 PM · 0 🪑</a>
+
+—
+🕒 Checked at 26-09-13 14:35:02
+🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a> · ➕ <code>/watchshowtime Dune ShowtimeId</code> · ⏹ <code>/stopshowtime Dune ShowtimeId</code>
 ```
 
 If no selected seats are available, omit the empty first section but list all enabled successful showtimes in the no-availability section.

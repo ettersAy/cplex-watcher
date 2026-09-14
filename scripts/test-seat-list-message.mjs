@@ -50,10 +50,10 @@ await globalThis.__seatListTest.handleSeatList({ GITHUB_REPOSITORY: "owner/repo"
 
 assert.equal(sent.length, 1);
 assert.equal(sent[0].parse_mode, "HTML");
-assert.match(sent[0].text, /<a href="https:\/\/www\.cineplex\.com\/ticketing\/preview\?theatreId=9406&amp;showtimeId=405854">⏳ Dune &amp; Friends · 🪑 1 · #9406 · 🎬 2 · 👁 in \d+ min<\/a>/);
-assert.match(sent[0].text, /📖 \/seatinfo Dune &amp; Friends/);
+assert.match(sent[0].text, /<a href="https:\/\/www\.cineplex\.com\/ticketing\/preview\?theatreId=9406&amp;showtimeId=405854">🟢 <b>Dune &amp; Friends<\/b> · Test Theatre · #9406 · 1 🪑 · 2 🎬<\/a>/);
+assert.match(sent[0].text, /📖 <code>\/seatinfo Dune &amp; Friends<\/code> · 👁 in \d+ min/);
 assert.doesNotMatch(sent[0].text, /Stopped/);
-assert.match(sent[0].text, /Open web interface/);
+assert.match(sent[0].text, /Web interface/);
 
 states.watches.dune = {
   lastCheckStatus: "success", lastCheckedAt: "2027-01-14T12:00:00Z",

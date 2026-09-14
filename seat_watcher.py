@@ -126,19 +126,37 @@ def preview_url(theatre_id: str, showtime_id: str) -> str:
     return f"https://www.cineplex.com/ticketing/preview?theatreId={theatre_id}&showtimeId={showtime_id}"
 
 
-def grouped_alert_html(watch_name: str, theatre_id: str, showtime_id: str, seats: list[dict[str, str]]) -> str:
+def grouped_alert_html(
+    watch_name: str,
+    theatre_id: str,
+    showtime_id: str,
+    seats: list[dict[str, str]],
+    *,
+    theatre_name: str = "",
+    showtime: dict | None = None,
+) -> str:
     """Build one safe Telegram HTML alert for all new seats in a showtime."""
     rows: dict[str, list[int]] = defaultdict(list)
     for seat in seats:
         match = SEAT_LABEL_PATTERN.fullmatch(seat["seatLabel"])
         if match:
             rows[match.group(1)].append(int(match.group(2)))
-    details = "\n".join(f"{row}: " + ", ".join(map(str, sorted(numbers))) for row, numbers in sorted(rows.items()))
+    details = "\n".join(
+        f'<a href="{html.escape(preview_url(theatre_id, showtime_id), quote=True)}">{row}: ' + ", ".join(map(str, sorted(numbers))) + "</a>"
+        for row, numbers in sorted(rows.items())
+    )
+    display_time = str((showtime or {}).get("displayTime") or "Time unavailable")
+    date_label, separator, time_label = display_time.partition(", ")
+    showtime_label = f"{date_label} · #{showtime_id} · {time_label}" if separator else f"#{showtime_id} · {display_time}"
+    theatre_label = theatre_name or "Theatre"
     return (
-        f"🎟 <b>{html.escape(watch_name)}</b> — new seats available\n"
-        f"Theatre #{html.escape(theatre_id)} · "
-        f"<a href=\"{html.escape(preview_url(theatre_id, showtime_id), quote=True)}\">#{html.escape(showtime_id)}</a>\n"
-        f"{details}"
+        f"🪑 <b>New selected seats — {html.escape(watch_name)}</b>\n"
+        f"{html.escape(theatre_label)} · #{html.escape(theatre_id)}\n\n"
+        f"<b>{html.escape(showtime_label)}</b>\n"
+        f"{details}\n\n"
+        f"—\n"
+        f"⏹ <code>/stopshowtime {html.escape(watch_name)} {html.escape(showtime_id)}</code>\n"
+        f"🌐 <a href=\"https://ettersay.github.io/cplex-watcher/\">Web interface</a>"
     )
 
 
@@ -350,7 +368,10 @@ def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sle
                     result["newSeats"] += len(new_seats)
                     if notify:
                         try:
-                            notify(grouped_alert_html(watch_name, theatre_id, showtime_id, new_seats))
+                            notify(grouped_alert_html(
+                                watch_name, theatre_id, showtime_id, new_seats,
+                                theatre_name=str(watch.get("theatreName") or ""), showtime=showtime,
+                            ))
                             append_log(log_path, "info", f"watch={watch_name} showtime={showtime_id} telegram availability alert sent seats=" + ",".join(seat["seatLabel"] for seat in new_seats))
                         except Exception as error:  # Do not hide delivery error from the durable log.
                             append_log(log_path, "error", f"watch={watch_name} showtime={showtime_id} telegram delivery failed: {type(error).__name__}")
@@ -361,10 +382,14 @@ def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sle
                 append_log(log_path, "error", f"watch={watch_name} showtime={showtime_id} cineplex availability call failed: {type(error).__name__}: {error}")
                 if notify:
                     try:
+                        display_time = str(showtime.get("displayTime") or "Time unavailable")
                         notify(
-                            f"❌ <b>{html.escape(watch_name)}</b> — seat check failed\n"
-                            f"Showtime #{html.escape(showtime_id)} · Theatre #{html.escape(theatre_id)}\n"
-                            f"{html.escape(str(error))}\nNext automatic retry: about 5 min"
+                            f"❌ <b>Seat scan failed — {html.escape(watch_name)}</b>\n"
+                            f"{html.escape(str(watch.get('theatreName') or 'Theatre'))} · #{html.escape(theatre_id)}\n\n"
+                            f"<a href=\"{html.escape(preview_url(theatre_id, showtime_id), quote=True)}\">#{html.escape(showtime_id)} · {html.escape(display_time)}</a>\n\n"
+                            f"{html.escape(str(error))}\n"
+                            f"The watcher will retry automatically in about 5 min.\n\n"
+                            f"📖 <code>/seatinfo {html.escape(watch_name)}</code>"
                         )
                     except Exception as notify_error:
                         append_log(log_path, "error", f"watch={watch_name} showtime={showtime_id} telegram failure delivery failed: {type(notify_error).__name__}")

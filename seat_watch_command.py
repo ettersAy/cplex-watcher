@@ -15,6 +15,7 @@ from seat_watcher import (
     layout_url,
     request_json,
     request_showtime_detail,
+    preview_url,
     select_seats,
 )
 
@@ -126,6 +127,34 @@ def showtime_display_metadata(detail, theatre_id, showtime_id):
     }
 
 
+def command_result_html(result):
+    """Render the action result as one compact, safe Telegram HTML message."""
+    watch = result["watch"]
+    operation = result["operation"]
+    watch_name = re.sub(r"[&<>\"']", lambda match: {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[match.group()], watch["name"])
+    theatre_name = re.sub(r"[&<>\"']", lambda match: {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[match.group()], watch["theatreName"])
+    theatre_id = re.sub(r"[&<>\"']", lambda match: {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[match.group()], str(watch["theatreId"]))
+    titles = {
+        "add_showtime": "Showtime added",
+        "stop_showtime": "Showtime stopped",
+        "create": "Seat watch started",
+        "edit": "Seat watch updated",
+        "stop": "Seat watch stopped",
+        "refresh": "Seat watch refreshed",
+    }
+    lines = [f"✅ <b>{titles[operation]}</b>", f"<b>{watch_name}</b> · {theatre_name} · #{theatre_id}"]
+    showtime_id = result.get("showtimeId")
+    if showtime_id:
+        showtime = watch["showtimes"][showtime_id]
+        display_time = re.sub(r"[&<>\"']", lambda match: {"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[match.group()], showtime.get("displayTime", "Time unavailable"))
+        url = preview_url(str(watch["theatreId"]), showtime_id)
+        lines.append(f'<a href="{url}">#{showtime_id} · {display_time}</a>')
+    if operation in {"create", "edit", "add_showtime", "refresh"}:
+        lines.append(f"📖 <code>/seatinfo {watch_name}</code>")
+    lines.append('🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a>')
+    return "\n\n".join(lines)
+
+
 def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_json=request_json):
     for showtime_id in watch["showtimes"]:
         detail = fetch_detail(watch["theatreId"], showtime_id)
@@ -203,7 +232,13 @@ def run(root, operation, payload_value, watch_id):
     _write_json(config_path, config)
     _write_json(state_path, state)
     _write_json(available_path, available)
-    return {"message": message, "watchId": watch_id or watch["id"]}
+    return {
+        "message": message,
+        "watchId": watch_id or watch["id"],
+        "operation": operation,
+        "watch": watches[watch_id or watch["id"]],
+        "showtimeId": showtime_id if operation in {"add_showtime", "stop_showtime"} else None,
+    }
 
 
 def main():
