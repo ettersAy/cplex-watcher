@@ -40,7 +40,7 @@
       },
       "showtimes": {
         "405853": {
-          "enabled": true,
+          "enabled": false,
           "showDate": "2027-01-14T00:00:00",
           "startsAt": "2027-01-14T12:15:00",
           "displayTime": "Jan 14, 12:15 PM"
