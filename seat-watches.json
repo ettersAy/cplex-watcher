@@ -50,12 +50,6 @@
           "showDate": "2026-12-15T00:00:00",
           "startsAt": "2026-12-15T18:00:00",
           "displayTime": "Dec 15, 6:00 PM"
-        },
-        "405743": {
-          "enabled": true,
-          "showDate": "2026-12-17T00:00:00",
-          "startsAt": "2026-12-17T19:25:00",
-          "displayTime": "Dec 17, 7:25 PM"
         }
       }
     }
