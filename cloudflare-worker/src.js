@@ -468,7 +468,7 @@ async function getSeatWatches(env) {
 
 async function getSeatWatcherFile(env, filename, property) {
   if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
-  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/${filename}`, {
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/${filename}?v=${Date.now()}`, {
     headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load ${filename}: HTTP ${response.status}`);
@@ -485,7 +485,7 @@ async function getSeatWatchState(env) {
 
 async function getAvailableSeatList(env) {
   if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
-  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/available-seat-list.json`, {
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/available-seat-list.json?v=${Date.now()}`, {
     headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load available-seat-list.json: HTTP ${response.status}`);
