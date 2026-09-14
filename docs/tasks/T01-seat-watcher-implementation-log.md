@@ -374,3 +374,11 @@ configuration.
 The Worker uses authenticated GitHub Contents API reads for every seat-watch
 file. Anonymous reads can be rate limited with HTTP 403, which previously made
 `/listseats` fail while trying to load scan state.
+
+## 2026-09-13 — Watcher-first web layout
+
+The interface now renders one card per watcher rather than one card per
+showtime. Its header contains the watch name, theatre, theatre ID, and Edit.
+Showtimes are nested inside date sections; each heading displays the date,
+total selected seats available that day, and showtime count. Each showtime
+remains a compact direct Cineplex-preview link with its own Stop button.
