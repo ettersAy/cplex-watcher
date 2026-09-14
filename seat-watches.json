@@ -46,7 +46,7 @@
           "displayTime": "Jan 14, 12:15 PM"
         },
         "405854": {
-          "enabled": true,
+          "enabled": false,
           "showDate": "2027-01-14T00:00:00",
           "startsAt": "2027-01-14T15:30:00",
           "displayTime": "Jan 14, 3:30 PM"
