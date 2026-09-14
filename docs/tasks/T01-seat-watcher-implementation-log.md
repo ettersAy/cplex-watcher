@@ -182,3 +182,35 @@ Observed results for theatre `9406`, showtime `405853`:
 Lesson retained: a live detail lookup, paired seat validation, first scan, and
 second scan are required before claiming registration works. A failed
 registration must leave the existing saved watch untouched.
+
+## 2026-09-13 — Stage 8: real Telegram user end-to-end proof
+
+The seat watcher was committed, pushed, and deployed as Worker version
+`887e1e20-2c70-4bdd-9d0d-e70f44a01df9`. A real Telegram user sent:
+
+```text
+/watchshowtime Dune 405854
+```
+
+Observed full path:
+
+1. The deployed Worker immediately replied: `Adding #405854 to Dune`.
+2. Worker dispatched GitHub Actions run `34795193913` at the deployed source
+   SHA. The run completed successfully.
+3. The Action performed one-time detail lookup, saved `405854` as Jan 14 at
+   3:30 PM, validated the real layout/availability APIs, scanned both watched
+   showtimes, and committed state.
+4. Telegram sent the final confirmation: `Added showtime #405854 to Dune`.
+5. GitHub read-back confirmed both `405853` and `405854` have correct saved
+   metadata and 49 selected seats each.
+
+An additional real production scan, GitHub Actions run `34795328415`, completed
+successfully immediately afterward. Its committed log recorded 9 and 5 selected
+available seats but `new_seats=0`; the de-duplication list remained at 14 and
+Telegram showed no additional alert. This proves the system does not alert the
+same available seat twice on a later successful scan.
+
+Lesson retained: do not call a local API test a real user test. Complete proof
+requires an actual Telegram-originated command, deployed Worker acknowledgement,
+successful Action at the deployed SHA, persisted GitHub state, final Telegram
+reply, and a later scan that confirms de-duplication.
