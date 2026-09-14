@@ -70,7 +70,7 @@
     },
     "dune-part-3-the-imax-experience-in-70mm": {
       "id": "dune-part-3-the-imax-experience-in-70mm",
-      "name": "Dune: Part 3: The IMAX Experience\u00ae in 70MM",
+      "name": "Dune",
       "enabled": true,
       "theatreId": "9406",
       "theatreName": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
