@@ -1,9 +1,11 @@
 # Cineplex Watcher web interface
 
-This is a static GitHub Pages interface with two tabs:
+This is a static GitHub Pages interface with four tabs:
 
+- **📊 Dashboard** combines real saved seat and ticket-watch totals, latest scan times, estimated next scans, and recent scan summaries. Refresh reloads saved data; it does not start a scan.
 - **🎟 Seat watcher** lists and manages saved seat watches, grouped by show date.
 - **🎫 Ticket watcher** uses compact ticket cards. It reads active ticket watches, saved scan state, and sales-started state from the repository. From this tab a user can add a movie name (one per line) or stop a still-watching movie.
+- **📖 Guide** provides Telegram command examples and explains seat-alert de-duplication.
 
 Both tabs validate the local access token with the Cloudflare Worker before loading protected seat-watch data or submitting a change.
 

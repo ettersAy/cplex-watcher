@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <title>Cineplex Seat Watcher</title>
-    <link rel="stylesheet" href="styles.css?v=20260913-seat-14">
+    <link rel="stylesheet" href="styles.css?v=20260914-dashboard-1">
   </head>
   <body>
     <main id="app" hidden>
@@ -14,10 +14,18 @@
         <p class="hint">Seat availability and ticket-sale watches.</p>
       </header>
       <nav class="tabs" aria-label="Watcher type">
-        <button id="seat-tab" class="tab" type="button" role="tab" aria-selected="true" aria-controls="seat-panel">🎟 Seat watcher</button>
+        <button id="dashboard-tab" class="tab" type="button" role="tab" aria-selected="true" aria-controls="dashboard-panel">📊 Dashboard</button>
+        <button id="seat-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="seat-panel">🎟 Seat watcher</button>
         <button id="ticket-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="ticket-panel">🎫 Ticket watcher</button>
+        <button id="guide-tab" class="tab" type="button" role="tab" aria-selected="false" aria-controls="guide-panel">📖 Guide</button>
       </nav>
-      <section id="seat-panel" class="tab-panel" role="tabpanel" aria-labelledby="seat-tab">
+      <section id="dashboard-panel" class="tab-panel" role="tabpanel" aria-labelledby="dashboard-tab">
+        <header class="page-header"><div><h2>Dashboard</h2><p id="dashboard-updated" class="hint">Loading watcher status…</p></div><button id="refresh-dashboard" class="secondary" type="button">↻ Refresh</button></header>
+        <section id="dashboard-health" class="health-grid" aria-live="polite"></section>
+        <section class="dashboard-section"><h3 class="dashboard-heading">Latest scans</h3><ul id="dashboard-activity" class="activity-list"></ul></section>
+        <section class="dashboard-section"><h3 class="dashboard-heading">Quick actions</h3><div class="quick-actions"><button class="secondary" type="button" data-open-tab="seat">🎟 Open seat watcher</button><button class="secondary" type="button" data-open-tab="ticket">🎫 Open ticket watcher</button><button class="secondary" type="button" data-open-tab="guide">📖 Command guide</button></div></section>
+      </section>
+      <section id="seat-panel" class="tab-panel" role="tabpanel" aria-labelledby="seat-tab" hidden>
         <header class="page-header">
           <div><h2>Seat watches</h2><p class="hint">Showtimes grouped by date and ordered by time.</p></div>
           <button id="open-add" class="primary" type="button">+ Add seat watcher</button>
@@ -34,6 +42,12 @@
         <p id="ticket-load-status" class="result" role="status">Open this tab to load ticket watches.</p>
         <p id="ticket-action-result" class="result" role="status"></p>
         <section id="ticket-watches" aria-live="polite"></section>
+      </section>
+      <section id="guide-panel" class="tab-panel" role="tabpanel" aria-labelledby="guide-tab" hidden>
+        <header class="page-header"><div><h2>Bot command guide</h2><p class="hint">Send commands in your private Telegram chat with the bot.</p></div></header>
+        <article class="command-group"><h3>🎟 Seat watcher</h3><p class="hint">Add theatre details and seat labels in the web interface. Telegram is for quick showtime management and details.</p><div class="command"><code>/watchshowtime Dune 405740,405741</code><span>Start watching comma-separated showtime IDs.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/stopshowtime Dune 405741</code><span>Stop one watched showtime.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/listseats</code><span>Show a short summary of all seat watches.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/seatinfo Dune</code><span>Show available and still-watched showtimes, grouped by day.</span><button class="copy-command" type="button">Copy</button></div></article>
+        <article class="command-group"><h3>🎫 Ticket watcher</h3><p class="hint">Watch a movie until Cineplex starts selling tickets.</p><div class="command"><code>/watch Dune: Part 3</code><span>Start a ticket-sale watch.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/stopwatch Dune: Part 3</code><span>Stop a ticket-sale watch.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/list</code><span>List current ticket-sale watches.</span><button class="copy-command" type="button">Copy</button></div></article>
+        <section class="dashboard-section"><h3 class="dashboard-heading">How seat alerts work</h3><p class="guide-note">A matching seat alerts once when it becomes available. It is not alerted again while it stays available. If it disappears and later reopens, the bot alerts again. Scan failures are sent to Telegram and written to logs.</p></section>
       </section>
     </main>
 
@@ -65,6 +79,6 @@
         <p id="seat-preview-result" class="summary"></p>
       </div>
     </dialog>
-    <script src="app.js?v=20260913-seat-14"></script>
+    <script src="app.js?v=20260914-dashboard-1"></script>
   </body>
 </html>
