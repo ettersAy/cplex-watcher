@@ -159,6 +159,7 @@ def command_result_html(result):
         "create": "Seat watch started",
         "edit": "Seat watch updated",
         "stop": "Seat watch stopped",
+        "delete": "Seat watch deleted",
         "refresh": "Seat watch refreshed",
     }
     lines = [f"✅ <b>{titles[operation]}</b>", f"<b>{watch_name}</b> · {theatre_name} · #{theatre_id}"]
@@ -249,6 +250,14 @@ def run(root, operation, payload_value, watch_id):
         for showtime_id in watch.get("showtimes", {}):
             _remove_showtime_entries(available, watch["name"], watch["theatreId"], showtime_id)
         message = f"Stopped seat watch {watch['name']}."
+    elif operation == "delete":
+        watch = watches.pop(watch_id, None)
+        if not watch:
+            raise ValueError("Seat watch was not found")
+        state.setdefault("watches", {}).pop(watch_id, None)
+        for showtime_id in watch.get("showtimes", {}):
+            _remove_showtime_entries(available, watch["name"], watch["theatreId"], showtime_id)
+        message = f"Deleted seat watch {watch['name']}."
     elif operation == "refresh":
         watch = watches.get(watch_id)
         if not watch or not watch.get("enabled"):
@@ -287,14 +296,14 @@ def run(root, operation, payload_value, watch_id):
         "message": message,
         "watchId": watch_id or watch["id"],
         "operation": completed_operation if operation == "watch_preview" else operation,
-        "watch": watches[watch_id or watch["id"]],
+        "watch": watch,
         "showtimeId": showtime_id if operation in {"add_showtime", "stop_showtime", "watch_preview"} else None,
     }
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("operation", choices=("create", "edit", "stop", "add_showtime", "stop_showtime", "refresh", "watch_preview"))
+    parser.add_argument("operation", choices=("create", "edit", "stop", "delete", "add_showtime", "stop_showtime", "refresh", "watch_preview"))
     parser.add_argument("--payload", default="{}")
     parser.add_argument("--watch-id", default="")
     parser.add_argument("--root", type=Path, default=Path(__file__).parent)

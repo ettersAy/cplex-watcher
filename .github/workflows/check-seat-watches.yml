@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: scan, create, edit, stop, add_showtime, stop_showtime, refresh, or watch_preview
+        description: scan, create, edit, stop, delete, add_showtime, stop_showtime, refresh, or watch_preview
         required: false
         default: scan
         type: string

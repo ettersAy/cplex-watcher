@@ -197,7 +197,7 @@ async function handleSeatWatchMutation(request, env, operation, watchId = "", su
   let payload = {};
   if (suppliedPayload) {
     payload = suppliedPayload;
-  } else if (operation !== "stop") {
+  } else if (operation !== "stop" && operation !== "delete") {
     try {
       payload = await request.json();
     } catch {
@@ -889,7 +889,7 @@ export default {
     if (url.pathname.startsWith("/api/seat-watches/")) {
       const watchId = decodeURIComponent(url.pathname.slice("/api/seat-watches/".length));
       if (request.method === "PATCH") return handleSeatWatchMutation(request, env, "edit", watchId);
-      if (request.method === "DELETE") return handleSeatWatchMutation(request, env, "stop", watchId);
+      if (request.method === "DELETE") return handleSeatWatchMutation(request, env, "delete", watchId);
     }
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });

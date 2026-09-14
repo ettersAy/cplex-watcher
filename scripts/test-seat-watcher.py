@@ -212,6 +212,23 @@ def main():
         (root / "seat-watches.json").write_text(json.dumps({"watches": {"dune": watch}}))
         result = run(root, "refresh", "{}", "dune")
         assert result["message"] == "Refreshed seat watch Dune."
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        watch = {
+            "id": "dune", "name": "Dune", "enabled": True, "theatreId": "9406", "theatreName": "Test",
+            "rule": rule, "showtimes": {"405853": {"enabled": True}},
+        }
+        (root / "seat-watches.json").write_text(json.dumps({"watches": {"dune": watch}}))
+        (root / "seat-watch-state.json").write_text(json.dumps({"watches": {"dune": {"showtimes": {}}}}))
+        (root / "available-seat-list.json").write_text(json.dumps({"Dune|9406|405853|one": {"seatId": "one"}}))
+        result = run(root, "delete", "{}", "dune")
+        assert result["message"] == "Deleted seat watch Dune."
+        assert result["watch"]["id"] == "dune"
+        assert json.loads((root / "seat-watches.json").read_text())["watches"] == {}
+        assert json.loads((root / "seat-watch-state.json").read_text())["watches"] == {}
+        assert json.loads((root / "available-seat-list.json").read_text()) == {}
+        assert "Seat watch deleted" in command_result_html(result)
     print("seat watcher core checks passed")
 
 
