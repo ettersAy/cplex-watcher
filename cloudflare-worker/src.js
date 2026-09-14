@@ -668,7 +668,8 @@ async function handleSeatList(env, chatId) {
     ].join("\n\n"), { parse_mode: "HTML" });
   } catch (error) {
     console.error("Could not load seat watches:", error);
-    await telegram(env, chatId, "I could not load the seat watches. Please try again shortly.");
+    const detail = error instanceof Error ? error.message.slice(0, 180) : "Unexpected list-render error";
+    await telegram(env, chatId, `I could not load the seat watches: ${escapeHtml(detail)}.`);
   }
 }
 
