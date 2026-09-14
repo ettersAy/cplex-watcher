@@ -40,7 +40,7 @@
       },
       "showtimes": {
         "405740": {
-          "enabled": true,
+          "enabled": false,
           "showDate": "2026-12-14T00:00:00",
           "startsAt": "2026-12-14T18:00:00",
           "displayTime": "Dec 14, 6:00 PM",
