@@ -36,3 +36,24 @@ button.stop { background: transparent; border: 1px solid #52617a; color: #dbe3f1
 button.stop:hover { border-color: #ff8a80; color: #ffb0a8; }
 button:disabled { cursor: wait; opacity: .6; }
 @media (max-width: 560px) { main { padding-top: 36px; } .panel { padding: 18px; } .watch { align-items: flex-start; flex-direction: column; } }
+
+/* Seat-watch status-board layout. */
+.page-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 26px; }
+.page-header h1 { font-size: clamp(2rem, 5vw, 3rem); }
+.date-group { margin-top: 26px; }
+.date-heading { color: #aeb7c8; font-size: .82rem; letter-spacing: .06em; margin: 0 0 10px; text-transform: uppercase; }
+.showtime-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.showtime-card { background: #151b26; border: 1px solid #293447; border-radius: 11px; padding: 12px; }
+.card-top, .card-bottom { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
+.showtime-link { color: #dbe3f1; font-weight: 750; overflow: hidden; text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.showtime-link:hover { text-decoration: underline; }
+.showtime-meta { color: #aeb7c8; font-size: .8rem; margin: 6px 0 10px; overflow-wrap: anywhere; }
+.status { color: #75d7a9; font-size: .82rem; font-weight: 750; white-space: nowrap; }
+.status.error { color: #ffb0a8; }
+dialog { background: #1a202c; border: 1px solid #3d485e; border-radius: 14px; color: #eef1f7; max-width: 590px; padding: 20px; width: calc(100% - 32px); }
+dialog::backdrop { background: rgba(0, 0, 0, .6); }
+.dialog-header { align-items: flex-start; display: flex; justify-content: space-between; }
+.close { background: transparent; color: inherit; font-size: 24px; margin: 0; padding: 0 4px; }
+.field-grid { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.form-actions { display: flex; gap: 9px; justify-content: flex-end; }
+@media (max-width: 640px) { .page-header { align-items: stretch; flex-direction: column; gap: 14px; } .page-header .primary { width: 100%; } .showtime-grid, .field-grid { grid-template-columns: 1fr; } }

@@ -95,7 +95,7 @@ async function dispatchSeatWatch(env, operation, watchId, payload, requestId, ch
 function queueCorsHeaders(env) {
   return {
     "access-control-allow-origin": env.UI_ORIGIN,
-    "access-control-allow-methods": "POST, DELETE, OPTIONS",
+    "access-control-allow-methods": "POST, PATCH, DELETE, OPTIONS",
     "access-control-allow-headers": "authorization, content-type",
     "access-control-max-age": "86400",
     vary: "Origin",
@@ -138,6 +138,41 @@ function isCineplexMovieUrl(value) {
 
 function queueResponse(env, body, status = 200) {
   return Response.json(body, { status, headers: queueCorsHeaders(env) });
+}
+
+function seatWatchId(value) {
+  return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value || "") ? value : null;
+}
+
+async function handleSeatWatchMutation(request, env, operation, watchId = "", suppliedPayload = null) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+  let payload = {};
+  if (suppliedPayload) {
+    payload = suppliedPayload;
+  } else if (operation !== "stop") {
+    try {
+      payload = await request.json();
+    } catch {
+      return queueResponse(env, { error: "Request body must be JSON." }, 400);
+    }
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return queueResponse(env, { error: "Seat-watch payload must be a JSON object." }, 400);
+    }
+  }
+  if (operation !== "create" && !seatWatchId(watchId)) {
+    return queueResponse(env, { error: "Seat watch ID is invalid." }, 400);
+  }
+  const requestId = crypto.randomUUID();
+  console.log(JSON.stringify({ event: "web_seat_watch_requested", requestId, operation, watchId }));
+  try {
+    await dispatchSeatWatch(env, operation, watchId, payload, requestId, "");
+    console.log(JSON.stringify({ event: "web_seat_watch_queued", requestId, operation, watchId }));
+    return queueResponse(env, { requestId, message: "Seat-watch request queued. Refresh in a moment to see the saved result." }, 202);
+  } catch (error) {
+    console.error("Could not dispatch web seat-watch request:", error);
+    return queueResponse(env, { error: "Could not start the seat-watch request. Please try again shortly." }, 502);
+  }
 }
 
 async function handleQueue(request, env) {
@@ -721,7 +756,7 @@ async function handleUpdate(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    if ((url.pathname === "/api/queue" || url.pathname === "/api/scan" || url.pathname === "/api/verify") && request.method === "OPTIONS") {
+    if ((url.pathname === "/api/queue" || url.pathname === "/api/scan" || url.pathname === "/api/verify" || url.pathname === "/api/seat-watches" || url.pathname.startsWith("/api/seat-watches/")) && request.method === "OPTIONS") {
       if (request.headers.get("Origin") !== env.UI_ORIGIN) return new Response("Forbidden", { status: 403 });
       return new Response(null, { status: 204, headers: queueCorsHeaders(env) });
     }
@@ -729,6 +764,14 @@ export default {
     if (url.pathname === "/api/queue" && request.method === "DELETE") return handleRemoveWatch(request, env);
     if (url.pathname === "/api/scan" && request.method === "POST") return handleScan(request, env);
     if (url.pathname === "/api/verify" && request.method === "POST") return handleVerifyUiToken(request, env);
+    if (url.pathname === "/api/seat-watches" && request.method === "POST") return handleSeatWatchMutation(request, env, "create");
+    const showtimePath = /^\/api\/seat-watches\/([^/]+)\/showtimes\/(\d+)$/.exec(url.pathname);
+    if (showtimePath && request.method === "DELETE") return handleSeatWatchMutation(request, env, "stop_showtime", decodeURIComponent(showtimePath[1]), { id: showtimePath[2] });
+    if (url.pathname.startsWith("/api/seat-watches/")) {
+      const watchId = decodeURIComponent(url.pathname.slice("/api/seat-watches/".length));
+      if (request.method === "PATCH") return handleSeatWatchMutation(request, env, "edit", watchId);
+      if (request.method === "DELETE") return handleSeatWatchMutation(request, env, "stop", watchId);
+    }
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },

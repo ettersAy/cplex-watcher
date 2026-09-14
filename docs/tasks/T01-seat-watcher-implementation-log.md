@@ -308,3 +308,19 @@ match the configured label rule exactly.
 The manual refresh accepts only a seat-watch name, resolves that active watch
 before dispatch, and scans only that watch in the shared workflow concurrency
 group. It does not change the five-minute schedule or the watch configuration.
+
+## 2026-09-13 — Stage 12: `/refreshseats` live proof
+
+A real Telegram `/refreshseats Dune` request was acknowledged by the deployed
+Worker. GitHub Actions run `34796346867` applied the refresh operation, scanned
+only the active Dune watch, and Telegram confirmed `Refreshed seat watch Dune.`
+
+## Final web interface implementation
+
+The former movie-sales page is replaced with the approved seat-watch layout:
+enabled showtimes are grouped by show date, ordered by start time, shown in
+compact two-column cards, linked to Cineplex preview, and stopped one showtime
+at a time. The protected add dialog accepts comma-separated showtime IDs and
+seat-label ranges. It dispatches `create`; per-card Stop dispatches
+`stop_showtime`. The Worker also exposes the documented protected create,
+edit, and full-stop endpoints for future web editing controls.
