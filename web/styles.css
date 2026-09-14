@@ -47,6 +47,14 @@ button { cursor: pointer; font: inherit; }
 .icon-button { background: transparent; border: 1px solid light-dark(#cbd8cf, #4a5c51); border-radius: 7px; color: inherit; font-size: 14px; line-height: 1; min-width: 30px; padding: 6px; }
 .icon-button:hover { border-color: light-dark(#6b9b7c, #78d59a); }
 .icon-button.stop:hover { border-color: light-dark(#b85a55, #ff9696); color: light-dark(#9f302c, #ff9696); }
+.action-menu { flex: 0 0 auto; position: relative; }
+.action-menu-trigger { list-style: none; }
+.action-menu-trigger::-webkit-details-marker { display: none; }
+.action-menu-list { background: light-dark(#fff, #18231d); border: 1px solid light-dark(#cbd8cf, #4a5c51); border-radius: 9px; box-shadow: 0 8px 22px #0003; display: grid; gap: 3px; padding: 5px; position: absolute; right: 0; top: calc(100% + 5px); width: max-content; z-index: 4; }
+.action-menu:not([open]) .action-menu-list { display: none; }
+.action-menu-item { align-items: center; border: 0; display: flex; gap: 7px; padding: 8px 9px; text-align: left; width: 100%; }
+.action-menu-item:hover { background: light-dark(#edf5ef, #263a2d); }
+.action-menu-item.delete:hover { background: light-dark(#fff0ef, #442724); border-color: transparent; }
 button:disabled { cursor: wait; opacity: .6; }
 dialog { background: light-dark(#fff, #19251e); border: 1px solid light-dark(#d5e0d8, #3b4f42); border-radius: 14px; color: inherit; max-width: 590px; padding: 20px; width: calc(100% - 32px); }
 dialog::backdrop { background: rgba(8, 18, 12, .48); }
