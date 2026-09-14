@@ -468,11 +468,12 @@ async function getSeatWatches(env) {
 
 async function getSeatWatcherFile(env, filename, property) {
   if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
-  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/${filename}?v=${Date.now()}`, {
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/contents/${filename}?ref=main`, {
     headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load ${filename}: HTTP ${response.status}`);
-  const config = await response.json();
+  const content = await response.json();
+  const config = JSON.parse(atob(String(content.content || "").replace(/\s/g, "")));
   if (!config || typeof config !== "object" || !config[property] || typeof config[property] !== "object") {
     throw new Error(`${filename} has an invalid format`);
   }
@@ -485,11 +486,12 @@ async function getSeatWatchState(env) {
 
 async function getAvailableSeatList(env) {
   if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
-  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/available-seat-list.json?v=${Date.now()}`, {
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/contents/available-seat-list.json?ref=main`, {
     headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load available-seat-list.json: HTTP ${response.status}`);
-  const seats = await response.json();
+  const content = await response.json();
+  const seats = JSON.parse(atob(String(content.content || "").replace(/\s/g, "")));
   if (!seats || typeof seats !== "object" || Array.isArray(seats)) {
     throw new Error("available-seat-list.json has an invalid format");
   }
