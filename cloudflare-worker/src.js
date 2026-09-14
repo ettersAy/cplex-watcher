@@ -309,6 +309,29 @@ async function handleWatchShowtime(env, chatId, value) {
   }
 }
 
+async function handleStopShowtime(env, chatId, value) {
+  const command = parseSeatShowtimeCommand(value);
+  if (!command) return telegram(env, chatId, "Use /stopshowtime Watch Name ShowtimeId\nExample: /stopshowtime Dune 405854");
+  try {
+    const found = findSeatWatch(await getSeatWatches(env), command.name);
+    if (!found || !found.watch.enabled) {
+      return telegram(env, chatId, `No enabled seat watch named ${command.name}.`);
+    }
+    const showtime = found.watch.showtimes?.[command.showtimeId];
+    if (!showtime || !showtime.enabled) {
+      return telegram(env, chatId, `Showtime #${command.showtimeId} is not active for ${found.watch.name}.`);
+    }
+    const requestId = crypto.randomUUID();
+    console.log(JSON.stringify({ event: "seat_showtime_stop_requested", requestId, watchId: found.id, showtimeId: command.showtimeId }));
+    await dispatchSeatWatch(env, "stop_showtime", found.id, { id: command.showtimeId }, requestId, chatId);
+    console.log(JSON.stringify({ event: "seat_showtime_stop_queued", requestId, watchId: found.id, showtimeId: command.showtimeId }));
+    return telegram(env, chatId, `⏳ Stopping #${command.showtimeId} for ${found.watch.name}. I will reply when it is saved.`);
+  } catch (error) {
+    console.error("Could not dispatch seat-showtime stop:", error);
+    return telegram(env, chatId, "I could not start the stop request. Please try again shortly.");
+  }
+}
+
 function movieKey(url) {
   return new URL(url).pathname.split("/").filter(Boolean).at(-1);
 }
@@ -479,8 +502,11 @@ async function handleUpdate(request, env) {
   const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
   const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);
   const watchShowtimeCommand = message.text.match(/^\/watchshowtime(?:@\w+)?\s+(.+)$/i);
+  const stopShowtimeCommand = message.text.match(/^\/stopshowtime(?:@\w+)?\s+(.+)$/i);
   if (watchShowtimeCommand) {
     await handleWatchShowtime(env, chatId, watchShowtimeCommand[1]);
+  } else if (stopShowtimeCommand) {
+    await handleStopShowtime(env, chatId, stopShowtimeCommand[1]);
   } else if (watchCommand) {
     await handleWatch(env, chatId, watchCommand[1].trim());
   } else if (stopCommand) {
@@ -488,7 +514,7 @@ async function handleUpdate(request, env) {
   } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
     await handleList(env, chatId);
   } else {
-    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
+    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
   }
 
   return new Response("ok");

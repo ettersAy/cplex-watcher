@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from seat_watcher import apply_available_seats, availability_url, grouped_alert_html, layout_url, parse_rule, scan_all, select_seats
-from seat_watch_command import showtime_display_metadata, validate_showtimes, validate_watch
+from seat_watch_command import run, showtime_display_metadata, validate_showtimes, validate_watch
 
 
 def layout_fixture():
@@ -130,6 +130,26 @@ def main():
         assert failed_result["failures"] == 1
         assert json.loads((root / "available-seat-list.json").read_text())
         assert "[error]" in (root / "seat-watch.log").read_text()
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        watch = {
+            "id": "dune", "name": "Dune", "enabled": True, "theatreId": "9406", "theatreName": "Test",
+            "rule": rule,
+            "showtimes": {"405853": {"enabled": True}, "405854": {"enabled": True}},
+        }
+        (root / "seat-watches.json").write_text(json.dumps({"watches": {"dune": watch}}))
+        (root / "available-seat-list.json").write_text(json.dumps({
+            "Dune|9406|405853|one": {"seatId": "one"},
+            "Dune|9406|405854|two": {"seatId": "two"},
+        }))
+        result = run(root, "stop_showtime", json.dumps({"id": "405854"}), "dune")
+        saved = json.loads((root / "seat-watches.json").read_text())["watches"]["dune"]
+        saved_available = json.loads((root / "available-seat-list.json").read_text())
+        assert result["message"] == "Stopped showtime #405854 for Dune."
+        assert saved["showtimes"]["405853"]["enabled"] is True
+        assert saved["showtimes"]["405854"]["enabled"] is False
+        assert sorted(saved_available) == ["Dune|9406|405853|one"]
     print("seat watcher core checks passed")
 
 

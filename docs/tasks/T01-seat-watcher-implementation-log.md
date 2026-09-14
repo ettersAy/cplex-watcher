@@ -214,3 +214,11 @@ Lesson retained: do not call a local API test a real user test. Complete proof
 requires an actual Telegram-originated command, deployed Worker acknowledgement,
 successful Action at the deployed SHA, persisted GitHub state, final Telegram
 reply, and a later scan that confirms de-duplication.
+
+## Next implementation step: `/stopshowtime`
+
+The next isolated step adds `/stopshowtime <watch name> <showtimeId>` to the
+Worker. It resolves the existing enabled watch, checks that the showtime is
+active, dispatches `stop_showtime`, and replies only after the Action saves the
+change. The repeatable regression script verifies that it disables only the
+requested showtime and removes only that showtime's de-duplication entries.
