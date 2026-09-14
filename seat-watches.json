@@ -3,7 +3,7 @@
     "dune": {
       "id": "dune",
       "name": "Dune",
-      "enabled": true,
+      "enabled": false,
       "theatreId": "9406",
       "theatreName": "Cineplex Cinemas Yonge-Dundas and VIP",
       "rule": {
