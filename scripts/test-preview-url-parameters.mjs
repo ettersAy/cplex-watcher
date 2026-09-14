@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import vm from "node:vm";
 
 const content = readFileSync(new URL("../chrome-extension/content.js", import.meta.url), "utf8");
 const worker = readFileSync(new URL("../cloudflare-worker/src.js", import.meta.url), "utf8");
@@ -19,3 +20,15 @@ for (const value of [
 }
 
 console.log("preview URL parameter checks passed");
+
+const context = { addEventListener() {}, console, URL, Response };
+const workerWithoutModuleExport = worker.replace(/\nexport default \{[\s\S]*$/, "");
+vm.runInNewContext(`${workerWithoutModuleExport}\nglobalThis.findSeatWatchForTest = findSeatWatch;`, context);
+const watches = {
+  empty: { name: "Dune", enabled: true, showtimes: {} },
+  active: { name: "Dune", enabled: true, showtimes: { "405810": { enabled: true } } },
+};
+assert.equal(context.findSeatWatchForTest(watches, "Dune"), null);
+assert.equal(context.findSeatWatchForTest(watches, "Dune", { activeShowtimesOnly: true }).id, "active");
+
+console.log("active seat-watch lookup checks passed");

@@ -596,9 +596,12 @@ function parseSeatPreviewUrl(value) {
   }
 }
 
-function findSeatWatch(watches, requestedName) {
+function findSeatWatch(watches, requestedName, { activeShowtimesOnly = false } = {}) {
   const target = normalizeSeatWatchName(requestedName);
-  const matches = Object.entries(watches).filter(([, watch]) => normalizeSeatWatchName(watch?.name) === target);
+  const matches = Object.entries(watches).filter(([, watch]) => {
+    if (normalizeSeatWatchName(watch?.name) !== target) return false;
+    return !activeShowtimesOnly || (watch?.enabled && Object.values(watch.showtimes || {}).some((showtime) => showtime?.enabled !== false));
+  });
   if (matches.length !== 1) return null;
   return { id: matches[0][0], watch: matches[0][1] };
 }
@@ -698,7 +701,7 @@ async function handleSeatInfo(env, chatId, name) {
   if (!name) return telegram(env, chatId, "Use /seatinfo Watch Name\nExample: /seatinfo Dune");
   try {
     const [watches, states] = await Promise.all([getSeatWatches(env), getSeatWatchState(env)]);
-    const found = findSeatWatch(watches, name);
+    const found = findSeatWatch(watches, name, { activeShowtimesOnly: true });
     if (!found || !found.watch.enabled) {
       return telegram(env, chatId, `No enabled seat watch named ${name}. Example: /seatinfo Dune`);
     }
