@@ -430,7 +430,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:17.835831+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:13.744380+00:00",
           "lastCheckStatus": "success"
         },
         "405741": {
@@ -861,7 +861,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:18.008953+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:13.958043+00:00",
           "lastCheckStatus": "success"
         },
         "405743": {
@@ -1292,7 +1292,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:18.388812+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:14.233681+00:00",
           "lastCheckStatus": "success"
         },
         "405745": {
@@ -1723,7 +1723,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:18.729734+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:14.661521+00:00",
           "lastCheckStatus": "success"
         },
         "405750": {
@@ -2154,7 +2154,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:18.899083+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:14.836707+00:00",
           "lastCheckStatus": "success"
         },
         "405751": {
@@ -2585,7 +2585,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:19.075532+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:15.010132+00:00",
           "lastCheckStatus": "success"
         },
         "405752": {
@@ -3016,7 +3016,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:19.303523+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:15.238209+00:00",
           "lastCheckStatus": "success"
         },
         "405753": {
@@ -3447,7 +3447,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:19.596043+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:15.512614+00:00",
           "lastCheckStatus": "success"
         },
         "405754": {
@@ -3878,7 +3878,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:19.798954+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:15.679277+00:00",
           "lastCheckStatus": "success"
         },
         "405755": {
@@ -4309,7 +4309,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:20.095089+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:15.984390+00:00",
           "lastCheckStatus": "success"
         },
         "405760": {
@@ -4740,7 +4740,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:20.334817+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:16.233237+00:00",
           "lastCheckStatus": "success"
         },
         "405761": {
@@ -5171,7 +5171,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:20.540514+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:16.434317+00:00",
           "lastCheckStatus": "success"
         },
         "405765": {
@@ -5602,11 +5602,11 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:20.771751+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:16.651167+00:00",
           "lastCheckStatus": "success"
         }
       },
-      "lastCheckedAt": "2026-09-14T05:04:20.772272+00:00",
+      "lastCheckedAt": "2026-09-14T05:05:16.651871+00:00",
       "lastCheckStatus": "success"
     },
     "dune-part-3-the-imax-experience-in-70mm": {
@@ -6110,7 +6110,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:21.018851+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:16.852567+00:00",
           "lastCheckStatus": "success"
         },
         "405809": {
@@ -6361,7 +6361,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:21.531459+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:17.020841+00:00",
           "lastCheckStatus": "success"
         },
         "405810": {
@@ -6612,11 +6612,262 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:04:21.900970+00:00",
+          "lastCheckedAt": "2026-09-14T05:05:17.212265+00:00",
+          "lastCheckStatus": "success"
+        },
+        "405811": {
+          "selectedSeats": {
+            "1_8_22": {
+              "label": "E17",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_21": {
+              "label": "E16",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_20": {
+              "label": "E15",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_19": {
+              "label": "E14",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_18": {
+              "label": "E13",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_17": {
+              "label": "E12",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_16": {
+              "label": "E11",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_15": {
+              "label": "E10",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_14": {
+              "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_23": {
+              "label": "F23",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_22": {
+              "label": "F22",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_21": {
+              "label": "F21",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_20": {
+              "label": "F20",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_19": {
+              "label": "F19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_18": {
+              "label": "F18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_17": {
+              "label": "F17",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_16": {
+              "label": "F16",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_15": {
+              "label": "F15",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_6_14": {
+              "label": "F14",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_23": {
+              "label": "G23",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_22": {
+              "label": "G22",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_21": {
+              "label": "G21",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_20": {
+              "label": "G20",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_19": {
+              "label": "G19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_18": {
+              "label": "G18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_17": {
+              "label": "G17",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_16": {
+              "label": "G16",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_15": {
+              "label": "G15",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_5_14": {
+              "label": "G14",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_23": {
+              "label": "H23",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_22": {
+              "label": "H22",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_21": {
+              "label": "H21",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_20": {
+              "label": "H20",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_19": {
+              "label": "H19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_18": {
+              "label": "H18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_17": {
+              "label": "H17",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_16": {
+              "label": "H16",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_15": {
+              "label": "H15",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_4_14": {
+              "label": "H14",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_23": {
+              "label": "I23",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_22": {
+              "label": "I22",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_21": {
+              "label": "I21",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_20": {
+              "label": "I20",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_19": {
+              "label": "I19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_18": {
+              "label": "I18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_17": {
+              "label": "I17",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_16": {
+              "label": "I16",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_15": {
+              "label": "I15",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_3_14": {
+              "label": "I14",
+              "type": "Standard",
+              "status": "Occupied"
+            }
+          },
+          "lastCheckedAt": "2026-09-14T05:05:17.743593+00:00",
           "lastCheckStatus": "success"
         }
       },
-      "lastCheckedAt": "2026-09-14T05:04:21.901453+00:00",
+      "lastCheckedAt": "2026-09-14T05:05:17.744123+00:00",
       "lastCheckStatus": "success"
     }
   }
