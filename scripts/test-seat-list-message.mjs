@@ -32,10 +32,12 @@ const available = {
 };
 const sent = [];
 const originalFetch = globalThis.fetch;
+let failStateRead = false;
 globalThis.fetch = async (url, options = {}) => {
   const file = url.includes("seat-watches.json") ? { watches }
     : url.includes("seat-watch-state.json") ? states
       : url.includes("available-seat-list.json") ? available : null;
+  if (failStateRead && url.includes("seat-watch-state.json")) return new Response("forbidden", { status: 403 });
   if (file) return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(file)).toString("base64") }));
   if (String(url).includes("api.telegram.org")) {
     sent.push(JSON.parse(options.body));
@@ -44,7 +46,7 @@ globalThis.fetch = async (url, options = {}) => {
   throw new Error(`Unexpected fetch: ${url}`);
 };
 
-await globalThis.__seatListTest.handleSeatList({ GITHUB_REPOSITORY: "owner/repo", TELEGRAM_BOT_TOKEN: "test" }, "123");
+await globalThis.__seatListTest.handleSeatList({ GITHUB_REPOSITORY: "owner/repo", GITHUB_ACTIONS_TOKEN: "test", TELEGRAM_BOT_TOKEN: "test" }, "123");
 
 assert.equal(sent.length, 1);
 assert.equal(sent[0].parse_mode, "HTML");
@@ -60,7 +62,7 @@ states.watches.dune = {
     "405854": { lastCheckStatus: "success", selectedSeats: { first: { label: "E9", status: "Occupied" } } },
   },
 };
-await globalThis.__seatListTest.handleSeatInfo({ GITHUB_REPOSITORY: "owner/repo", TELEGRAM_BOT_TOKEN: "test" }, "123", "Dune & Friends");
+await globalThis.__seatListTest.handleSeatInfo({ GITHUB_REPOSITORY: "owner/repo", GITHUB_ACTIONS_TOKEN: "test", TELEGRAM_BOT_TOKEN: "test" }, "123", "Dune & Friends");
 assert.equal(sent.length, 2);
 assert.match(sent[1].text, /2 seats available, 2 showtimes/);
 assert.match(sent[1].text, /Showtimes with available selected seats:/);
@@ -68,5 +70,10 @@ assert.match(sent[1].text, /E: 10\n    F: 20/);
 assert.match(sent[1].text, /Showtimes with no selected seats available:/);
 assert.match(sent[1].text, /showtimeId=405853/);
 assert.match(sent[1].text, /showtimeId=405854/);
+failStateRead = true;
+await globalThis.__seatListTest.handleSeatList({ GITHUB_REPOSITORY: "owner/repo", GITHUB_ACTIONS_TOKEN: "test", TELEGRAM_BOT_TOKEN: "test" }, "123");
+assert.equal(sent.length, 3);
+assert.match(sent[2].text, /Latest seat-scan details are temporarily unavailable/);
+assert.match(sent[2].text, /Dune &amp; Friends/);
 globalThis.fetch = originalFetch;
 console.log("seat list message checks passed");

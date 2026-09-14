@@ -88,6 +88,10 @@ jobs:
           git add seat-watches.json seat-watch-state.json available-seat-list.json seat-watch.log
           if ! git diff --cached --quiet; then
             git commit -m "Update seat watcher state"
-            git pull --rebase origin main
+            if ! git pull --rebase origin main; then
+              git rebase --abort
+              echo "::warning::Discarded stale scan state because a newer seat-watch edit changed the same files. The next scheduled scan will use the newer configuration."
+              exit 0
+            fi
             git push origin HEAD:main
           fi

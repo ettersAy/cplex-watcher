@@ -361,3 +361,16 @@ state-only commit on `origin/main` before pushing. The existing
 the rebase covers unrelated pushes made while a scan is in progress. A real
 conflict is not ignored: the Action still fails visibly rather than silently
 discarding either side.
+
+### Correction after a real edit/scan collision
+
+An edit changes both configuration and derived state. A scan that began before
+that edit must never overwrite its newer state. If rebasing a scan-state commit
+conflicts in `seat-watch-state.json` or `seat-watch.log`, the Action now aborts
+that stale local rebase, keeps the already-pushed Edit result, logs a visible
+warning, and succeeds. The next five-minute scan starts from the new
+configuration.
+
+The Worker uses authenticated GitHub Contents API reads for every seat-watch
+file. Anonymous reads can be rate limited with HTTP 403, which previously made
+`/listseats` fail while trying to load scan state.

@@ -467,9 +467,9 @@ async function getSeatWatches(env) {
 }
 
 async function getSeatWatcherFile(env, filename, property) {
-  if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
+  if (!env.GITHUB_REPOSITORY || !env.GITHUB_ACTIONS_TOKEN) throw new Error("GitHub state reader is not configured");
   const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/contents/${filename}?ref=main`, {
-    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+    headers: { accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`, "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load ${filename}: HTTP ${response.status}`);
   const content = await response.json();
@@ -646,7 +646,8 @@ async function handleSeatInfo(env, chatId, name) {
 
 async function handleSeatList(env, chatId) {
   try {
-    const [watches, states] = await Promise.all([getSeatWatches(env), getSeatWatchState(env)]);
+    const watches = await getSeatWatches(env);
+    const stateResult = await getSeatWatchState(env).then((states) => ({ states })).catch((error) => ({ error }));
     const enabledWatches = Object.values(watches)
       .filter((watch) => watch?.enabled && enabledSeatShowtimeIds(watch).length)
       .sort((left, right) => String(left.name).localeCompare(String(right.name)));
@@ -656,13 +657,14 @@ async function handleSeatList(env, chatId) {
       return;
     }
     const blocks = enabledWatches.map((watch) => [
-      seatWatchSummaryHtml(watch, states[watch.id]),
+      seatWatchSummaryHtml(watch, stateResult.states?.[watch.id]),
       `   📖 /seatinfo ${escapeHtml(watch.name)}`,
       `   ➕ /watchshowtime ${escapeHtml(watch.name)} ShowtimeId`,
       `   ⏹ /stopseats ${escapeHtml(watch.name)}`,
     ].join("\n"));
     await telegram(env, chatId, [
       "🎟 <b>Seat watches</b>",
+      ...(stateResult.error ? ["⚠️ Latest seat-scan details are temporarily unavailable. The watch list is still shown."] : []),
       blocks.join("\n\n"),
       "🌐 <a href=\"https://ettersay.github.io/cplex-watcher/\">Open web interface</a>",
     ].join("\n\n"), { parse_mode: "HTML" });
