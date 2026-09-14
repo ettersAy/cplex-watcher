@@ -304,6 +304,25 @@
           "seatsRemaining": 233,
           "isSoldOut": false,
           "auditorium": "Salle 13 - IMAX"
+        },
+        "405811": {
+          "enabled": true,
+          "showDate": "2027-01-03T00:00:00",
+          "startsAt": "2027-01-03T19:20:00",
+          "displayTime": "Jan 3, 7:20 PM",
+          "seatMapUrl": "https://www.cineplex.com/en-Mobile/ticketing/preview?theatreId=9406&showtimeId=405811&dbox=False",
+          "ticketingUrl": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/redirect-to-ticketing?VistaSessionId=405811&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "ticketingRedesignUrl": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/redirect-to-ticketing?VistaSessionId=405811&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "getTicketingUrlApi": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/ticketing-url?VistaSessionId=405811&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "deeplinkUrl": "https://apis.cineplex.com/prod/cpx/theatrical/deeplink?s=405811&a=0000000001&l=9406&m=imax70-dune-part-3-the-imax-experience-in-70mm&ss=False",
+          "showtimeShareKey": "v:405811_t:9406_a:0000000001",
+          "showStartDateTimeUtc": "2027-01-04T00:20:00Z",
+          "isInThePast": false,
+          "isReservedSeating": true,
+          "isShowtimeEnabledOnline": true,
+          "seatsRemaining": 151,
+          "isSoldOut": false,
+          "auditorium": "Salle 13 - IMAX"
         }
       },
       "movie": "Dune: Part 3: The IMAX Experience\u00ae in 70MM",
