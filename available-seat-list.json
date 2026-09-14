@@ -14,5 +14,21 @@
     "seatId": "1_8_11",
     "seatLabel": "E6",
     "availableSince": "2026-09-14T05:52:11.702099+00:00"
+  },
+  "Dune: Part 3|9406|405811|1_8_10": {
+    "watchName": "Dune: Part 3",
+    "theatreId": "9406",
+    "showtimeId": "405811",
+    "seatId": "1_8_10",
+    "seatLabel": "E5",
+    "availableSince": "2026-09-14T06:17:33.262455+00:00"
+  },
+  "Dune: Part 3|9406|405811|1_8_11": {
+    "watchName": "Dune: Part 3",
+    "theatreId": "9406",
+    "showtimeId": "405811",
+    "seatId": "1_8_11",
+    "seatLabel": "E6",
+    "availableSince": "2026-09-14T06:17:33.262455+00:00"
   }
 }
