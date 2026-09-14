@@ -238,3 +238,10 @@ for the other watched showtimes.
 Lesson retained: test destructive-looking commands against a multi-showtime
 watch. The assertion must prove both the requested removal and preservation of
 the unrelated active showtime and its de-duplication records.
+
+## Next implementation step: `/stopseats`
+
+The next isolated step adds `/stopseats <watch name>`. It must disable the
+whole watch, clear every available-seat alert entry for that watch, retain the
+configuration for later editing, and leave unrelated watches untouched. The
+repeatable regression script covers those saved-state effects before deployment.

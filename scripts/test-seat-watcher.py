@@ -150,6 +150,25 @@ def main():
         assert saved["showtimes"]["405853"]["enabled"] is True
         assert saved["showtimes"]["405854"]["enabled"] is False
         assert sorted(saved_available) == ["Dune|9406|405853|one"]
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        watch = {
+            "id": "dune", "name": "Dune", "enabled": True, "theatreId": "9406", "theatreName": "Test",
+            "rule": rule,
+            "showtimes": {"405853": {"enabled": True}, "405854": {"enabled": True}},
+        }
+        (root / "seat-watches.json").write_text(json.dumps({"watches": {"dune": watch}}))
+        (root / "available-seat-list.json").write_text(json.dumps({
+            "Dune|9406|405853|one": {"seatId": "one"},
+            "Dune|9406|405854|two": {"seatId": "two"},
+        }))
+        result = run(root, "stop", "{}", "dune")
+        saved = json.loads((root / "seat-watches.json").read_text())["watches"]["dune"]
+        saved_available = json.loads((root / "available-seat-list.json").read_text())
+        assert result["message"] == "Stopped seat watch Dune."
+        assert saved["enabled"] is False
+        assert saved_available == {}
     print("seat watcher core checks passed")
 
 
