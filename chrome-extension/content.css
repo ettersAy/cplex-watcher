@@ -1,7 +1,0 @@
-#cplex-seat-watcher-prompt { background: #fff; border: 1px solid #cbd8cf; border-radius: 12px; bottom: 20px; box-shadow: 0 10px 32px #0003; color: #17211d; display: grid; font: 14px/1.4 system-ui, sans-serif; gap: 8px; padding: 13px; position: fixed; right: 20px; width: min(320px, calc(100vw - 40px)); z-index: 2147483647; }
-#cplex-seat-watcher-prompt strong { font-size: 15px; }
-#cplex-seat-watcher-prompt div { display: flex; gap: 8px; }
-#cplex-seat-watcher-prompt button { border: 0; border-radius: 7px; cursor: pointer; padding: 8px 10px; }
-#cplex-seat-watcher-prompt [data-action="add"] { background: #1f7146; color: #fff; font-weight: 700; }
-#cplex-seat-watcher-prompt [data-action="dismiss"] { background: #edf1ee; color: #28342d; }
-#cplex-seat-watcher-prompt p { color: #52695a; font-size: 12px; margin: 0; }

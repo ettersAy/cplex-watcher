@@ -7,5 +7,5 @@
   "host_permissions": ["https://www.cineplex.com/*", "https://cplex-watcher.cplexwatcher.workers.dev/*"],
   "background": {"service_worker": "background.js", "type": "module"},
   "action": {"default_title": "Cineplex Seat Watcher", "default_popup": "popup.html"},
-  "content_scripts": [{"matches": ["https://www.cineplex.com/ticketing/preview*"], "js": ["content.js"], "css": ["content.css"], "run_at": "document_idle"}]
+  "content_scripts": [{"matches": ["https://www.cineplex.com/ticketing/preview*"], "js": ["content.js"], "run_at": "document_idle"}]
 }
