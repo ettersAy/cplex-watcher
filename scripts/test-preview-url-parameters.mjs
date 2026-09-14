@@ -30,5 +30,6 @@ const watches = {
 };
 assert.equal(context.findSeatWatchForTest(watches, "Dune"), null);
 assert.equal(context.findSeatWatchForTest(watches, "Dune", { activeShowtimesOnly: true }).id, "active");
+assert.equal(context.findSeatWatchForTest({ active: { name: "Dune: Part 3", enabled: true, showtimes: { "405810": { enabled: true } } } }, "Dune", { activeShowtimesOnly: true }).id, "active");
 
 console.log("active seat-watch lookup checks passed");

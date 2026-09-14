@@ -598,12 +598,14 @@ function parseSeatPreviewUrl(value) {
 
 function findSeatWatch(watches, requestedName, { activeShowtimesOnly = false } = {}) {
   const target = normalizeSeatWatchName(requestedName);
-  const matches = Object.entries(watches).filter(([, watch]) => {
-    if (normalizeSeatWatchName(watch?.name) !== target) return false;
+  const candidates = Object.entries(watches).filter(([, watch]) => {
     return !activeShowtimesOnly || (watch?.enabled && Object.values(watch.showtimes || {}).some((showtime) => showtime?.enabled !== false));
   });
-  if (matches.length !== 1) return null;
-  return { id: matches[0][0], watch: matches[0][1] };
+  const exact = candidates.filter(([, watch]) => normalizeSeatWatchName(watch?.name) === target);
+  if (exact.length === 1) return { id: exact[0][0], watch: exact[0][1] };
+  const partial = candidates.filter(([, watch]) => normalizeSeatWatchName(watch?.name).includes(target));
+  if (partial.length !== 1) return null;
+  return { id: partial[0][0], watch: partial[0][1] };
 }
 
 function escapeHtml(value) {
