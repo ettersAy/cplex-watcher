@@ -273,7 +273,7 @@ def _fetch_with_retry(fetch_json, url: str, *, sleep=time.sleep, attempts: int =
     raise RuntimeError("unreachable retry state")
 
 
-def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sleep) -> dict:
+def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sleep, watch_id: str | None = None) -> dict:
     """Scan enabled watches, persist state, and return a safe result summary.
 
     `fetch_json` and `notify` are injected by tests. `notify(text)` must raise on
@@ -288,17 +288,21 @@ def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sle
     available_list = _read_json(available_path, {})
     if not isinstance(config.get("watches"), dict):
         raise ValueError("seat-watches.json must contain a watches object")
+    if watch_id and watch_id not in config["watches"]:
+        raise ValueError("Seat watch was not found")
     append_log(log_path, "info", "seat watcher scan started")
     result = {"watches": 0, "showtimes": 0, "failures": 0, "newSeats": 0}
 
-    for watch_id, watch in config["watches"].items():
+    for current_watch_id, watch in config["watches"].items():
+        if watch_id and current_watch_id != watch_id:
+            continue
         if not watch.get("enabled"):
             continue
         result["watches"] += 1
         theatre_id = str(watch["theatreId"])
         watch_name = str(watch["name"])
         rule = watch["rule"]
-        watch_state = state.setdefault("watches", {}).setdefault(watch_id, {"showtimes": {}})
+        watch_state = state.setdefault("watches", {}).setdefault(current_watch_id, {"showtimes": {}})
         for showtime_id, showtime in watch.get("showtimes", {}).items():
             if not showtime.get("enabled"):
                 continue
@@ -382,6 +386,7 @@ def main() -> None:
     parser.add_argument("operation", choices=("scan",), nargs="?", default="scan")
     parser.add_argument("--root", type=Path, default=Path(__file__).parent)
     parser.add_argument("--notify", action="store_true", help="send configured Telegram notifications")
+    parser.add_argument("--watch-id", help="scan one enabled seat watch")
     args = parser.parse_args()
     notify = None
     if args.notify:
@@ -393,7 +398,7 @@ def main() -> None:
 
         notify = lambda text: send_telegram(token, recipients, text, parse_mode="HTML")
     try:
-        result = scan_all(args.root, notify=notify)
+        result = scan_all(args.root, notify=notify, watch_id=args.watch_id)
     except (OSError, ValueError, HTTPError, URLError, json.JSONDecodeError) as error:
         print(f"seat watcher failed: {error}", file=sys.stderr)
         raise SystemExit(1)

@@ -302,3 +302,9 @@ seat was included.
 Lesson retained: use the saved selected-seat statuses for the detailed view,
 not all raw availability-response seats. That makes the user-facing details
 match the configured label rule exactly.
+
+## Next implementation step: `/refreshseats`
+
+The manual refresh accepts only a seat-watch name, resolves that active watch
+before dispatch, and scans only that watch in the shared workflow concurrency
+group. It does not change the five-minute schedule or the watch configuration.

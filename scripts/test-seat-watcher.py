@@ -177,6 +177,16 @@ def main():
         assert result["message"] == "Stopped seat watch Dune."
         assert saved["enabled"] is False
         assert saved_available == {}
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        watch = {
+            "id": "dune", "name": "Dune", "enabled": True, "theatreId": "9406", "theatreName": "Test",
+            "rule": rule, "showtimes": {"405853": {"enabled": True}},
+        }
+        (root / "seat-watches.json").write_text(json.dumps({"watches": {"dune": watch}}))
+        result = run(root, "refresh", "{}", "dune")
+        assert result["message"] == "Refreshed seat watch Dune."
     print("seat watcher core checks passed")
 
 

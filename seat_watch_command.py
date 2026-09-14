@@ -169,6 +169,11 @@ def run(root, operation, payload_value, watch_id):
         for showtime_id in watch.get("showtimes", {}):
             _remove_showtime_entries(available, watch["name"], watch["theatreId"], showtime_id)
         message = f"Stopped seat watch {watch['name']}."
+    elif operation == "refresh":
+        watch = watches.get(watch_id)
+        if not watch or not watch.get("enabled"):
+            raise ValueError("No enabled seat watch was found")
+        message = f"Refreshed seat watch {watch['name']}."
     elif operation in {"add_showtime", "stop_showtime"}:
         watch = watches.get(watch_id)
         if not watch:
@@ -203,7 +208,7 @@ def run(root, operation, payload_value, watch_id):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("operation", choices=("create", "edit", "stop", "add_showtime", "stop_showtime"))
+    parser.add_argument("operation", choices=("create", "edit", "stop", "add_showtime", "stop_showtime", "refresh"))
     parser.add_argument("--payload", default="{}")
     parser.add_argument("--watch-id", default="")
     parser.add_argument("--root", type=Path, default=Path(__file__).parent)

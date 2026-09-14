@@ -350,6 +350,22 @@ async function handleStopSeats(env, chatId, name) {
   }
 }
 
+async function handleRefreshSeats(env, chatId, name) {
+  if (!name) return telegram(env, chatId, "Use /refreshseats Watch Name\nExample: /refreshseats Dune");
+  try {
+    const found = findSeatWatch(await getSeatWatches(env), name);
+    if (!found || !found.watch.enabled) return telegram(env, chatId, `No enabled seat watch named ${name}.`);
+    const requestId = crypto.randomUUID();
+    console.log(JSON.stringify({ event: "seat_watch_refresh_requested", requestId, watchId: found.id }));
+    await dispatchSeatWatch(env, "refresh", found.id, {}, requestId, chatId);
+    console.log(JSON.stringify({ event: "seat_watch_refresh_queued", requestId, watchId: found.id }));
+    return telegram(env, chatId, `⏳ Refreshing ${found.watch.name} now. I will reply after the seat check.`);
+  } catch (error) {
+    console.error("Could not dispatch seat-watch refresh:", error);
+    return telegram(env, chatId, "I could not start the seat refresh. Please try again shortly.");
+  }
+}
+
 function movieKey(url) {
   return new URL(url).pathname.split("/").filter(Boolean).at(-1);
 }
@@ -673,12 +689,15 @@ async function handleUpdate(request, env) {
   const watchShowtimeCommand = message.text.match(/^\/watchshowtime(?:@\w+)?\s+(.+)$/i);
   const stopShowtimeCommand = message.text.match(/^\/stopshowtime(?:@\w+)?\s+(.+)$/i);
   const stopSeatsCommand = message.text.match(/^\/stopseats(?:@\w+)?\s+(.+)$/i);
+  const refreshSeatsCommand = message.text.match(/^\/refreshseats(?:@\w+)?\s+(.+)$/i);
   if (watchShowtimeCommand) {
     await handleWatchShowtime(env, chatId, watchShowtimeCommand[1]);
   } else if (stopShowtimeCommand) {
     await handleStopShowtime(env, chatId, stopShowtimeCommand[1]);
   } else if (stopSeatsCommand) {
     await handleStopSeats(env, chatId, stopSeatsCommand[1].trim());
+  } else if (refreshSeatsCommand) {
+    await handleRefreshSeats(env, chatId, refreshSeatsCommand[1].trim());
   } else if (watchCommand) {
     await handleWatch(env, chatId, watchCommand[1].trim());
   } else if (stopCommand) {
@@ -692,7 +711,7 @@ async function handleUpdate(request, env) {
     } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
       await handleList(env, chatId);
     } else {
-      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
+      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /refreshseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
     }
   }
 

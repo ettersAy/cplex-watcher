@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       operation:
-        description: scan, create, edit, stop, add_showtime, or stop_showtime
+        description: scan, create, edit, stop, add_showtime, stop_showtime, or refresh
         required: false
         default: scan
         type: string
@@ -53,11 +53,11 @@ jobs:
         run: python seat_watch_command.py "$SEAT_OPERATION" --watch-id "$SEAT_WATCH_ID" --payload "$SEAT_PAYLOAD" > command-result.json
 
       - name: Scan configured seat watches
-        if: github.event_name != 'workflow_dispatch' || inputs.operation == 'scan' || inputs.operation == 'create' || inputs.operation == 'edit' || inputs.operation == 'add_showtime'
+        if: github.event_name != 'workflow_dispatch' || inputs.operation == 'scan' || inputs.operation == 'create' || inputs.operation == 'edit' || inputs.operation == 'add_showtime' || inputs.operation == 'refresh'
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
-        run: python seat_watcher.py scan --notify
+        run: python seat_watcher.py scan --notify ${{ inputs.operation == 'refresh' && format('--watch-id {0}', inputs.watch_id) || '' }}
 
       - name: Send command result to Telegram
         if: github.event_name == 'workflow_dispatch' && inputs.operation != 'scan' && inputs.chat_id != '' && always()
