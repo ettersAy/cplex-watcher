@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 const workerPath = new URL("../cloudflare-worker/src.js", import.meta.url);
 const source = readFileSync(workerPath, "utf8")
   .replace("export default {", "globalThis.__worker = {")
-  + "\nglobalThis.__seatListTest = { handleSeatList, handleSeatInfo, seatWatchSummaryHtml };";
+  + "\nglobalThis.__seatListTest = { handleSeatList, handleSeatInfo, handleSeatWatchLayout, seatWatchSummaryHtml };";
 await import(`data:text/javascript,${encodeURIComponent(source)}`);
 
 const watches = {
@@ -30,6 +30,7 @@ const states = {
 const available = {
   one: { watchName: "Dune & Friends", theatreId: "9406", showtimeId: "405854", seatId: "seat", seatLabel: "E10" },
 };
+const cineplexLayout = { totalColumns: 35, standardSeats: { rows: [{ seats: [{ id: "seat", label: "E10", columnPhysicalNumber: 10, type: "Standard" }] }] } };
 const sent = [];
 const originalFetch = globalThis.fetch;
 let failStateRead = false;
@@ -39,12 +40,21 @@ globalThis.fetch = async (url, options = {}) => {
       : url.includes("available-seat-list.json") ? available : null;
   if (failStateRead && url.includes("seat-watch-state.json")) return new Response("forbidden", { status: 403 });
   if (file) return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(file)).toString("base64") }));
+  if (String(url).includes("seat-layout")) return new Response(JSON.stringify(cineplexLayout));
   if (String(url).includes("api.telegram.org")) {
     sent.push(JSON.parse(options.body));
     return new Response("{}", { status: 200 });
   }
   throw new Error(`Unexpected fetch: ${url}`);
 };
+
+const layoutResponse = await globalThis.__seatListTest.handleSeatWatchLayout(
+  new Request("https://worker.example/api/seat-watches/dune/showtimes/405853/layout", { headers: { Origin: "https://ui.example", Authorization: "Bearer token" } }),
+  { UI_ORIGIN: "https://ui.example", UI_ACCESS_TOKEN: "token", GITHUB_REPOSITORY: "owner/repo", GITHUB_ACTIONS_TOKEN: "test" },
+  "dune", "405853",
+);
+assert.equal(layoutResponse.status, 200);
+assert.equal((await layoutResponse.json()).layout.totalColumns, 35);
 
 await globalThis.__seatListTest.handleSeatList({ GITHUB_REPOSITORY: "owner/repo", GITHUB_ACTIONS_TOKEN: "test", TELEGRAM_BOT_TOKEN: "test" }, "123");
 

@@ -152,6 +152,33 @@ async function handleSeatWatchRead(request, env) {
   }
 }
 
+async function handleSeatWatchLayout(request, env, watchId, showtimeId) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+  if (!seatWatchId(watchId) || !/^\d+$/.test(showtimeId || "")) {
+    return queueResponse(env, { error: "Seat watch or showtime is invalid." }, 400);
+  }
+  try {
+    const watch = (await getSeatWatches(env))[watchId];
+    if (!watch?.enabled || !watch.showtimes?.[showtimeId]?.enabled) {
+      return queueResponse(env, { error: "This showtime is not enabled for the seat watch." }, 404);
+    }
+    const response = await fetch(`https://apis.cineplex.com/prod/ticketing/api/v1/theatre/${encodeURIComponent(watch.theatreId)}/showtime/${encodeURIComponent(showtimeId)}/seat-layout`, {
+      headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher/1.0 (personal ticket availability monitor)" },
+    });
+    if (!response.ok) throw new Error(`Cineplex seat layout returned HTTP ${response.status}`);
+    const layout = await response.json();
+    if (!Array.isArray(layout?.standardSeats?.rows) || !Number.isInteger(layout?.totalColumns)) {
+      throw new Error("Cineplex seat layout has an unexpected format");
+    }
+    console.log(JSON.stringify({ event: "web_seat_layout_loaded", watchId, showtimeId }));
+    return queueResponse(env, { showtimeId, layout });
+  } catch (error) {
+    console.error("Could not load web seat layout:", error);
+    return queueResponse(env, { error: "Could not load the Cineplex seat layout. Please try again shortly." }, 502);
+  }
+}
+
 function seatWatchId(value) {
   return /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value || "") ? value : null;
 }
@@ -788,6 +815,8 @@ export default {
     if (url.pathname === "/api/verify" && request.method === "POST") return handleVerifyUiToken(request, env);
     if (url.pathname === "/api/seat-watches" && request.method === "GET") return handleSeatWatchRead(request, env);
     if (url.pathname === "/api/seat-watches" && request.method === "POST") return handleSeatWatchMutation(request, env, "create");
+    const layoutPath = /^\/api\/seat-watches\/([^/]+)\/showtimes\/(\d+)\/layout$/.exec(url.pathname);
+    if (layoutPath && request.method === "GET") return handleSeatWatchLayout(request, env, decodeURIComponent(layoutPath[1]), layoutPath[2]);
     const showtimePath = /^\/api\/seat-watches\/([^/]+)\/showtimes\/(\d+)$/.exec(url.pathname);
     if (showtimePath && request.method === "DELETE") return handleSeatWatchMutation(request, env, "stop_showtime", decodeURIComponent(showtimePath[1]), { id: showtimePath[2] });
     if (url.pathname.startsWith("/api/seat-watches/")) {

@@ -61,6 +61,8 @@ Implement the watcher-first layout in [seat-watcher-layout-template.html](seat-w
 
 Add an `👁️ Seats` button to every active watcher header. It opens the watcher-level popup shown in [seat-preview-popup-template.html](seat-preview-popup-template.html). The template loads the current captured Cineplex layout fixture; the live page must load the selected enabled showtime's real `seat-layout`. Watched labels are yellow and every other returned seat is blue. Keep actual gaps, aisles, physical columns, special seats, and per-row seat counts from the API rather than assuming a rectangular theatre. The popup is informational: it does not change what is scanned, and blue seats never create alerts.
 
+The live page obtains that layout through the protected `GET /api/seat-watches/<watchId>/showtimes/<showtimeId>/layout` endpoint. It only accepts an enabled showtime belonging to the specified enabled watch, then requests Cineplex's seat-layout endpoint; never expose a general user-controlled proxy URL.
+
 Stopped watches must remain visible in a separate compact `Stopped watches` section. Their `Edit` button opens the same form with the saved values; saving it revalidates the full configuration and restarts that watch. Do not require the user to create a duplicate watch merely to restart or change it.
 
 ### 3.2 Protected web API
