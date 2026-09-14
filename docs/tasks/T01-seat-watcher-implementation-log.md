@@ -222,3 +222,19 @@ Worker. It resolves the existing enabled watch, checks that the showtime is
 active, dispatches `stop_showtime`, and replies only after the Action saves the
 change. The repeatable regression script verifies that it disables only the
 requested showtime and removes only that showtime's de-duplication entries.
+
+## 2026-09-13 — Stage 9: `/stopshowtime` live proof
+
+`/stopshowtime Dune 405854` was sent by a real Telegram user to the deployed
+Worker. The Worker acknowledged the request, GitHub Actions run `34795780587`
+completed successfully, and Telegram replied: `Stopped showtime #405854 for
+Dune.`
+
+GitHub state read-back confirmed `405854` is disabled, `405853` remains
+enabled, and the available-seat list contains only the 9 entries for `405853`.
+This proves stopping one showtime does not stop the movie watch or erase alerts
+for the other watched showtimes.
+
+Lesson retained: test destructive-looking commands against a multi-showtime
+watch. The assertion must prove both the requested removal and preservation of
+the unrelated active showtime and its de-duplication records.
