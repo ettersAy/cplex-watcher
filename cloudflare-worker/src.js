@@ -406,6 +406,24 @@ async function handleStopShowtime(env, chatId, value) {
   }
 }
 
+async function handleWatchSeat(env, chatId, value) {
+  const preview = parseSeatPreviewUrl(value);
+  if (!preview) return telegram(env, chatId, "Use /watchseat CineplexPreviewUrl\nExample: /watchseat https://www.cineplex.com/ticketing/preview?theatreId=9406&showtimeId=405853");
+  try {
+    const watches = await getSeatWatches(env);
+    const existing = Object.values(watches).find((watch) => String(watch.theatreId) === preview.theatreId && watch.showtimes?.[preview.showtimeId]);
+    if (existing) return telegram(env, chatId, `ℹ️ #${preview.showtimeId} is already in ${existing.name}. Nothing changed.`);
+    const requestId = crypto.randomUUID();
+    console.log(JSON.stringify({ event: "seat_preview_watch_requested", requestId, ...preview }));
+    await dispatchSeatWatch(env, "watch_preview", "", preview, requestId, chatId);
+    console.log(JSON.stringify({ event: "seat_preview_watch_queued", requestId, ...preview }));
+    return telegram(env, chatId, `⏳ Reading #${preview.showtimeId} from Cineplex. I will add it to its movie watch after validation.`);
+  } catch (error) {
+    console.error("Could not dispatch preview seat watch:", error);
+    return telegram(env, chatId, "I could not start the preview seat watch. Please try again shortly.");
+  }
+}
+
 async function handleStopSeats(env, chatId, name) {
   if (!name) return telegram(env, chatId, "Use /stopseats Watch Name\nExample: /stopseats Dune");
   try {
@@ -535,6 +553,18 @@ function parseSeatShowtimeCommand(value) {
   const name = parts.join(" ");
   if (!name || !/^\d+$/.test(showtimeId || "")) return null;
   return { name, showtimeId };
+}
+
+function parseSeatPreviewUrl(value) {
+  try {
+    const url = new URL(value.trim());
+    const theatreId = url.searchParams.get("theatreId");
+    const showtimeId = url.searchParams.get("showtimeId");
+    if (url.hostname !== "www.cineplex.com" || !/^\/ticketing\/preview\/?$/i.test(url.pathname) || !/^\d+$/.test(theatreId || "") || !/^\d+$/.test(showtimeId || "")) return null;
+    return { theatreId, showtimeId };
+  } catch {
+    return null;
+  }
 }
 
 function findSeatWatch(watches, requestedName) {
@@ -771,10 +801,13 @@ async function handleUpdate(request, env) {
   const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
   const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);
   const watchShowtimeCommand = message.text.match(/^\/watchshowtime(?:@\w+)?\s+(.+)$/i);
+  const watchSeatCommand = message.text.match(/^\/watchseat(?:@\w+)?\s+(.+)$/i);
   const stopShowtimeCommand = message.text.match(/^\/stopshowtime(?:@\w+)?\s+(.+)$/i);
   const stopSeatsCommand = message.text.match(/^\/stopseats(?:@\w+)?\s+(.+)$/i);
   const refreshSeatsCommand = message.text.match(/^\/refreshseats(?:@\w+)?\s+(.+)$/i);
-  if (watchShowtimeCommand) {
+  if (watchSeatCommand) {
+    await handleWatchSeat(env, chatId, watchSeatCommand[1]);
+  } else if (watchShowtimeCommand) {
     await handleWatchShowtime(env, chatId, watchShowtimeCommand[1]);
   } else if (stopShowtimeCommand) {
     await handleStopShowtime(env, chatId, stopShowtimeCommand[1]);
@@ -795,7 +828,7 @@ async function handleUpdate(request, env) {
     } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
       await handleList(env, chatId);
     } else {
-      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /refreshseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
+      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchseat CineplexPreviewUrl\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /refreshseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchseat https://www.cineplex.com/ticketing/preview?theatreId=9406&showtimeId=405765\n\nUse /list to see your watched movies.");
     }
   }
 

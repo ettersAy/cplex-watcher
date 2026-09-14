@@ -19,6 +19,8 @@ from seat_watcher import (
     select_seats,
 )
 
+DEFAULT_RULE = {"E": [[9, 17]], "F": [[14, 23]], "G": [[14, 23]], "H": [[14, 23]], "I": [[14, 23]]}
+
 
 def slug(value):
     return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
@@ -155,9 +157,9 @@ def command_result_html(result):
     return "\n\n".join(lines)
 
 
-def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_json=request_json):
+def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_json=request_json, details=None):
     for showtime_id in watch["showtimes"]:
-        detail = fetch_detail(watch["theatreId"], showtime_id)
+        detail = (details or {}).get(showtime_id) or fetch_detail(watch["theatreId"], showtime_id)
         watch["showtimes"][showtime_id].update(showtime_display_metadata(detail, watch["theatreId"], showtime_id))
         layout = fetch_json(layout_url(watch["theatreId"], showtime_id))
         if not select_seats(layout, watch["rule"]):
@@ -165,6 +167,33 @@ def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_jso
         availability = fetch_json(availability_url(watch["theatreId"], showtime_id))
         if not isinstance(availability.get("seatAvailabilities"), dict):
             raise ValueError(f"Showtime #{showtime_id} returned invalid availability data")
+
+
+def register_preview_watch(watches, theatre_id, showtime_id, *, fetch_detail=request_showtime_detail, fetch_json=request_json):
+    """Register a preview URL showtime, reusing a matching movie/theatre watch."""
+    detail = fetch_detail(theatre_id, showtime_id)
+    movie_name = detail.get("movie")
+    theatre_name = detail.get("theatre")
+    if not isinstance(movie_name, str) or not movie_name.strip():
+        raise ValueError("Cineplex detail response is missing the movie name")
+    if not isinstance(theatre_name, str) or not theatre_name.strip():
+        raise ValueError("Cineplex detail response is missing the theatre name")
+    movie_name, theatre_name = movie_name.strip(), theatre_name.strip()
+    matching = next((watch for watch in watches.values() if watch.get("enabled") and watch.get("name", "").casefold() == movie_name.casefold() and str(watch.get("theatreId")) == theatre_id), None)
+    if matching:
+        candidate = {**matching, "showtimes": {showtime_id: {"enabled": True}}}
+        validate_showtimes(candidate, fetch_detail=fetch_detail, fetch_json=fetch_json, details={showtime_id: detail})
+        matching["showtimes"][showtime_id] = candidate["showtimes"][showtime_id]
+        return matching, "add_showtime"
+    name = movie_name
+    if any(watch.get("name", "").casefold() == movie_name.casefold() for watch in watches.values()):
+        name = f"{movie_name} · {theatre_name}"
+    watch = validate_watch({"name": name, "theatreId": theatre_id, "theatreName": theatre_name, "rule": DEFAULT_RULE, "showtimes": [{"id": showtime_id}]})
+    if watch["id"] in watches:
+        raise ValueError(f"A seat watch named {name} already exists")
+    validate_showtimes(watch, fetch_detail=fetch_detail, fetch_json=fetch_json, details={showtime_id: detail})
+    watches[watch["id"]] = watch
+    return watch, "create"
 
 
 def run(root, operation, payload_value, watch_id):
@@ -175,7 +204,16 @@ def run(root, operation, payload_value, watch_id):
     state = _read_json(state_path, {"watches": {}})
     available = _read_json(available_path, {})
     watches = config.setdefault("watches", {})
-    if operation in {"create", "edit"}:
+    if operation == "watch_preview":
+        payload = read_payload(payload_value)
+        theatre_id = payload.get("theatreId")
+        showtime_id = payload.get("showtimeId")
+        if not isinstance(theatre_id, str) or not theatre_id.isdigit():
+            raise ValueError("Theatre ID must contain digits only")
+        showtime_id = valid_showtime_id(showtime_id)
+        watch, completed_operation = register_preview_watch(watches, theatre_id, showtime_id)
+        message = f"Added preview showtime #{showtime_id} to {watch['name']}."
+    elif operation in {"create", "edit"}:
         watch = validate_watch(read_payload(payload_value))
         if operation == "create" and watch["id"] in watches:
             raise ValueError(f"A watch named {watch['name']} already exists")
@@ -235,15 +273,15 @@ def run(root, operation, payload_value, watch_id):
     return {
         "message": message,
         "watchId": watch_id or watch["id"],
-        "operation": operation,
+        "operation": completed_operation if operation == "watch_preview" else operation,
         "watch": watches[watch_id or watch["id"]],
-        "showtimeId": showtime_id if operation in {"add_showtime", "stop_showtime"} else None,
+        "showtimeId": showtime_id if operation in {"add_showtime", "stop_showtime", "watch_preview"} else None,
     }
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("operation", choices=("create", "edit", "stop", "add_showtime", "stop_showtime", "refresh"))
+    parser.add_argument("operation", choices=("create", "edit", "stop", "add_showtime", "stop_showtime", "refresh", "watch_preview"))
     parser.add_argument("--payload", default="{}")
     parser.add_argument("--watch-id", default="")
     parser.add_argument("--root", type=Path, default=Path(__file__).parent)

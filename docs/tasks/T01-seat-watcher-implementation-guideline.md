@@ -156,6 +156,7 @@ All seat-management commands use the existing authorized-chat check. Command rep
 | Command | Contract |
 |---|---|
 | `/watchshowtime <watch name> <showtimeId>` | Adds one validated showtime to an existing enabled watch. No date or time is entered by the user. |
+| `/watchseat <Cineplex preview URL>` | Extracts `theatreId` and `showtimeId`. If that pair is already watched it changes nothing. Otherwise the Action fetches Cineplex metadata once; it adds the showtime to an enabled watch for the same movie and theatre, or creates a new watch using the default seat rule. |
 | `/stopshowtime <watch name> <showtimeId>` | Disables that showtime and removes its available-seat alert entries. |
 | `/stopseats <watch name>` | Disables every showtime in that watch and clears its alert entries; does not delete configuration. |
 | `/listseats` | Shows a short summary for every enabled watch. |

@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from seat_watcher import apply_available_seats, availability_url, grouped_alert_html, layout_url, parse_rule, scan_all, select_seats
-from seat_watch_command import command_result_html, run, showtime_display_metadata, validate_showtimes, validate_watch
+from seat_watch_command import command_result_html, register_preview_watch, run, showtime_display_metadata, validate_showtimes, validate_watch
 
 
 def layout_fixture():
@@ -76,6 +76,25 @@ def main():
     )
     assert calls == [("9406", "405853")]
     assert validation_watch["showtimes"]["405853"]["displayTime"] == "Jan 14, 12:15 PM"
+
+    preview_detail = {
+        "theatreId": 9406, "theatre": "Scotia Bank", "movie": "Dune: Part 3",
+        "showDate": "2027-01-14T00:00:00",
+        "showtime": {"vistaSessionId": 405853, "showStartDateTime": "2027-01-14T12:15:00"},
+    }
+    preview_watches = {}
+    preview_watch, preview_operation = register_preview_watch(
+        preview_watches, "9406", "405853", fetch_detail=lambda *_: preview_detail,
+        fetch_json=lambda url: layout_fixture() if "seat-layout" in url else {"seatAvailabilities": {}},
+    )
+    assert preview_operation == "create" and preview_watch["name"] == "Dune: Part 3"
+    assert preview_watch["showtimes"]["405853"]["displayTime"] == "Jan 14, 12:15 PM"
+    preview_detail["showtime"] = {"vistaSessionId": 405854, "showStartDateTime": "2027-01-14T18:00:00"}
+    preview_watch, preview_operation = register_preview_watch(
+        preview_watches, "9406", "405854", fetch_detail=lambda *_: preview_detail,
+        fetch_json=lambda url: layout_fixture() if "seat-layout" in url else {"seatAvailabilities": {}},
+    )
+    assert preview_operation == "add_showtime" and sorted(preview_watch["showtimes"]) == ["405853", "405854"]
 
     availability = {seat_id: "Occupied" for seat_id in selected}
     new_seats, available_list = apply_available_seats(
