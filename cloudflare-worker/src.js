@@ -95,7 +95,7 @@ async function dispatchSeatWatch(env, operation, watchId, payload, requestId, ch
 function queueCorsHeaders(env) {
   return {
     "access-control-allow-origin": env.UI_ORIGIN,
-    "access-control-allow-methods": "POST, PATCH, DELETE, OPTIONS",
+    "access-control-allow-methods": "GET, POST, PATCH, DELETE, OPTIONS",
     "access-control-allow-headers": "authorization, content-type",
     "access-control-max-age": "86400",
     vary: "Origin",
@@ -138,6 +138,18 @@ function isCineplexMovieUrl(value) {
 
 function queueResponse(env, body, status = 200) {
   return Response.json(body, { status, headers: queueCorsHeaders(env) });
+}
+
+async function handleSeatWatchRead(request, env) {
+  const authenticationError = queueAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+  try {
+    const [watches, state] = await Promise.all([getSeatWatches(env), getSeatWatchState(env)]);
+    return queueResponse(env, { watches, state });
+  } catch (error) {
+    console.error("Could not load web seat-watch state:", error);
+    return queueResponse(env, { error: "Could not load seat watches. Please try again shortly." }, 502);
+  }
 }
 
 function seatWatchId(value) {
@@ -764,6 +776,7 @@ export default {
     if (url.pathname === "/api/queue" && request.method === "DELETE") return handleRemoveWatch(request, env);
     if (url.pathname === "/api/scan" && request.method === "POST") return handleScan(request, env);
     if (url.pathname === "/api/verify" && request.method === "POST") return handleVerifyUiToken(request, env);
+    if (url.pathname === "/api/seat-watches" && request.method === "GET") return handleSeatWatchRead(request, env);
     if (url.pathname === "/api/seat-watches" && request.method === "POST") return handleSeatWatchMutation(request, env, "create");
     const showtimePath = /^\/api\/seat-watches\/([^/]+)\/showtimes\/(\d+)$/.exec(url.pathname);
     if (showtimePath && request.method === "DELETE") return handleSeatWatchMutation(request, env, "stop_showtime", decodeURIComponent(showtimePath[1]), { id: showtimePath[2] });
