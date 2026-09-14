@@ -38,6 +38,14 @@ def main():
         "showtimes": [{"id": "405765"}],
     })
     assert command_watch["showtimes"]["405765"] == {"enabled": True}
+    try:
+        validate_watch({
+            "name": "Dune", "theatreId": "9406", "theatreName": "Test", "rule": {"E": [9, 17]},
+            "showtimes": [{"id": "405765"}],
+        })
+        raise AssertionError("Malformed seat-rule shape was accepted")
+    except ValueError as error:
+        assert "two positive integers" in str(error)
 
     metadata = showtime_display_metadata({
         "theatreId": 9406,

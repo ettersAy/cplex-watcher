@@ -245,3 +245,18 @@ The next isolated step adds `/stopseats <watch name>`. It must disable the
 whole watch, clear every available-seat alert entry for that watch, retain the
 configuration for later editing, and leave unrelated watches untouched. The
 repeatable regression script covers those saved-state effects before deployment.
+
+## 2026-09-13 — Validation correction found while restoring the live test watch
+
+The first restoration attempt used a compact rule such as `"E": [9, 17]`
+instead of the documented range-list shape `"E": [[9, 17]]`. The command
+handler accepted it, then the layout validation raised a Python type error.
+No state was saved or changed because the failure occurred before writes.
+
+`validate_watch` now rejects malformed, non-positive, descending, overlapping,
+or duplicate-row rules before it makes any Cineplex request. The repeatable
+test includes the malformed compact shape.
+
+Lesson retained: validate a command payload's complete nested data contract at
+the command boundary. Do not rely on later scanning code to reveal malformed
+configuration.

@@ -39,6 +39,34 @@ def valid_showtime_id(value):
     return value
 
 
+def validate_rule(rule):
+    if not isinstance(rule, dict) or not rule:
+        raise ValueError("Seat rule is required")
+    normalized = {}
+    for row, ranges in rule.items():
+        normalized_row = row.upper() if isinstance(row, str) else ""
+        if not re.fullmatch(r"[A-Z]+", normalized_row) or not isinstance(ranges, list) or not ranges:
+            raise ValueError("Seat rule must contain row ranges such as E: [[9, 17]]")
+        if normalized_row in normalized:
+            raise ValueError(f"Seat rule contains row {normalized_row} more than once")
+        normalized_ranges = []
+        for seat_range in ranges:
+            if (
+                not isinstance(seat_range, list)
+                or len(seat_range) != 2
+                or any(not isinstance(number, int) or isinstance(number, bool) for number in seat_range)
+            ):
+                raise ValueError("Each seat range must contain two positive integers")
+            start, end = seat_range
+            if start <= 0 or end <= 0 or start > end:
+                raise ValueError("Seat ranges must use positive ascending numbers")
+            if any(start <= previous_end and end >= previous_start for previous_start, previous_end in normalized_ranges):
+                raise ValueError(f"Overlapping seat range for row {normalized_row}")
+            normalized_ranges.append([start, end])
+        normalized[normalized_row] = normalized_ranges
+    return normalized
+
+
 def validate_watch(payload):
     name = payload.get("name")
     theatre_id = payload.get("theatreId")
@@ -51,8 +79,7 @@ def validate_watch(payload):
         raise ValueError("Theatre ID must contain digits only")
     if not isinstance(theatre_name, str) or not theatre_name.strip():
         raise ValueError("Theatre name is required")
-    if not isinstance(rule, dict) or not rule:
-        raise ValueError("Seat rule is required")
+    rule = validate_rule(rule)
     if not isinstance(showtimes, list) or not showtimes:
         raise ValueError("Provide at least one showtime")
     normalized = {}
