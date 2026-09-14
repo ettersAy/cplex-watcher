@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <title>Cineplex Seat Watcher</title>
-    <link rel="stylesheet" href="styles.css?v=20260913-seat-1">
+    <link rel="stylesheet" href="styles.css?v=20260913-seat-3">
   </head>
   <body>
     <main id="app" hidden>
       <header class="page-header">
-        <div><h1>Seat watches</h1><p class="hint">Showtimes grouped by date, ordered by time.</p></div>
+        <div><h1>Seat watches</h1><p class="hint">Showtimes grouped by date and ordered by time.</p></div>
         <button id="open-add" class="primary" type="button">+ Add seat watcher</button>
       </header>
       <p id="load-status" class="result" role="status">Loading seat watches…</p>
@@ -19,16 +19,16 @@
     </main>
 
     <dialog id="watch-dialog" aria-labelledby="watch-dialog-title">
-      <div class="dialog-header"><div><h2 id="watch-dialog-title">Add seat watcher</h2><p class="hint">Use a name and showtime IDs. Date and time are found automatically.</p></div><button id="close-dialog" class="close" type="button" aria-label="Close">×</button></div>
+      <div class="dialog-header"><div><h2 id="watch-dialog-title">Add seat watcher</h2><p id="watch-dialog-hint" class="hint">Use a name and showtime IDs. Date and time are found automatically.</p></div><button id="close-dialog" class="close" type="button" aria-label="Close">×</button></div>
       <form id="watch-form">
         <label>Watch name<input id="watch-name" name="name" maxlength="80" required></label>
         <div class="field-grid"><label>Theatre ID<input id="theatre-id" name="theatreId" inputmode="numeric" required></label><label>Theatre name<input id="theatre-name" name="theatreName" required></label></div>
         <label>Showtime IDs <span class="hint">Separate with commas.</span><textarea id="showtime-ids" name="showtimeIds" required placeholder="405743, 405765"></textarea></label>
-        <label>Seat labels<input id="seat-rule" name="rule" value="E9-E17, F14-F23, G14-G23, H14-H23, I14-I23" required></label>
+        <label>Seat labels <span class="hint">Example: E9-E17, F14-F23</span><input id="seat-rule" name="rule" value="E9-E17, F14-F23, G14-G23, H14-H23, I14-I23" required></label>
         <p id="form-result" class="result" role="status"></p>
         <div class="form-actions"><button id="cancel-dialog" class="secondary" type="button">Cancel</button><button id="save-watch" class="primary" type="submit">Start watching</button></div>
       </form>
     </dialog>
-    <script src="app.js?v=20260913-seat-2"></script>
+    <script src="app.js?v=20260913-seat-3"></script>
   </body>
 </html>
