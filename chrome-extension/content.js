@@ -1,4 +1,8 @@
-const validPreview = () => { const url = new URL(location.href); return /^\d+$/.test(url.searchParams.get("theatreId") || "") && /^\d+$/.test(url.searchParams.get("showtimeId") || ""); };
+const validPreview = () => {
+  const url = new URL(location.href);
+  const theatreId = url.searchParams.get("theatreId") || url.searchParams.get("locationId");
+  return /^\d+$/.test(theatreId || "") && /^\d+$/.test(url.searchParams.get("showtimeId") || "");
+};
 
 if (validPreview() && !document.querySelector("#cplex-seat-watcher-prompt")) {
   const host = document.createElement("aside");

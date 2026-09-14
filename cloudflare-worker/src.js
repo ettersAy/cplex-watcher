@@ -228,7 +228,7 @@ async function handleExtensionWatchSeat(request, env) {
   let body;
   try { body = await request.json(); } catch { return Response.json({ error: "Request body must be JSON." }, { status: 400, headers: { "access-control-allow-origin": "*" } }); }
   const preview = parseSeatPreviewUrl(typeof body?.url === "string" ? body.url : "");
-  if (!preview) return Response.json({ error: "Provide an official Cineplex preview URL with theatreId and showtimeId." }, { status: 400, headers: { "access-control-allow-origin": "*" } });
+  if (!preview) return Response.json({ error: "Provide an official Cineplex preview URL with theatreId or locationId and showtimeId." }, { status: 400, headers: { "access-control-allow-origin": "*" } });
   try {
     const watches = await getSeatWatches(env);
     const existing = Object.values(watches).find((watch) => String(watch.theatreId) === preview.theatreId && watch.showtimes?.[preview.showtimeId]);
@@ -587,7 +587,7 @@ function parseSeatShowtimeCommand(value) {
 function parseSeatPreviewUrl(value) {
   try {
     const url = new URL(value.trim());
-    const theatreId = url.searchParams.get("theatreId");
+    const theatreId = url.searchParams.get("theatreId") || url.searchParams.get("locationId");
     const showtimeId = url.searchParams.get("showtimeId");
     if (url.hostname !== "www.cineplex.com" || !/^\/ticketing\/preview\/?$/i.test(url.pathname) || !/^\d+$/.test(theatreId || "") || !/^\d+$/.test(showtimeId || "")) return null;
     return { theatreId, showtimeId };
