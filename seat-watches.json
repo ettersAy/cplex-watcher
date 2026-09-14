@@ -3,7 +3,7 @@
     "dune": {
       "id": "dune",
       "name": "Dune",
-      "enabled": true,
+      "enabled": false,
       "theatreId": "9406",
       "theatreName": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
       "rule": {
