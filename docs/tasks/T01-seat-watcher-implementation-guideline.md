@@ -424,7 +424,7 @@ Use `⏳` after a latest complete successful scan and `❌` after a latest faile
 
 ### 9.3 `/seatinfo <watch name>`
 
-Show the watch summary, then two complete sections for successfully scanned showtimes: those with selected seats available, and those with none. Every enabled successful showtime appears exactly once across the two sections. Do not include occupied or out-of-rule seats in availability details.
+Show the watch summary, then two complete sections for successfully scanned showtimes: those with selected seats available, and those with none. Every enabled successful showtime appears exactly once across the two sections. Group each section by show date, place every showtime on its own clickable line, and show time only because the parent heading already gives the date. Do not include occupied or out-of-rule seats in availability details.
 
 For the Dune rule, E18 and E19 must not appear because the E range ends at E17.
 

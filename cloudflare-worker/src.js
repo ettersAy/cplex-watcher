@@ -585,10 +585,41 @@ function availableSeatCount(selectedSeats) {
   return Object.values(selectedSeats || {}).filter((seat) => seat?.status === "Available").length;
 }
 
-function seatInfoShowtimeLink(watch, showtimeId, showtime) {
-  const label = `#${showtimeId}`;
+function seatInfoDate(showtime) {
+  const date = new Date(showtime?.startsAt || showtime?.showDate);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function seatInfoTime(showtime) {
+  const displayTime = String(showtime?.displayTime || "");
+  return displayTime.includes(", ") ? displayTime.split(", ").at(-1) : displayTime || "Time unavailable";
+}
+
+function seatInfoShowtimeLink(watch, showtimeId, showtime, availableCount) {
+  const label = `#${showtimeId} · ${seatInfoTime(showtime)} · ${availableCount} 🪑`;
   const url = `https://www.cineplex.com/ticketing/preview?theatreId=${watch.theatreId}&showtimeId=${showtimeId}`;
-  return `<a href="${escapeHtml(url, true)}">${label}</a> — ${escapeHtml(showtime?.displayTime || "Date not available")}`;
+  return `<a href="${escapeHtml(url, true)}">${escapeHtml(label)}</a>`;
+}
+
+function seatInfoDateGroups(watch, entries) {
+  const groups = new Map();
+  for (const entry of entries) {
+    const label = seatInfoDate(entry.showtime);
+    const group = groups.get(label) || { label, availableCount: 0, entries: [] };
+    group.availableCount += entry.availableCount;
+    group.entries.push(entry);
+    groups.set(label, group);
+  }
+  return [...groups.values()].map((group) => [
+    `<b>${escapeHtml(group.label)} · ${group.availableCount} 🪑 · 🎬 ${group.entries.length}</b>`,
+    ...group.entries.map((entry) => `• ${seatInfoShowtimeLink(watch, entry.showtimeId, entry.showtime, entry.availableCount)}`),
+  ].join("\n")).join("\n\n");
 }
 
 async function handleSeatInfo(env, chatId, name) {
@@ -611,31 +642,28 @@ async function handleSeatInfo(env, chatId, name) {
       } else if (showtimeState?.lastCheckStatus === "success") {
         successful.push({
           showtimeId, showtime,
-          availableRows: seatLabelsByRow(showtimeState.selectedSeats),
           availableCount: availableSeatCount(showtimeState.selectedSeats),
         });
       }
     }
-    const withAvailability = successful.filter((item) => item.availableRows.length);
-    const withoutAvailability = successful.filter((item) => !item.availableRows.length);
+    const withAvailability = successful.filter((item) => item.availableCount);
+    const withoutAvailability = successful.filter((item) => !item.availableCount);
     const availableCount = withAvailability.reduce((count, item) => count + item.availableCount, 0);
     const showtimeCount = enabledSeatShowtimeIds(watch).length;
     const sections = [
-      `🎟 <b>${escapeHtml(watch.name)}</b> — ${availableCount} seats available, ${showtimeCount} ${showtimeCount === 1 ? "showtime" : "showtimes"}`,
-      `${escapeHtml(watch.theatreName)} (#${escapeHtml(watch.theatreId)}) · next 👁 ${nextScheduledCheck()}`,
-      `Checked at ${formatTimestamp(watchState.lastCheckedAt)}`,
+      `🎟 <b>${escapeHtml(watch.name)}</b> · ${escapeHtml(watch.theatreName)} · #${escapeHtml(watch.theatreId)} · ${availableCount} 🪑 · ${showtimeCount} 🎬`,
     ];
     if (withAvailability.length) {
-      sections.push(`Showtimes with available selected seats:\n${withAvailability.map((item) => `  • ${seatInfoShowtimeLink(watch, item.showtimeId, item.showtime)} — ${item.availableCount} seats\n    ${item.availableRows.join("\n    ")}`).join("\n\n")}`);
+      sections.push(`🟢 <b>Available</b>\n\n${seatInfoDateGroups(watch, withAvailability)}`);
     }
     if (withoutAvailability.length) {
-      sections.push(`Showtimes with no selected seats available:\n${withoutAvailability.map((item) => `  • ${seatInfoShowtimeLink(watch, item.showtimeId, item.showtime)}`).join("\n")}`);
+      sections.push(`⚪ <b>Still watching</b>\n\n${seatInfoDateGroups(watch, withoutAvailability)}`);
     }
     if (failed.length) {
-      sections.push(`Failed showtimes:\n${failed.map((item) => `  • ❌ ${seatInfoShowtimeLink(watch, item.showtimeId, item.showtime)}\n    ${escapeHtml(item.error)}`).join("\n")}`);
+      sections.push(`❌ <b>Failed</b>\n\n${failed.map((item) => `• #${escapeHtml(item.showtimeId)} · ${escapeHtml(seatInfoTime(item.showtime))}\n  ${escapeHtml(item.error)}`).join("\n")}`);
     }
     if (!successful.length && !failed.length) sections.push("No completed seat scan yet.");
-    sections.push(`➕ /watchshowtime ${escapeHtml(watch.name)} ShowtimeId\n⏹ /stopseats ${escapeHtml(watch.name)}\n🌐 <a href="https://ettersay.github.io/cplex-watcher/">Open web interface</a>`);
+    sections.push(`—\n🕒 Checked at ${formatTimestamp(watchState.lastCheckedAt)}\n🌐 <a href="https://ettersay.github.io/cplex-watcher/">Web interface</a> · ➕ <code>/watchshowtime ${escapeHtml(watch.name)} ShowtimeId</code> · ⏹ <code>/stopshowtime ${escapeHtml(watch.name)} ShowtimeId</code>`);
     console.log(JSON.stringify({ event: "seat_watch_info_requested", watchId: found.id }));
     await telegram(env, chatId, sections.join("\n\n"), { parse_mode: "HTML" });
   } catch (error) {
