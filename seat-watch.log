@@ -119,3 +119,11 @@
 [26-09-13 22:28:45] [info] watch=Dune showtime=405743 cineplex availability call initiated
 [26-09-13 22:28:46] [info] watch=Dune showtime=405743 selected_available=0
 [26-09-13 22:28:46] [info] seat watcher scan completed watches=1 showtimes=3 failures=0 new_seats=0
+[26-09-13 22:33:37] [info] seat watcher scan started
+[26-09-13 22:33:37] [info] watch=Dune showtime=405740 cineplex availability call initiated
+[26-09-13 22:33:38] [info] watch=Dune showtime=405740 selected_available=0
+[26-09-13 22:33:38] [info] watch=Dune showtime=405741 cineplex availability call initiated
+[26-09-13 22:33:38] [info] watch=Dune showtime=405741 selected_available=0
+[26-09-13 22:33:38] [info] watch=Dune showtime=405743 cineplex availability call initiated
+[26-09-13 22:33:38] [info] watch=Dune showtime=405743 selected_available=0
+[26-09-13 22:33:38] [info] seat watcher scan completed watches=1 showtimes=3 failures=0 new_seats=0
