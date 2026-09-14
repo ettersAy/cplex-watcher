@@ -1,0 +1,88 @@
+name: Check Cineplex seat watches
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: scan, create, edit, stop, add_showtime, or stop_showtime
+        required: false
+        default: scan
+        type: string
+      watch_id:
+        description: Existing seat-watch identifier
+        required: false
+        type: string
+      payload:
+        description: JSON configuration payload
+        required: false
+        type: string
+      request_id:
+        description: Worker request identifier
+        required: false
+        type: string
+      chat_id:
+        description: Telegram command-result recipient
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: seat-watch-write
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Apply seat-watch command
+        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'scan'
+        env:
+          SEAT_OPERATION: ${{ inputs.operation }}
+          SEAT_WATCH_ID: ${{ inputs.watch_id }}
+          SEAT_PAYLOAD: ${{ inputs.payload }}
+        run: python seat_watch_command.py "$SEAT_OPERATION" --watch-id "$SEAT_WATCH_ID" --payload "$SEAT_PAYLOAD" > command-result.json
+
+      - name: Scan configured seat watches
+        if: github.event_name != 'workflow_dispatch' || inputs.operation == 'scan' || inputs.operation == 'create' || inputs.operation == 'edit' || inputs.operation == 'add_showtime'
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+        run: python seat_watcher.py scan --notify
+
+      - name: Send command result to Telegram
+        if: github.event_name == 'workflow_dispatch' && inputs.operation != 'scan' && inputs.chat_id != '' && always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_RECIPIENTS: ${{ inputs.chat_id }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from watcher import send_telegram
+
+          try:
+              result = json.loads(Path("command-result.json").read_text())
+              text = result.get("error") or f"✅ {result['message']}"
+          except (OSError, json.JSONDecodeError, KeyError) as error:
+              text = f"❌ Seat-watch request failed: {error}"
+          send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text)
+          PY
+
+      - name: Save seat-watch state and logs
+        run: |
+          git config user.name "Cineplex Seat Watcher"
+          git config user.email "actions@github.com"
+          git add seat-watches.json seat-watch-state.json available-seat-list.json seat-watch.log
+          git diff --cached --quiet || git commit -m "Update seat watcher state"
+          git push

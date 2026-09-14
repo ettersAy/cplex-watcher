@@ -1,0 +1,102 @@
+<div id="seat-layout-options" aria-label="Seat watcher interface layout options">
+  <style>
+    #seat-layout-options { color: light-dark(#17211d, #eef8f2); font: 14px/1.35 system-ui, sans-serif; }
+    #seat-layout-options * { box-sizing: border-box; }
+    #seat-layout-options .sw-shell { background: light-dark(#f7faf7, #101713); border: 1px solid light-dark(#d6e0d9, #334238); border-radius: 18px; overflow: hidden; }
+    #seat-layout-options .sw-top { align-items: center; background: light-dark(#173d2a, #1c5539); color: #fff; display: flex; justify-content: space-between; padding: 16px 20px; }
+    #seat-layout-options .sw-brand { font-size: 18px; font-weight: 500; }
+    #seat-layout-options .sw-tabs { display: flex; flex-wrap: wrap; gap: 7px; padding: 14px 18px 0; }
+    #seat-layout-options .sw-tabs button { background: transparent; border: 1px solid light-dark(#cbd8cf, #405249); border-radius: 999px; color: inherit; cursor: pointer; font: inherit; padding: 7px 10px; }
+    #seat-layout-options .sw-tabs button[aria-pressed="true"] { background: light-dark(#dcefe2, #254c35); border-color: light-dark(#2d6b46, #70c997); }
+    #seat-layout-options .sw-page { min-height: 540px; padding: 18px; position: relative; }
+    #seat-layout-options .sw-head { align-items: start; display: flex; gap: 18px; justify-content: space-between; margin-bottom: 16px; }
+    #seat-layout-options h2, #seat-layout-options h3, #seat-layout-options p { margin: 0; }
+    #seat-layout-options h2 { font-size: 20px; font-weight: 500; }
+    #seat-layout-options .sw-muted { color: light-dark(#5f7066, #a9baaf); margin-top: 4px; }
+    #seat-layout-options .sw-add { background: light-dark(#1f7146, #61bd83); border: 0; border-radius: 9px; color: light-dark(#fff, #102317); cursor: pointer; font: inherit; font-weight: 500; padding: 9px 12px; white-space: nowrap; }
+    #seat-layout-options .sw-layout-label { color: light-dark(#476052, #a5c6ae); font-size: 12px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+    #seat-layout-options .sw-list { display: grid; gap: 10px; }
+    #seat-layout-options .sw-watch { background: light-dark(#fff, #18231d); border: 1px solid light-dark(#d8e2da, #35463b); border-radius: 12px; padding: 13px; }
+    #seat-layout-options .sw-watch-top { align-items: center; display: flex; gap: 10px; justify-content: space-between; }
+    #seat-layout-options .sw-watch-name { font-size: 16px; font-weight: 500; }
+    #seat-layout-options .sw-status { color: light-dark(#236c43, #78d59a); font-size: 12px; }
+    #seat-layout-options .sw-status.error { color: light-dark(#a43030, #ff9696); }
+    #seat-layout-options .sw-stop { background: transparent; border: 1px solid light-dark(#cbd8cf, #4a5c51); border-radius: 8px; color: inherit; cursor: pointer; font: inherit; font-size: 12px; padding: 7px 9px; }
+    #seat-layout-options .sw-meta { color: light-dark(#53675a, #a6b7ab); font-size: 12px; margin-top: 8px; }
+    #seat-layout-options .sw-count { color: light-dark(#1d6a42, #6fda96); font-size: 22px; font-weight: 500; }
+    #seat-layout-options .sw-table { border-collapse: collapse; width: 100%; }
+    #seat-layout-options .sw-table th, #seat-layout-options .sw-table td { border-bottom: 1px solid light-dark(#d8e2da, #35463b); padding: 11px 8px; text-align: left; }
+    #seat-layout-options .sw-table th { color: light-dark(#5e7264, #a5b9ab); font-size: 12px; font-weight: 500; }
+    #seat-layout-options .sw-table td:last-child, #seat-layout-options .sw-table th:last-child { text-align: right; }
+    #seat-layout-options .sw-board { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    #seat-layout-options .sw-light-groups { align-items: start; display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #seat-layout-options .sw-light-group { display: grid; gap: 9px; }
+    #seat-layout-options .sw-light-group .sw-watch { padding: 11px; }
+    #seat-layout-options .sw-date-group { display: grid; gap: 9px; margin-top: 18px; }
+    #seat-layout-options .sw-date-group:first-child { margin-top: 0; }
+    #seat-layout-options .sw-date-cards { display: grid; gap: 9px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #seat-layout-options .sw-date-cards .sw-watch { padding: 11px; }
+    #seat-layout-options .sw-column { background: light-dark(#eef5ef, #162219); border-radius: 12px; min-height: 210px; padding: 12px; }
+    #seat-layout-options .sw-column h3 { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+    #seat-layout-options .sw-time { border-left: 2px solid light-dark(#5b9f70, #78d59a); margin: 10px 0; padding-left: 10px; }
+    #seat-layout-options .sw-mobile { margin: 0 auto; max-width: 380px; }
+    #seat-layout-options .sw-mobile .sw-watch { border-radius: 14px; }
+    #seat-layout-options .sw-overlay { align-items: center; background: rgba(8, 18, 12, .48); display: flex; inset: 0; justify-content: center; padding: 18px; position: absolute; }
+    #seat-layout-options .sw-dialog { background: light-dark(#fff, #19251e); border: 1px solid light-dark(#d5e0d8, #3b4f42); border-radius: 14px; box-shadow: 0 16px 45px rgba(0,0,0,.27); max-width: 580px; padding: 18px; width: 100%; }
+    #seat-layout-options .sw-dialog-head { align-items: start; display: flex; justify-content: space-between; }
+    #seat-layout-options .sw-dialog h3 { font-size: 18px; font-weight: 500; }
+    #seat-layout-options .sw-close { background: transparent; border: 0; color: inherit; cursor: pointer; font-size: 20px; }
+    #seat-layout-options .sw-form { display: grid; gap: 11px; margin-top: 16px; }
+    #seat-layout-options .sw-grid { display: grid; gap: 11px; grid-template-columns: 1fr 1fr; }
+    #seat-layout-options label { color: light-dark(#3f5647, #bed0c2); display: grid; font-size: 12px; gap: 5px; }
+    #seat-layout-options input, #seat-layout-options textarea { background: light-dark(#fbfdfb, #101813); border: 1px solid light-dark(#bdcdbf, #4a5c51); border-radius: 8px; color: inherit; font: inherit; padding: 8px; width: 100%; }
+    #seat-layout-options textarea { min-height: 56px; resize: vertical; }
+    #seat-layout-options .sw-form-foot { align-items: center; display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+    #seat-layout-options .sw-cancel { background: transparent; border: 0; color: inherit; cursor: pointer; font: inherit; padding: 9px; }
+    #seat-layout-options .sw-note { color: light-dark(#52645a, #b1c4b6); font-size: 12px; margin-top: 10px; }
+    #seat-layout-options .sw-modal-style-drawer .sw-overlay { align-items: stretch; justify-content: flex-end; padding: 0; }
+    #seat-layout-options .sw-modal-style-drawer .sw-dialog { border-radius: 0; max-width: 430px; }
+    #seat-layout-options .sw-modal-style-bottom .sw-overlay { align-items: flex-end; padding: 0; }
+    #seat-layout-options .sw-modal-style-bottom .sw-dialog { border-bottom-left-radius: 0; border-bottom-right-radius: 0; max-width: 520px; }
+    @media (max-width: 560px) { #seat-layout-options .sw-grid, #seat-layout-options .sw-board, #seat-layout-options .sw-light-groups, #seat-layout-options .sw-date-cards { grid-template-columns: 1fr; } #seat-layout-options .sw-head { align-items: stretch; flex-direction: column; } #seat-layout-options .sw-add { width: 100%; } }
+  </style>
+  <div class="sw-shell">
+    <div class="sw-top"><div class="sw-brand">Cineplex Seat Watcher</div><div class="sw-layout-label" id="sw-mode-label">1 · Watch cards</div></div>
+    <div class="sw-tabs" role="tablist" aria-label="Choose interface layout">
+      <button type="button" data-layout="cards" aria-pressed="true">1. Watch cards</button>
+      <button type="button" data-layout="table" aria-pressed="false">2. Dense table</button>
+      <button type="button" data-layout="board" aria-pressed="false">3. Status board</button>
+      <button type="button" data-layout="timeline" aria-pressed="false">4. Movie timeline</button>
+      <button type="button" data-layout="mobile" aria-pressed="false">5. Mobile first</button>
+      <button type="button" data-layout="hybrid" aria-pressed="false">6. Light grouped board</button>
+    </div>
+    <div class="sw-page" id="sw-page" aria-live="polite"></div>
+  </div>
+  <script>
+    (() => {
+      const root = document.getElementById('seat-layout-options');
+      const page = root.querySelector('#sw-page');
+      const label = root.querySelector('#sw-mode-label');
+      const choices = {
+        cards: { title: 'Seat watches', mode: '1 · Watch cards', popup: 'modal', body: `
+          <div class="sw-list"><article class="sw-watch"><div class="sw-watch-top"><span><span class="sw-watch-name">⏳ Dune</span><div class="sw-meta">Scotiabank Theatre Toronto #9406 · 10 showtimes</div></span><span class="sw-count">5</span></div><div class="sw-meta">Seats found · next check in 6 min · checked 14:35</div></article><article class="sw-watch"><div class="sw-watch-top"><span><span class="sw-watch-name">❌ Dune 2</span><div class="sw-meta">Theatre 8303 · 5 showtimes</div></span><span class="sw-count">20</span></div><div class="sw-status error">Last check failed</div></article></div>` },
+        table: { title: 'All seat watches', mode: '2 · Dense table', popup: 'drawer', body: `
+          <table class="sw-table"><thead><tr><th>Watch</th><th>Theatre</th><th>Showtimes</th><th>Seats</th><th>Last check</th></tr></thead><tbody><tr><td>⏳ Dune</td><td>#9406</td><td>10</td><td class="sw-status">5 found</td><td>14:35</td></tr><tr><td>❌ Dune 2</td><td>#8303</td><td>5</td><td class="sw-status">20 found</td><td>Failed</td></tr><tr><td>⏳ Odyssey</td><td>#9406</td><td>1</td><td>0 found</td><td>14:34</td></tr></tbody></table>` },
+        board: { title: 'Seat availability', mode: '3 · Status board', popup: 'modal', body: `
+          <div class="sw-board"><section class="sw-column"><h3>Seats available now</h3><article class="sw-watch"><div class="sw-watch-name">Dune</div><div class="sw-count">5 seats</div><div class="sw-meta">#9406 · 10 showtimes</div></article><article class="sw-watch"><div class="sw-watch-name">Dune 2</div><div class="sw-count">20 seats</div><div class="sw-meta">#8303 · 5 showtimes</div></article></section><section class="sw-column"><h3>Needs attention</h3><article class="sw-watch"><div class="sw-watch-name">Dune 2</div><div class="sw-status error">❌ Latest scan failed</div><div class="sw-meta">Retry next run</div></article><article class="sw-watch"><div class="sw-watch-name">Odyssey</div><div class="sw-meta">No seats found · checked 14:34</div></article></section></div>` },
+        timeline: { title: 'Watches by showtime', mode: '4 · Movie timeline', popup: 'modal', body: `
+          <article class="sw-watch"><div class="sw-watch-name">⏳ Dune</div><div class="sw-meta">Scotiabank Theatre Toronto #9406</div><div class="sw-time"><strong>Dec 14 · 3:00 PM</strong><div class="sw-meta">#405740 · 0 seats found</div></div><div class="sw-time"><strong>Dec 14 · 6:00 PM</strong><div class="sw-status">#405743 · 3 seats found</div></div><div class="sw-time"><strong>Dec 14 · 9:15 PM</strong><div class="sw-status">#405765 · 2 seats found</div></div></article>` },
+        mobile: { title: 'Seat watches', mode: '5 · Mobile first', popup: 'bottom', body: `
+          <div class="sw-mobile"><article class="sw-watch"><div class="sw-watch-top"><span class="sw-watch-name">⏳ Dune</span><span class="sw-status">5 seats found</span></div><div class="sw-meta">#9406 · 10 showtimes · next in 6 min</div></article><article class="sw-watch"><div class="sw-watch-top"><span class="sw-watch-name">❌ Dune 2</span><span class="sw-status error">20 seats found</span></div><div class="sw-meta">#8303 · 5 showtimes · scan failed</div></article><article class="sw-watch"><div class="sw-watch-top"><span class="sw-watch-name">⏳ Odyssey</span><span>0 seats found</span></div><div class="sw-meta">#9406 · 1 showtime · next in 6 min</div></article></div>` },
+        hybrid: { title: 'Seat watches', mode: '6 · Grouped by date', popup: 'modal', body: `
+          <section class="sw-date-group" aria-label="December 14 showtimes"><div class="sw-layout-label">Sunday, Dec 14 · 4 showtimes</div><div class="sw-date-cards"><article class="sw-watch"><div class="sw-watch-top"><a class="sw-watch-name" href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405740" target="_blank" rel="noreferrer">⏳ Dune · 3:00 PM</a><span>0 seats</span></div><div class="sw-meta">#9406 · <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405740" target="_blank" rel="noreferrer">#405740</a></div><div class="sw-watch-top" style="margin-top:8px"><span class="sw-meta">Next in 6 min</span><button class="sw-stop" type="button">Stop</button></div></article><article class="sw-watch"><div class="sw-watch-top"><a class="sw-watch-name" href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743" target="_blank" rel="noreferrer">⏳ Dune · 6:00 PM</a><span class="sw-status">5 seats</span></div><div class="sw-meta">#9406 · <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405743" target="_blank" rel="noreferrer">#405743</a></div><div class="sw-watch-top" style="margin-top:8px"><span class="sw-meta">E10, E12, F22</span><button class="sw-stop" type="button">Stop</button></div></article><article class="sw-watch"><div class="sw-watch-top"><a class="sw-watch-name" href="https://www.cineplex.com/ticketing/preview?theatreId=8303&amp;showtimeId=405765" target="_blank" rel="noreferrer">⏳ Dune 2 · 8:15 PM</a><span class="sw-status">20 seats</span></div><div class="sw-meta">#8303 · <a href="https://www.cineplex.com/ticketing/preview?theatreId=8303&amp;showtimeId=405765" target="_blank" rel="noreferrer">#405765</a></div><div class="sw-watch-top" style="margin-top:8px"><span class="sw-meta">Next in 4 min</span><button class="sw-stop" type="button">Stop</button></div></article><article class="sw-watch"><div class="sw-watch-top"><a class="sw-watch-name" href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405750" target="_blank" rel="noreferrer">❌ Dune 3 · 10:30 PM</a><span class="sw-status error">Failed</span></div><div class="sw-meta">#9406 · <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405750" target="_blank" rel="noreferrer">#405750</a></div><div class="sw-watch-top" style="margin-top:8px"><span class="sw-meta">Retry next run</span><button class="sw-stop" type="button">Stop</button></div></article></div></section><section class="sw-date-group" aria-label="December 15 showtimes"><div class="sw-layout-label">Monday, Dec 15 · 1 showtime</div><div class="sw-date-cards"><article class="sw-watch"><div class="sw-watch-top"><a class="sw-watch-name" href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405761" target="_blank" rel="noreferrer">⏳ Odyssey · 7:00 PM</a><span>0 seats</span></div><div class="sw-meta">#9406 · <a href="https://www.cineplex.com/ticketing/preview?theatreId=9406&amp;showtimeId=405761" target="_blank" rel="noreferrer">#405761</a></div><div class="sw-watch-top" style="margin-top:8px"><span class="sw-meta">Next in 6 min</span><button class="sw-stop" type="button">Stop</button></div></article></div></section>` }
+      };
+      const state = { layout: 'hybrid', showDialog: true };
+      function dialog(style) { return `<div class="sw-overlay sw-modal-style-${style}" id="sw-overlay"><form class="sw-dialog" aria-label="Add a seat watcher"><div class="sw-dialog-head"><div><h3>Add seat watcher</h3><p class="sw-muted">Create a precise Cineplex seat watch.</p></div><button class="sw-close" type="button" aria-label="Close">×</button></div><div class="sw-form"><label>Watch name<input value="Dune" aria-label="Watch name"></label><div class="sw-grid"><label>Theatre ID<input value="9406" aria-label="Theatre ID"></label><label>Theatre name<input value="Scotiabank Theatre Toronto" aria-label="Theatre name"></label></div><label>Showtime IDs <span class="sw-muted">Separate with commas</span><textarea aria-label="Showtime IDs">405740,405743,405765</textarea></label><label>Seat labels <input value="E9-E17, F14-F23, G14-G23, H14-H23, I14-I23" aria-label="Seat labels"></label><div class="sw-form-foot"><button class="sw-cancel" type="button">Cancel</button><button class="sw-add" type="submit">Start watching</button></div></div><p class="sw-note">The first scan validates every showtime and alerts once for matching available seats.</p></form></div>`; }
+      function render() { const option = choices[state.layout]; label.textContent = option.mode; page.innerHTML = `<div class="sw-head"><div><h2>${option.title}</h2><p class="sw-muted">Review current watches, availability, and failures.</p></div><button class="sw-add" type="button" id="sw-open">+ Add seat watcher</button></div>${option.body}${state.showDialog ? dialog(option.popup) : ''}`; root.querySelectorAll('[data-layout]').forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.layout === state.layout))); const overlay = root.querySelector('#sw-overlay'); if (overlay) { overlay.querySelector('.sw-close').addEventListener('click', () => { state.showDialog = false; render(); }); overlay.querySelector('.sw-cancel').addEventListener('click', () => { state.showDialog = false; render(); }); overlay.querySelector('form').addEventListener('submit', (event) => event.preventDefault()); } root.querySelector('#sw-open').addEventListener('click', () => { state.showDialog = true; render(); }); }
+      root.querySelectorAll('[data-layout]').forEach((button) => button.addEventListener('click', () => { state.layout = button.dataset.layout; state.showDialog = true; render(); }));
+      render();
+      if (globalThis.Tweak) { const tweak = new Tweak({ container: root, onChange: render }); tweak.addSelect(state, 'layout', { label: 'Layout', options: Object.entries(choices).map(([value, option]) => ({ value, label: option.mode })) }); }
+    })();
+  </script>
+</div>

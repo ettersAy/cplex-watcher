@@ -74,6 +74,24 @@ async function dispatchStopWatch(env, title, requestId, chatId = "") {
   if (!response.ok) throw new Error(`GitHub Actions stop-watch dispatch failed: ${await response.text()}`);
 }
 
+async function dispatchSeatWatch(env, operation, watchId, payload, requestId, chatId) {
+  if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
+    throw new Error("GitHub Actions dispatch is not configured");
+  }
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/check-seat-watches.yml/dispatches`, {
+    method: "POST",
+    headers: {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+      "content-type": "application/json",
+      "user-agent": "CineplexTicketWatcher",
+      "x-github-api-version": "2022-11-28",
+    },
+    body: JSON.stringify({ ref: "main", inputs: { operation, watch_id: watchId, payload: JSON.stringify(payload), request_id: requestId, chat_id: chatId } }),
+  });
+  if (!response.ok) throw new Error(`GitHub Actions seat-watch dispatch failed: ${await response.text()}`);
+}
+
 function queueCorsHeaders(env) {
   return {
     "access-control-allow-origin": env.UI_ORIGIN,
@@ -272,6 +290,25 @@ async function handleStopWatch(env, chatId, title) {
   return telegram(env, chatId, `Searching active watches for ${title}. I will reply when the watch is stopped.`);
 }
 
+async function handleWatchShowtime(env, chatId, value) {
+  const command = parseSeatShowtimeCommand(value);
+  if (!command) return telegram(env, chatId, "Use /watchshowtime Watch Name ShowtimeId\nExample: /watchshowtime Dune 405765");
+  try {
+    const found = findSeatWatch(await getSeatWatches(env), command.name);
+    if (!found || !found.watch.enabled) {
+      return telegram(env, chatId, `No enabled seat watch named ${command.name}. Create it first in the web interface.`);
+    }
+    const requestId = crypto.randomUUID();
+    console.log(JSON.stringify({ event: "seat_showtime_add_requested", requestId, watchId: found.id, showtimeId: command.showtimeId }));
+    await dispatchSeatWatch(env, "add_showtime", found.id, { id: command.showtimeId }, requestId, chatId);
+    console.log(JSON.stringify({ event: "seat_showtime_add_queued", requestId, watchId: found.id, showtimeId: command.showtimeId }));
+    return telegram(env, chatId, `⏳ Adding #${command.showtimeId} to ${found.watch.name}. I will reply after Cineplex validates it.`);
+  } catch (error) {
+    console.error("Could not dispatch seat-showtime add:", error);
+    return telegram(env, chatId, "I could not start the seat-watch request. Please try again shortly.");
+  }
+}
+
 function movieKey(url) {
   return new URL(url).pathname.split("/").filter(Boolean).at(-1);
 }
@@ -319,6 +356,38 @@ async function getSalesStarted(env) {
   const movies = await response.json();
   if (!Array.isArray(movies)) throw new Error("Sales-started list has an invalid format");
   return movies;
+}
+
+async function getSeatWatches(env) {
+  if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/seat-watches.json`, {
+    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+  });
+  if (!response.ok) throw new Error(`Could not load seat watches: HTTP ${response.status}`);
+  const config = await response.json();
+  if (!config || typeof config !== "object" || !config.watches || typeof config.watches !== "object") {
+    throw new Error("Seat watches file has an invalid format");
+  }
+  return config.watches;
+}
+
+function normalizeSeatWatchName(value) {
+  return String(value).toLocaleLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function parseSeatShowtimeCommand(value) {
+  const parts = value.trim().split(/\s+/);
+  const showtimeId = parts.pop();
+  const name = parts.join(" ");
+  if (!name || !/^\d+$/.test(showtimeId || "")) return null;
+  return { name, showtimeId };
+}
+
+function findSeatWatch(watches, requestedName) {
+  const target = normalizeSeatWatchName(requestedName);
+  const matches = Object.entries(watches).filter(([, watch]) => normalizeSeatWatchName(watch?.name) === target);
+  if (matches.length !== 1) return null;
+  return { id: matches[0][0], watch: matches[0][1] };
 }
 
 function escapeHtml(value) {
@@ -409,14 +478,17 @@ async function handleUpdate(request, env) {
 
   const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
   const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);
-  if (watchCommand) {
+  const watchShowtimeCommand = message.text.match(/^\/watchshowtime(?:@\w+)?\s+(.+)$/i);
+  if (watchShowtimeCommand) {
+    await handleWatchShowtime(env, chatId, watchShowtimeCommand[1]);
+  } else if (watchCommand) {
     await handleWatch(env, chatId, watchCommand[1].trim());
   } else if (stopCommand) {
     await handleStopWatch(env, chatId, stopCommand[1].trim());
   } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
     await handleList(env, chatId);
   } else {
-    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nExample: /watch Runner\n\nUse /list to see your watched movies.");
+    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
   }
 
   return new Response("ok");

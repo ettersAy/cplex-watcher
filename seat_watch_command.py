@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""GitHub Action command handler for seat-watch configuration changes."""
+
+import argparse
+import json
+import re
+from datetime import datetime
+from pathlib import Path
+
+from seat_watcher import (
+    _read_json,
+    _remove_showtime_entries,
+    _write_json,
+    availability_url,
+    layout_url,
+    request_json,
+    request_showtime_detail,
+    select_seats,
+)
+
+
+def slug(value):
+    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+
+
+def read_payload(value):
+    try:
+        result = json.loads(value)
+    except json.JSONDecodeError as error:
+        raise ValueError(f"Request payload must be JSON: {error.msg}") from error
+    if not isinstance(result, dict):
+        raise ValueError("Request payload must be a JSON object")
+    return result
+
+
+def valid_showtime_id(value):
+    if not isinstance(value, str) or not value.isdigit():
+        raise ValueError("Showtime ID must contain digits only")
+    return value
+
+
+def validate_watch(payload):
+    name = payload.get("name")
+    theatre_id = payload.get("theatreId")
+    theatre_name = payload.get("theatreName")
+    showtimes = payload.get("showtimes")
+    rule = payload.get("rule")
+    if not isinstance(name, str) or not name.strip() or len(name.strip()) > 80:
+        raise ValueError("Watch name is required and must be at most 80 characters")
+    if not isinstance(theatre_id, str) or not theatre_id.isdigit():
+        raise ValueError("Theatre ID must contain digits only")
+    if not isinstance(theatre_name, str) or not theatre_name.strip():
+        raise ValueError("Theatre name is required")
+    if not isinstance(rule, dict) or not rule:
+        raise ValueError("Seat rule is required")
+    if not isinstance(showtimes, list) or not showtimes:
+        raise ValueError("Provide at least one showtime")
+    normalized = {}
+    for item in showtimes:
+        if not isinstance(item, dict):
+            raise ValueError("Each showtime must be an object")
+        showtime_id = valid_showtime_id(item.get("id"))
+        if showtime_id in normalized:
+            raise ValueError(f"Showtime #{showtime_id} was provided more than once")
+        # A showtime ID is sufficient for the seat-layout and availability APIs.
+        # Date/time are optional display metadata and must never prevent a
+        # Telegram command from adding a watch.
+        metadata = {"enabled": True}
+        if isinstance(item.get("startsAt"), str) and item["startsAt"].strip():
+            metadata["startsAt"] = item["startsAt"].strip()
+        if isinstance(item.get("displayTime"), str) and item["displayTime"].strip():
+            metadata["displayTime"] = item["displayTime"].strip()
+        normalized[showtime_id] = metadata
+    return {
+        "id": slug(name), "name": name.strip(), "enabled": True, "theatreId": theatre_id,
+        "theatreName": theatre_name.strip(), "rule": rule, "showtimes": normalized,
+    }
+
+
+def showtime_display_metadata(detail, theatre_id, showtime_id):
+    """Keep only the date/time fields needed by the UI and Telegram output."""
+    if str(detail.get("theatreId")) != str(theatre_id):
+        raise ValueError(f"Showtime #{showtime_id} does not belong to theatre #{theatre_id}")
+    showtime = detail.get("showtime")
+    if not isinstance(showtime, dict) or str(showtime.get("vistaSessionId")) != str(showtime_id):
+        raise ValueError(f"Cineplex detail response does not match showtime #{showtime_id}")
+    starts_at = showtime.get("showStartDateTime")
+    show_date = detail.get("showDate")
+    if not isinstance(starts_at, str) or not isinstance(show_date, str):
+        raise ValueError(f"Cineplex detail response for #{showtime_id} is missing its date/time")
+    try:
+        parsed = datetime.fromisoformat(starts_at)
+    except ValueError as error:
+        raise ValueError(f"Cineplex detail response for #{showtime_id} has an invalid start time") from error
+    return {
+        "showDate": show_date,
+        "startsAt": starts_at,
+        "displayTime": parsed.strftime("%b %d, %-I:%M %p").replace(" 0", " "),
+    }
+
+
+def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_json=request_json):
+    for showtime_id in watch["showtimes"]:
+        detail = fetch_detail(watch["theatreId"], showtime_id)
+        watch["showtimes"][showtime_id].update(showtime_display_metadata(detail, watch["theatreId"], showtime_id))
+        layout = fetch_json(layout_url(watch["theatreId"], showtime_id))
+        if not select_seats(layout, watch["rule"]):
+            raise ValueError(f"Showtime #{showtime_id} has no seats matching this watch rule")
+        availability = fetch_json(availability_url(watch["theatreId"], showtime_id))
+        if not isinstance(availability.get("seatAvailabilities"), dict):
+            raise ValueError(f"Showtime #{showtime_id} returned invalid availability data")
+
+
+def run(root, operation, payload_value, watch_id):
+    config_path = root / "seat-watches.json"
+    state_path = root / "seat-watch-state.json"
+    available_path = root / "available-seat-list.json"
+    config = _read_json(config_path, {"watches": {}})
+    state = _read_json(state_path, {"watches": {}})
+    available = _read_json(available_path, {})
+    watches = config.setdefault("watches", {})
+    if operation in {"create", "edit"}:
+        watch = validate_watch(read_payload(payload_value))
+        if operation == "create" and watch["id"] in watches:
+            raise ValueError(f"A watch named {watch['name']} already exists")
+        target_id = watch_id or watch["id"]
+        if operation == "edit" and target_id not in watches:
+            raise ValueError("Seat watch was not found")
+        if operation == "edit":
+            old = watches[target_id]
+            for old_showtime_id in old.get("showtimes", {}):
+                _remove_showtime_entries(available, old["name"], old["theatreId"], old_showtime_id)
+            state.setdefault("watches", {}).pop(target_id, None)
+        validate_showtimes(watch)
+        watches[target_id] = {**watch, "id": target_id}
+        message = f"Saved seat watch {watch['name']}."
+    elif operation == "stop":
+        watch = watches.get(watch_id)
+        if not watch:
+            raise ValueError("Seat watch was not found")
+        watch["enabled"] = False
+        for showtime_id in watch.get("showtimes", {}):
+            _remove_showtime_entries(available, watch["name"], watch["theatreId"], showtime_id)
+        message = f"Stopped seat watch {watch['name']}."
+    elif operation in {"add_showtime", "stop_showtime"}:
+        watch = watches.get(watch_id)
+        if not watch:
+            raise ValueError("Seat watch was not found")
+        payload = read_payload(payload_value)
+        showtime_id = valid_showtime_id(payload.get("id"))
+        if operation == "add_showtime":
+            if showtime_id in watch["showtimes"]:
+                raise ValueError(f"Showtime #{showtime_id} is already watched for {watch['name']}")
+            metadata = {"enabled": True}
+            if isinstance(payload.get("startsAt"), str) and payload["startsAt"].strip():
+                metadata["startsAt"] = payload["startsAt"].strip()
+            if isinstance(payload.get("displayTime"), str) and payload["displayTime"].strip():
+                metadata["displayTime"] = payload["displayTime"].strip()
+            candidate = {**watch, "showtimes": {showtime_id: metadata}}
+            validate_showtimes(candidate)
+            watch["showtimes"][showtime_id] = candidate["showtimes"][showtime_id]
+            message = f"Added showtime #{showtime_id} to {watch['name']}."
+        else:
+            if showtime_id not in watch["showtimes"]:
+                raise ValueError(f"Showtime #{showtime_id} is not watched for {watch['name']}")
+            watch["showtimes"][showtime_id]["enabled"] = False
+            _remove_showtime_entries(available, watch["name"], watch["theatreId"], showtime_id)
+            message = f"Stopped showtime #{showtime_id} for {watch['name']}."
+    else:
+        raise ValueError("Unsupported seat-watch operation")
+    _write_json(config_path, config)
+    _write_json(state_path, state)
+    _write_json(available_path, available)
+    return {"message": message, "watchId": watch_id or watch["id"]}
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("operation", choices=("create", "edit", "stop", "add_showtime", "stop_showtime"))
+    parser.add_argument("--payload", default="{}")
+    parser.add_argument("--watch-id", default="")
+    parser.add_argument("--root", type=Path, default=Path(__file__).parent)
+    args = parser.parse_args()
+    try:
+        print(json.dumps(run(args.root, args.operation, args.payload, args.watch_id)))
+    except (OSError, ValueError) as error:
+        print(json.dumps({"error": str(error)}))
+        raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    main()
