@@ -63,6 +63,10 @@ Add an `👁️ Seats` button to every active watcher header. It opens the watch
 
 The live page obtains that layout through the protected `GET /api/seat-watches/<watchId>/showtimes/<showtimeId>/layout` endpoint. It only accepts an enabled showtime belonging to the specified enabled watch, then requests Cineplex's seat-layout endpoint; never expose a general user-controlled proxy URL.
 
+### 3.1.2 Shared web navigation
+
+The web interface has two top-level tabs: `🎟 Seat watcher` and `🎬 Ticket watcher`. Seat watcher keeps the approved current layout. Ticket watcher uses the same lightweight visual language but groups movie cards into `🎉 Sales started` and `⏳ Still watching`. Each movie card links to Cineplex, shows the latest check or retry status, and gives an emoji Stop control only while the movie is still being watched. The static reference is [watcher-tabs-template.html](watcher-tabs-template.html).
+
 Stopped watches must remain visible in a separate compact `Stopped watches` section. Their `Edit` button opens the same form with the saved values; saving it revalidates the full configuration and restarts that watch. Do not require the user to create a duplicate watch merely to restart or change it.
 
 ### 3.2 Protected web API

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cineplex Watchers — two-tab template</title>
+    <style>
+      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { background: light-dark(#f7faf7, #101713); color: light-dark(#17211d, #eef8f2); margin: 0; min-width: 320px; }
+      main { margin: 0 auto; max-width: 980px; padding: 32px 24px 56px; }
+      h1, h2, h3, p { margin: 0; }
+      h1 { font-size: 24px; font-weight: 650; }
+      h2 { font-size: 18px; }
+      button { color: inherit; cursor: pointer; font: inherit; }
+      .hint, .result, .meta { color: light-dark(#5f7066, #a9baaf); font-size: 13px; line-height: 1.45; }
+      .page-header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 16px; }
+      .tabs { border-bottom: 1px solid light-dark(#d8e2da, #35463b); display: flex; gap: 6px; margin-bottom: 18px; }
+      .tab { background: transparent; border: 0; border-bottom: 3px solid transparent; font-weight: 650; padding: 10px 12px 9px; }
+      .tab[aria-selected="true"] { border-bottom-color: light-dark(#287a4c, #78d59a); color: light-dark(#145d35, #a5e8bc); }
+      .panel[hidden] { display: none; }
+      .panel-header { align-items: center; display: flex; gap: 14px; justify-content: space-between; margin-bottom: 12px; }
+      .primary { background: light-dark(#1f7146, #61bd83); border: 0; border-radius: 8px; color: light-dark(#fff, #102317); font-weight: 650; padding: 10px 13px; }
+      .watcher-card, .ticket-card { background: light-dark(#fff, #18231d); border: 1px solid light-dark(#d8e2da, #35463b); border-radius: 12px; margin-top: 14px; max-width: 100%; overflow: hidden; width: fit-content; }
+      .watcher-header, .ticket-header { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
+      .watcher-header h2, .ticket-header h2 { font-size: 18px; }
+      .watcher-day { border-top: 1px solid light-dark(#e5ece6, #304137); padding: 12px 14px; }
+      .day-heading { color: light-dark(#476052, #a5c6ae); font-size: 13px; font-weight: 650; margin-bottom: 8px; }
+      .showtime-chip { align-items: center; background: light-dark(#f5f8f5, #111b15); border: 1px solid light-dark(#dce7de, #34463a); border-radius: 8px; display: flex; gap: 8px; margin-top: 7px; padding: 7px 9px; width: fit-content; }
+      .showtime-chip a, .movie-link { color: inherit; font-weight: 650; text-decoration: none; }
+      .showtime-chip a:hover, .movie-link:hover { text-decoration: underline; }
+      .icon { background: transparent; border: 1px solid light-dark(#cbd8cf, #4a5c51); border-radius: 7px; font-size: 14px; line-height: 1; min-width: 30px; padding: 6px; }
+      .ticket-section { margin-top: 22px; }
+      .section-heading { color: light-dark(#476052, #a5c6ae); font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
+      .ticket-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 9px; }
+      .ticket-card { margin-top: 0; width: min(350px, 100%); }
+      .ticket-status { font-size: 13px; font-weight: 650; }
+      .ticket-status.waiting { color: light-dark(#8a6400, #ffe078); }
+      .ticket-status.started { color: light-dark(#236c43, #78d59a); }
+      .ticket-status.failed { color: light-dark(#a43030, #ff9696); }
+      .ticket-footer { align-items: center; border-top: 1px solid light-dark(#e5ece6, #304137); display: flex; gap: 9px; justify-content: space-between; padding: 10px 14px; }
+      dialog { background: light-dark(#fff, #19251e); border: 1px solid light-dark(#d5e0d8, #3b4f42); border-radius: 14px; color: inherit; max-width: 520px; padding: 20px; width: calc(100% - 32px); }
+      dialog::backdrop { background: rgba(8, 18, 12, .48); }
+      .dialog-header { align-items: flex-start; display: flex; justify-content: space-between; }
+      .close { background: transparent; border: 0; font-size: 22px; line-height: 1; }
+      label { display: grid; font-size: 13px; font-weight: 650; gap: 6px; margin-top: 18px; }
+      textarea { background: light-dark(#fbfdfb, #101813); border: 1px solid light-dark(#bdcdbf, #4a5c51); border-radius: 7px; color: inherit; font: inherit; min-height: 96px; padding: 9px; resize: vertical; }
+      .dialog-actions { display: flex; gap: 9px; justify-content: flex-end; margin-top: 14px; }
+      .secondary { background: transparent; border: 0; padding: 10px; }
+      @media (max-width: 640px) { main { padding: 22px 18px 40px; } .page-header, .panel-header { align-items: stretch; flex-direction: column; } .primary { width: 100%; } .watcher-card, .ticket-card { width: 100%; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="page-header"><div><h1>Cineplex watchers</h1><p class="hint">Seat availability and ticket-sale watches in one place.</p></div></header>
+
+      <nav class="tabs" aria-label="Watcher type">
+        <button class="tab" id="seat-tab" type="button" role="tab" aria-controls="seat-panel" aria-selected="true">🎟 Seat watcher</button>
+        <button class="tab" id="ticket-tab" type="button" role="tab" aria-controls="ticket-panel" aria-selected="false">🎬 Ticket watcher</button>
+      </nav>
+
+      <!-- This is the existing Seat watcher layout; no design change is proposed here. -->
+      <section class="panel" id="seat-panel" role="tabpanel" aria-labelledby="seat-tab">
+        <div class="panel-header"><div><h2>Seat watches</h2><p class="hint">Showtimes grouped by date and ordered by time.</p></div><button class="primary" type="button">+ Add seat watcher</button></div>
+        <p class="result">1 active watch · 4 showtimes.</p>
+        <article class="watcher-card">
+          <header class="watcher-header"><h2>Dune</h2><span class="meta">Scotia Bank · #9406 · 5 🪑 · 4 🎬</span><button class="icon" title="Preview watched seats">👁️</button><button class="icon" title="Edit Dune">✏️</button><button class="icon" title="Collapse Dune">🔺</button></header>
+          <section class="watcher-day"><h3 class="day-heading">Monday, Dec 14 · 3 🪑 · 🎬 1</h3><div class="showtime-chip"><a href="#">#405740 · 6:00 PM · 3 🪑</a><button class="icon" title="Stop showtime">⏹</button></div></section>
+          <section class="watcher-day"><h3 class="day-heading">Tuesday, Dec 15 · 2 🪑 · 🎬 1</h3><div class="showtime-chip"><a href="#">#405741 · 6:00 PM · 2 🪑</a><button class="icon" title="Stop showtime">⏹</button></div></section>
+        </article>
+      </section>
+
+      <!-- Proposed Ticket watcher layout. It reuses the small-card style and separates
+           active watches from movies whose ticket sales have begun. -->
+      <section class="panel" id="ticket-panel" role="tabpanel" aria-labelledby="ticket-tab" hidden>
+        <div class="panel-header"><div><h2>Ticket watches</h2><p class="hint">Movies are checked until Cineplex starts ticket sales.</p></div><button class="primary" id="open-ticket-dialog" type="button">+ Add ticket watch</button></div>
+        <p class="result">2 watching · 1 sales started.</p>
+
+        <section class="ticket-section"><h3 class="section-heading">🎉 Sales started · 1</h3><div class="ticket-grid">
+          <article class="ticket-card"><header class="ticket-header"><a class="movie-link" href="#">Avatar 4</a><span class="ticket-status started">🎉 Started</span></header><p class="meta" style="padding:0 14px 12px">☀️ Detected at 26-09-13 14:35:02</p><footer class="ticket-footer"><span class="hint">Ticket sales are live</span><a class="icon" href="#" title="Open Cineplex">↗️</a></footer></article>
+        </div></section>
+
+        <section class="ticket-section"><h3 class="section-heading">⏳ Still watching · 2</h3><div class="ticket-grid">
+          <article class="ticket-card"><header class="ticket-header"><a class="movie-link" href="#">The Odyssey</a><span class="ticket-status waiting">⏳ Watching</span></header><p class="meta" style="padding:0 14px 12px">👁️ next check in 12 min<br>☀️ checked at 26-09-13 14:35:02</p><footer class="ticket-footer"><span class="hint">No ticket sales yet</span><button class="icon" title="Stop watching The Odyssey">⏹</button></footer></article>
+          <article class="ticket-card"><header class="ticket-header"><a class="movie-link" href="#">Project Hail Mary</a><span class="ticket-status failed">❌ Failed</span></header><p class="meta" style="padding:0 14px 12px">❌ Cineplex did not return ticket status<br>🔄 retrying in 12 min</p><footer class="ticket-footer"><span class="hint">Last known state retained</span><button class="icon" title="Stop watching Project Hail Mary">⏹</button></footer></article>
+        </div></section>
+      </section>
+    </main>
+
+    <dialog id="ticket-dialog" aria-labelledby="ticket-dialog-title"><div class="dialog-header"><div><h2 id="ticket-dialog-title">Add ticket watch</h2><p class="hint">Use one movie name per line. Cineplex search finds the official movie page.</p></div><button class="close" id="close-ticket-dialog" type="button" aria-label="Close">×</button></div><form method="dialog"><label>Movie names<textarea placeholder="The Odyssey&#10;Project Hail Mary"></textarea></label><div class="dialog-actions"><button class="secondary" value="cancel">Cancel</button><button class="primary" value="watch">Start watching</button></div></form></dialog>
+
+    <script>
+      const tabs = [[document.querySelector('#seat-tab'), document.querySelector('#seat-panel')], [document.querySelector('#ticket-tab'), document.querySelector('#ticket-panel')]];
+      for (const [tab, panel] of tabs) tab.onclick = () => tabs.forEach(([otherTab, otherPanel]) => { const selected = otherTab === tab; otherTab.setAttribute('aria-selected', selected); otherPanel.hidden = !selected; });
+      const dialog = document.querySelector('#ticket-dialog');
+      document.querySelector('#open-ticket-dialog').onclick = () => dialog.showModal();
+      document.querySelector('#close-ticket-dialog').onclick = () => dialog.close();
+    </script>
+  </body>
+</html>
