@@ -439,7 +439,7 @@ async function getManagedWatches(env) {
 
 async function getWatchState(env) {
   const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/state.json`, {
-    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+    headers: { accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`, "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load watch state: HTTP ${response.status}`);
 
@@ -454,7 +454,7 @@ async function getSalesStarted(env) {
   if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
 
   const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/sales-started.json`, {
-    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+    headers: { accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`, "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
   if (!response.ok) throw new Error(`Could not load sales-started list: HTTP ${response.status}`);
   const movies = await response.json();
