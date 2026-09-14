@@ -306,7 +306,7 @@
           "auditorium": "Salle 13 - IMAX"
         },
         "405811": {
-          "enabled": true,
+          "enabled": false,
           "showDate": "2027-01-03T00:00:00",
           "startsAt": "2027-01-03T19:20:00",
           "displayTime": "Jan 3, 7:20 PM",
