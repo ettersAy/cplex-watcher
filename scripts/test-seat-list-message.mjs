@@ -19,7 +19,14 @@ const watches = {
   },
   stopped: { id: "stopped", name: "Stopped", enabled: false, theatreId: "9406", showtimes: { "1": { enabled: true } } },
 };
-const states = { watches: { dune: { lastCheckStatus: "success" } } };
+const states = {
+  watches: {
+    dune: {
+      lastCheckStatus: "success",
+      showtimes: { "405854": { selectedSeats: { seat: { label: "E10", status: "Available" } } } },
+    },
+  },
+};
 const available = {
   one: { watchName: "Dune & Friends", theatreId: "9406", showtimeId: "405854", seatId: "seat", seatLabel: "E10" },
 };
@@ -29,7 +36,7 @@ globalThis.fetch = async (url, options = {}) => {
   const file = url.includes("seat-watches.json") ? { watches }
     : url.includes("seat-watch-state.json") ? states
       : url.includes("available-seat-list.json") ? available : null;
-  if (file) return new Response(JSON.stringify(file));
+  if (file) return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify(file)).toString("base64") }));
   if (String(url).includes("api.telegram.org")) {
     sent.push(JSON.parse(options.body));
     return new Response("{}", { status: 200 });

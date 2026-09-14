@@ -553,13 +553,11 @@ function enabledSeatShowtimeIds(watch) {
     .map(([showtimeId]) => showtimeId);
 }
 
-function seatWatchSummaryHtml(watch, watchState, availableList) {
+function seatWatchSummaryHtml(watch, watchState) {
   const showtimeIds = enabledSeatShowtimeIds(watch);
-  const availableSeats = Object.values(availableList).filter((seat) => (
-    seat?.watchName === watch.name
-    && String(seat?.theatreId) === String(watch.theatreId)
-    && showtimeIds.includes(String(seat?.showtimeId))
-  ));
+  const availableSeats = showtimeIds.flatMap((showtimeId) => Object.values(watchState?.showtimes?.[showtimeId]?.selectedSeats || {})
+    .filter((seat) => seat?.status === "Available")
+    .map((seat) => ({ ...seat, showtimeId })));
   const firstAvailableShowtimeId = availableSeats.find((seat) => seat.showtimeId)?.showtimeId;
   const linkShowtimeId = firstAvailableShowtimeId || showtimeIds[0];
   const failed = watchState?.lastCheckStatus === "failed" || showtimeIds.some((showtimeId) => watchState?.showtimes?.[showtimeId]?.lastCheckStatus === "failed");
@@ -648,9 +646,7 @@ async function handleSeatInfo(env, chatId, name) {
 
 async function handleSeatList(env, chatId) {
   try {
-    const [watches, states, availableList] = await Promise.all([
-      getSeatWatches(env), getSeatWatchState(env), getAvailableSeatList(env),
-    ]);
+    const [watches, states] = await Promise.all([getSeatWatches(env), getSeatWatchState(env)]);
     const enabledWatches = Object.values(watches)
       .filter((watch) => watch?.enabled && enabledSeatShowtimeIds(watch).length)
       .sort((left, right) => String(left.name).localeCompare(String(right.name)));
@@ -660,7 +656,7 @@ async function handleSeatList(env, chatId) {
       return;
     }
     const blocks = enabledWatches.map((watch) => [
-      seatWatchSummaryHtml(watch, states[watch.id], availableList),
+      seatWatchSummaryHtml(watch, states[watch.id]),
       `   📖 /seatinfo ${escapeHtml(watch.name)}`,
       `   ➕ /watchshowtime ${escapeHtml(watch.name)} ShowtimeId`,
       `   ⏹ /stopseats ${escapeHtml(watch.name)}`,
