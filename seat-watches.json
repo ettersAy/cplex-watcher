@@ -62,6 +62,60 @@
           "showDate": "2026-12-18T00:00:00",
           "startsAt": "2026-12-18T19:30:00",
           "displayTime": "Dec 18, 7:30 PM"
+        },
+        "405750": {
+          "enabled": true,
+          "showDate": "2026-12-19T00:00:00",
+          "startsAt": "2026-12-19T12:30:00",
+          "displayTime": "Dec 19, 12:30 PM"
+        },
+        "405751": {
+          "enabled": true,
+          "showDate": "2026-12-19T00:00:00",
+          "startsAt": "2026-12-19T15:55:00",
+          "displayTime": "Dec 19, 3:55 PM"
+        },
+        "405752": {
+          "enabled": true,
+          "showDate": "2026-12-19T00:00:00",
+          "startsAt": "2026-12-19T19:30:00",
+          "displayTime": "Dec 19, 7:30 PM"
+        },
+        "405753": {
+          "enabled": true,
+          "showDate": "2026-12-20T00:00:00",
+          "startsAt": "2026-12-20T19:30:00",
+          "displayTime": "Dec 20, 7:30 PM"
+        },
+        "405754": {
+          "enabled": true,
+          "showDate": "2026-12-20T00:00:00",
+          "startsAt": "2026-12-20T15:55:00",
+          "displayTime": "Dec 20, 3:55 PM"
+        },
+        "405755": {
+          "enabled": true,
+          "showDate": "2026-12-20T00:00:00",
+          "startsAt": "2026-12-20T12:30:00",
+          "displayTime": "Dec 20, 12:30 PM"
+        },
+        "405760": {
+          "enabled": true,
+          "showDate": "2026-12-21T00:00:00",
+          "startsAt": "2026-12-21T19:30:00",
+          "displayTime": "Dec 21, 7:30 PM"
+        },
+        "405761": {
+          "enabled": true,
+          "showDate": "2026-12-22T00:00:00",
+          "startsAt": "2026-12-22T19:30:00",
+          "displayTime": "Dec 22, 7:30 PM"
+        },
+        "405765": {
+          "enabled": true,
+          "showDate": "2026-12-23T00:00:00",
+          "startsAt": "2026-12-23T19:30:00",
+          "displayTime": "Dec 23, 7:30 PM"
         }
       }
     }
