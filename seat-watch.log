@@ -836,3 +836,33 @@
 [26-09-14 01:41:11] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 selected_available=4
 [26-09-14 01:41:12] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 telegram availability alert sent seats=E14,E15,E16,E17
 [26-09-14 01:41:12] [info] seat watcher scan completed watches=2 showtimes=14 failures=0 new_seats=4
+[26-09-14 01:49:15] [info] seat watcher scan started
+[26-09-14 01:49:15] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405740 cineplex availability call initiated
+[26-09-14 01:49:15] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405740 selected_available=0
+[26-09-14 01:49:15] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405741 cineplex availability call initiated
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405741 selected_available=0
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405743 cineplex availability call initiated
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405743 selected_available=0
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405745 cineplex availability call initiated
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405745 selected_available=0
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405750 cineplex availability call initiated
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405750 selected_available=0
+[26-09-14 01:49:16] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405751 cineplex availability call initiated
+[26-09-14 01:49:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405751 selected_available=0
+[26-09-14 01:49:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405752 cineplex availability call initiated
+[26-09-14 01:49:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405752 selected_available=0
+[26-09-14 01:49:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405753 cineplex availability call initiated
+[26-09-14 01:49:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405753 selected_available=0
+[26-09-14 01:49:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405754 cineplex availability call initiated
+[26-09-14 01:49:18] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405754 selected_available=0
+[26-09-14 01:49:18] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405755 cineplex availability call initiated
+[26-09-14 01:49:18] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405755 selected_available=0
+[26-09-14 01:49:18] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405760 cineplex availability call initiated
+[26-09-14 01:49:18] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405760 selected_available=0
+[26-09-14 01:49:18] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405761 cineplex availability call initiated
+[26-09-14 01:49:19] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405761 selected_available=0
+[26-09-14 01:49:19] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405765 cineplex availability call initiated
+[26-09-14 01:49:19] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405765 selected_available=0
+[26-09-14 01:49:19] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 cineplex availability call initiated
+[26-09-14 01:49:19] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 selected_available=4
+[26-09-14 01:49:19] [info] seat watcher scan completed watches=1 showtimes=14 failures=0 new_seats=0
