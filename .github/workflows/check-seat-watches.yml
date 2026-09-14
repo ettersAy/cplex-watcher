@@ -86,5 +86,8 @@ jobs:
           git config user.name "Cineplex Seat Watcher"
           git config user.email "actions@github.com"
           git add seat-watches.json seat-watch-state.json available-seat-list.json seat-watch.log
-          git diff --cached --quiet || git commit -m "Update seat watcher state"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "Update seat watcher state"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi

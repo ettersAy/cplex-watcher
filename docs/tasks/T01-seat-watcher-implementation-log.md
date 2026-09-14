@@ -350,3 +350,14 @@ present; Edit opened the populated Dune form with `Save changes`.
 Lesson retained: every JavaScript deployment must increment its public asset
 version in `web/index.html`. Otherwise GitHub Pages can serve old client code
 even though the HTML deployment itself succeeded.
+
+## 2026-09-13 — Scheduled scan push race
+
+A seat scan can run from a checkout that predates a web, Worker, or
+documentation push. Its old plain `git push` was rejected after the scan had
+successfully committed new state. The state-save step now rebases its new
+state-only commit on `origin/main` before pushing. The existing
+`seat-watch-write` concurrency group continues to serialize all state writers;
+the rebase covers unrelated pushes made while a scan is in progress. A real
+conflict is not ignored: the Action still fails visibly rather than silently
+discarding either side.
