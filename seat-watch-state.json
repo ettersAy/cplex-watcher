@@ -3273,6 +3273,16 @@
       "showtimes": {
         "405740": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -3315,6 +3325,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -3594,11 +3624,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:05.510220+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:53.115090+00:00",
           "lastCheckStatus": "success"
         },
         "405741": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -3641,6 +3681,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -3920,11 +3980,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:05.804271+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:53.663699+00:00",
           "lastCheckStatus": "success"
         },
         "405743": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -3967,6 +4037,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -4246,11 +4336,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:06.124395+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:54.279712+00:00",
           "lastCheckStatus": "success"
         },
         "405745": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -4293,6 +4393,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -4572,11 +4692,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:06.451777+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:55.031752+00:00",
           "lastCheckStatus": "success"
         },
         "405750": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -4619,6 +4749,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -4898,11 +5048,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:06.845018+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:55.578132+00:00",
           "lastCheckStatus": "success"
         },
         "405751": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -4945,6 +5105,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -5224,11 +5404,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:07.123876+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:56.307234+00:00",
           "lastCheckStatus": "success"
         },
         "405752": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -5271,6 +5461,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -5550,11 +5760,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:07.292472+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:57.108165+00:00",
           "lastCheckStatus": "success"
         },
         "405753": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -5597,6 +5817,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -5876,11 +6116,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:07.616542+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:57.869899+00:00",
           "lastCheckStatus": "success"
         },
         "405754": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -5923,6 +6173,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -6202,11 +6472,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:07.834487+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:58.500951+00:00",
           "lastCheckStatus": "success"
         },
         "405755": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -6249,6 +6529,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -6528,11 +6828,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:08.210628+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:59.104536+00:00",
           "lastCheckStatus": "success"
         },
         "405760": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -6575,6 +6885,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -6854,11 +7184,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:08.521717+00:00",
+          "lastCheckedAt": "2026-09-14T05:23:59.874406+00:00",
           "lastCheckStatus": "success"
         },
         "405761": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -6901,6 +7241,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -7180,11 +7540,21 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:08.839281+00:00",
+          "lastCheckedAt": "2026-09-14T05:24:00.440614+00:00",
           "lastCheckStatus": "success"
         },
         "405765": {
           "selectedSeats": {
+            "1_8_24": {
+              "label": "E19",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_23": {
+              "label": "E18",
+              "type": "Standard",
+              "status": "Occupied"
+            },
             "1_8_22": {
               "label": "E17",
               "type": "Standard",
@@ -7227,6 +7597,26 @@
             },
             "1_8_14": {
               "label": "E9",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_13": {
+              "label": "E8",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_12": {
+              "label": "E7",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_11": {
+              "label": "E6",
+              "type": "Standard",
+              "status": "Occupied"
+            },
+            "1_8_10": {
+              "label": "E5",
               "type": "Standard",
               "status": "Occupied"
             },
@@ -7506,11 +7896,11 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-14T05:21:09.091756+00:00",
+          "lastCheckedAt": "2026-09-14T05:24:00.979577+00:00",
           "lastCheckStatus": "success"
         }
       },
-      "lastCheckedAt": "2026-09-14T05:21:09.092311+00:00",
+      "lastCheckedAt": "2026-09-14T05:24:00.980174+00:00",
       "lastCheckStatus": "success"
     }
   }
