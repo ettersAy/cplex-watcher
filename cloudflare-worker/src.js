@@ -504,6 +504,82 @@ function seatWatchSummaryHtml(watch, watchState, availableList) {
   return `<a href="${escapeHtml(`https://www.cineplex.com/ticketing/preview?theatreId=${watch.theatreId}&showtimeId=${linkShowtimeId}`, true)}">${line}</a>`;
 }
 
+function seatLabelsByRow(selectedSeats) {
+  const rows = new Map();
+  for (const seat of Object.values(selectedSeats || {})) {
+    if (seat?.status !== "Available" || typeof seat.label !== "string") continue;
+    const match = /^([A-Z]+)(\d+)$/.exec(seat.label);
+    if (!match) continue;
+    const [_, row, number] = match;
+    rows.set(row, [...(rows.get(row) || []), Number(number)]);
+  }
+  return [...rows.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([row, numbers]) => `${row}: ${numbers.sort((left, right) => left - right).join(", ")}`);
+}
+
+function availableSeatCount(selectedSeats) {
+  return Object.values(selectedSeats || {}).filter((seat) => seat?.status === "Available").length;
+}
+
+function seatInfoShowtimeLink(watch, showtimeId, showtime) {
+  const label = `#${showtimeId}`;
+  const url = `https://www.cineplex.com/ticketing/preview?theatreId=${watch.theatreId}&showtimeId=${showtimeId}`;
+  return `<a href="${escapeHtml(url, true)}">${label}</a> — ${escapeHtml(showtime?.displayTime || "Date not available")}`;
+}
+
+async function handleSeatInfo(env, chatId, name) {
+  if (!name) return telegram(env, chatId, "Use /seatinfo Watch Name\nExample: /seatinfo Dune");
+  try {
+    const [watches, states] = await Promise.all([getSeatWatches(env), getSeatWatchState(env)]);
+    const found = findSeatWatch(watches, name);
+    if (!found || !found.watch.enabled) {
+      return telegram(env, chatId, `No enabled seat watch named ${name}. Example: /seatinfo Dune`);
+    }
+    const { watch } = found;
+    const watchState = states[found.id] || {};
+    const successful = [];
+    const failed = [];
+    for (const showtimeId of enabledSeatShowtimeIds(watch)) {
+      const showtime = watch.showtimes[showtimeId];
+      const showtimeState = watchState.showtimes?.[showtimeId];
+      if (showtimeState?.lastCheckStatus === "failed") {
+        failed.push({ showtimeId, showtime, error: showtimeState.lastError || "Seat check failed" });
+      } else if (showtimeState?.lastCheckStatus === "success") {
+        successful.push({
+          showtimeId, showtime,
+          availableRows: seatLabelsByRow(showtimeState.selectedSeats),
+          availableCount: availableSeatCount(showtimeState.selectedSeats),
+        });
+      }
+    }
+    const withAvailability = successful.filter((item) => item.availableRows.length);
+    const withoutAvailability = successful.filter((item) => !item.availableRows.length);
+    const availableCount = withAvailability.reduce((count, item) => count + item.availableCount, 0);
+    const sections = [
+      `🎟 <b>${escapeHtml(watch.name)}</b> — ${availableCount} seats available, ${enabledSeatShowtimeIds(watch).length} showtimes`,
+      `${escapeHtml(watch.theatreName)} (#${escapeHtml(watch.theatreId)}) · next 👁 ${nextScheduledCheck()}`,
+      `Checked at ${formatTimestamp(watchState.lastCheckedAt)}`,
+    ];
+    if (withAvailability.length) {
+      sections.push(`Showtimes with available selected seats:\n${withAvailability.map((item) => `  • ${seatInfoShowtimeLink(watch, item.showtimeId, item.showtime)} — ${item.availableCount} seats\n    ${item.availableRows.join("\n    ")}`).join("\n\n")}`);
+    }
+    if (withoutAvailability.length) {
+      sections.push(`Showtimes with no selected seats available:\n${withoutAvailability.map((item) => `  • ${seatInfoShowtimeLink(watch, item.showtimeId, item.showtime)}`).join("\n")}`);
+    }
+    if (failed.length) {
+      sections.push(`Failed showtimes:\n${failed.map((item) => `  • ❌ ${seatInfoShowtimeLink(watch, item.showtimeId, item.showtime)}\n    ${escapeHtml(item.error)}`).join("\n")}`);
+    }
+    if (!successful.length && !failed.length) sections.push("No completed seat scan yet.");
+    sections.push(`➕ /watchshowtime ${escapeHtml(watch.name)} ShowtimeId\n⏹ /stopseats ${escapeHtml(watch.name)}\n🌐 <a href="https://ettersay.github.io/cplex-watcher/">Open web interface</a>`);
+    console.log(JSON.stringify({ event: "seat_watch_info_requested", watchId: found.id }));
+    await telegram(env, chatId, sections.join("\n\n"), { parse_mode: "HTML" });
+  } catch (error) {
+    console.error("Could not load seat watch details:", error);
+    await telegram(env, chatId, "I could not load the seat watch details. Please try again shortly.");
+  }
+}
+
 async function handleSeatList(env, chatId) {
   try {
     const [watches, states, availableList] = await Promise.all([
@@ -608,10 +684,15 @@ async function handleUpdate(request, env) {
     await handleStopWatch(env, chatId, stopCommand[1].trim());
   } else if (/^\/listseats(?:@\w+)?$/i.test(message.text)) {
     await handleSeatList(env, chatId);
-  } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
-    await handleList(env, chatId);
   } else {
-    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /listseats for seat watches\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
+    const seatInfoCommand = message.text.match(/^\/seatinfo(?:@\w+)?\s+(.+)$/i);
+    if (seatInfoCommand) {
+      await handleSeatInfo(env, chatId, seatInfoCommand[1].trim());
+    } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
+      await handleList(env, chatId);
+    } else {
+      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
+    }
   }
 
   return new Response("ok");

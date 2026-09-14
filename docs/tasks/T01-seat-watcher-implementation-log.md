@@ -270,3 +270,23 @@ with availability is the link target; if none has availability, it is the
 earliest enabled showtime. The message also gives exact follow-up commands and
 the web-interface link. `scripts/test-seat-list-message.mjs` verifies the
 rendering without network access before the real Telegram command test.
+
+## 2026-09-13 — Stage 10: `/listseats` live proof
+
+The Worker was deployed as version `2a3dda7c-c977-49ff-8ada-44cdc91e665e`.
+A real Telegram `/listseats` request returned the approved compact Dune block:
+9 seats, theatre `#9406`, one active showtime, and a clickable complete summary
+line targeting showtime `#405853`. It also displayed the detail, add-showtime,
+and stop commands and the web-interface link.
+
+Lesson retained: a rendering test catches HTML escaping, link selection, and
+hidden stopped watches before deployment; the real Telegram test must still
+verify that Telegram makes the entire intended summary line clickable.
+
+## Next implementation step: `/seatinfo`
+
+The detailed command must use the latest saved successful scan only. It groups
+currently available selected seats by row, shows each enabled successful
+showtime exactly once in either the availability or no-availability section,
+keeps failures separate, and links every showtime to Cineplex preview. The
+same message-rendering script covers both `/listseats` and `/seatinfo`.

@@ -6,15 +6,15 @@ import { readFileSync } from "node:fs";
 const workerPath = new URL("../cloudflare-worker/src.js", import.meta.url);
 const source = readFileSync(workerPath, "utf8")
   .replace("export default {", "globalThis.__worker = {")
-  + "\nglobalThis.__seatListTest = { handleSeatList, seatWatchSummaryHtml };";
+  + "\nglobalThis.__seatListTest = { handleSeatList, handleSeatInfo, seatWatchSummaryHtml };";
 await import(`data:text/javascript,${encodeURIComponent(source)}`);
 
 const watches = {
   dune: {
-    id: "dune", name: "Dune & Friends", enabled: true, theatreId: "9406",
+    id: "dune", name: "Dune & Friends", enabled: true, theatreId: "9406", theatreName: "Test Theatre",
     showtimes: {
-      "405854": { enabled: true, startsAt: "2027-01-14T15:30:00" },
-      "405853": { enabled: true, startsAt: "2027-01-14T12:15:00" },
+      "405854": { enabled: true, startsAt: "2027-01-14T15:30:00", displayTime: "Jan 14, 3:30 PM" },
+      "405853": { enabled: true, startsAt: "2027-01-14T12:15:00", displayTime: "Jan 14, 12:15 PM" },
     },
   },
   stopped: { id: "stopped", name: "Stopped", enabled: false, theatreId: "9406", showtimes: { "1": { enabled: true } } },
@@ -38,7 +38,6 @@ globalThis.fetch = async (url, options = {}) => {
 };
 
 await globalThis.__seatListTest.handleSeatList({ GITHUB_REPOSITORY: "owner/repo", TELEGRAM_BOT_TOKEN: "test" }, "123");
-globalThis.fetch = originalFetch;
 
 assert.equal(sent.length, 1);
 assert.equal(sent[0].parse_mode, "HTML");
@@ -46,4 +45,21 @@ assert.match(sent[0].text, /<a href="https:\/\/www\.cineplex\.com\/ticketing\/pr
 assert.match(sent[0].text, /📖 \/seatinfo Dune &amp; Friends/);
 assert.doesNotMatch(sent[0].text, /Stopped/);
 assert.match(sent[0].text, /Open web interface/);
+
+states.watches.dune = {
+  lastCheckStatus: "success", lastCheckedAt: "2027-01-14T12:00:00Z",
+  showtimes: {
+    "405853": { lastCheckStatus: "success", selectedSeats: { first: { label: "E10", status: "Available" }, second: { label: "F20", status: "Available" } } },
+    "405854": { lastCheckStatus: "success", selectedSeats: { first: { label: "E9", status: "Occupied" } } },
+  },
+};
+await globalThis.__seatListTest.handleSeatInfo({ GITHUB_REPOSITORY: "owner/repo", TELEGRAM_BOT_TOKEN: "test" }, "123", "Dune & Friends");
+assert.equal(sent.length, 2);
+assert.match(sent[1].text, /2 seats available, 2 showtimes/);
+assert.match(sent[1].text, /Showtimes with available selected seats:/);
+assert.match(sent[1].text, /E: 10\n    F: 20/);
+assert.match(sent[1].text, /Showtimes with no selected seats available:/);
+assert.match(sent[1].text, /showtimeId=405853/);
+assert.match(sent[1].text, /showtimeId=405854/);
+globalThis.fetch = originalFetch;
 console.log("seat list message checks passed");
