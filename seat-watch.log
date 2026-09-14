@@ -471,3 +471,43 @@
 [26-09-14 01:05:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405811 cineplex availability call initiated
 [26-09-14 01:05:17] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405811 selected_available=0
 [26-09-14 01:05:17] [info] seat watcher scan completed watches=2 showtimes=17 failures=0 new_seats=0
+[26-09-14 01:05:31] [info] seat watcher scan started
+[26-09-14 01:05:31] [info] watch=Dune showtime=405740 cineplex availability call initiated
+[26-09-14 01:05:31] [info] watch=Dune showtime=405740 selected_available=0
+[26-09-14 01:05:31] [info] watch=Dune showtime=405741 cineplex availability call initiated
+[26-09-14 01:05:31] [info] watch=Dune showtime=405741 selected_available=0
+[26-09-14 01:05:31] [info] watch=Dune showtime=405743 cineplex availability call initiated
+[26-09-14 01:05:31] [info] watch=Dune showtime=405743 selected_available=0
+[26-09-14 01:05:31] [info] watch=Dune showtime=405745 cineplex availability call initiated
+[26-09-14 01:05:32] [info] watch=Dune showtime=405745 selected_available=0
+[26-09-14 01:05:32] [info] watch=Dune showtime=405750 cineplex availability call initiated
+[26-09-14 01:05:32] [info] watch=Dune showtime=405750 selected_available=0
+[26-09-14 01:05:32] [info] watch=Dune showtime=405751 cineplex availability call initiated
+[26-09-14 01:05:32] [info] watch=Dune showtime=405751 selected_available=0
+[26-09-14 01:05:32] [info] watch=Dune showtime=405752 cineplex availability call initiated
+[26-09-14 01:05:33] [info] watch=Dune showtime=405752 selected_available=0
+[26-09-14 01:05:33] [info] watch=Dune showtime=405753 cineplex availability call initiated
+[26-09-14 01:05:33] [info] watch=Dune showtime=405753 selected_available=0
+[26-09-14 01:05:33] [info] watch=Dune showtime=405754 cineplex availability call initiated
+[26-09-14 01:05:33] [info] watch=Dune showtime=405754 selected_available=0
+[26-09-14 01:05:33] [info] watch=Dune showtime=405755 cineplex availability call initiated
+[26-09-14 01:05:33] [info] watch=Dune showtime=405755 selected_available=0
+[26-09-14 01:05:33] [info] watch=Dune showtime=405760 cineplex availability call initiated
+[26-09-14 01:05:34] [info] watch=Dune showtime=405760 selected_available=0
+[26-09-14 01:05:34] [info] watch=Dune showtime=405761 cineplex availability call initiated
+[26-09-14 01:05:34] [info] watch=Dune showtime=405761 selected_available=0
+[26-09-14 01:05:34] [info] watch=Dune showtime=405765 cineplex availability call initiated
+[26-09-14 01:05:34] [info] watch=Dune showtime=405765 selected_available=0
+[26-09-14 01:05:34] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405821 cineplex availability call initiated
+[26-09-14 01:05:34] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405821 selected_available=7
+[26-09-14 01:05:34] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405809 cineplex availability call initiated
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405809 selected_available=0
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405810 cineplex availability call initiated
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405810 selected_available=0
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405811 cineplex availability call initiated
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405811 selected_available=0
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 cineplex layout call initiated
+[26-09-14 01:05:35] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 cineplex availability call initiated
+[26-09-14 01:05:36] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 selected_available=4
+[26-09-14 01:05:36] [info] watch=Dune: Part 3: The IMAX Experience® in 70MM showtime=405812 telegram availability alert sent seats=E14,E15,E16,E17
+[26-09-14 01:05:36] [info] seat watcher scan completed watches=2 showtimes=18 failures=0 new_seats=4
