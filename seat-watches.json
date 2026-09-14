@@ -3,9 +3,9 @@
     "dune": {
       "id": "dune",
       "name": "Dune",
-      "enabled": false,
+      "enabled": true,
       "theatreId": "9406",
-      "theatreName": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
+      "theatreName": "Cineplex Cinemas Yonge-Dundas and VIP",
       "rule": {
         "E": [
           [
@@ -44,12 +44,6 @@
           "showDate": "2027-01-14T00:00:00",
           "startsAt": "2027-01-14T12:15:00",
           "displayTime": "Jan 14, 12:15 PM"
-        },
-        "405854": {
-          "enabled": false,
-          "showDate": "2027-01-14T00:00:00",
-          "startsAt": "2027-01-14T15:30:00",
-          "displayTime": "Jan 14, 3:30 PM"
         }
       }
     }
