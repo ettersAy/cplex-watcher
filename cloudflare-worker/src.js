@@ -118,6 +118,14 @@ function queueAuthenticationError(request, env) {
   return null;
 }
 
+function extensionAuthenticationError(request, env) {
+  if (!env.UI_ACCESS_TOKEN) return Response.json({ error: "The extension queue is not configured yet." }, { status: 503, headers: { "access-control-allow-origin": "*" } });
+  const authorization = request.headers.get("Authorization") || "";
+  const token = authorization.startsWith("Bearer ") ? authorization.slice(7) : "";
+  if (token !== env.UI_ACCESS_TOKEN) return Response.json({ error: "Invalid extension access token." }, { status: 401, headers: { "access-control-allow-origin": "*" } });
+  return null;
+}
+
 function parseMovieTitles(body) {
   const value = typeof body?.titles === "string" ? body.titles : (typeof body?.title === "string" ? body.title : "");
   const titles = [...new Map(value.split(/\r?\n/).map((title) => title.trim()).filter(Boolean).map((title) => [title.toLocaleLowerCase(), title])).values()];
@@ -211,6 +219,27 @@ async function handleSeatWatchMutation(request, env, operation, watchId = "", su
   } catch (error) {
     console.error("Could not dispatch web seat-watch request:", error);
     return queueResponse(env, { error: "Could not start the seat-watch request. Please try again shortly." }, 502);
+  }
+}
+
+async function handleExtensionWatchSeat(request, env) {
+  const authenticationError = extensionAuthenticationError(request, env);
+  if (authenticationError) return authenticationError;
+  let body;
+  try { body = await request.json(); } catch { return Response.json({ error: "Request body must be JSON." }, { status: 400, headers: { "access-control-allow-origin": "*" } }); }
+  const preview = parseSeatPreviewUrl(typeof body?.url === "string" ? body.url : "");
+  if (!preview) return Response.json({ error: "Provide an official Cineplex preview URL with theatreId and showtimeId." }, { status: 400, headers: { "access-control-allow-origin": "*" } });
+  try {
+    const watches = await getSeatWatches(env);
+    const existing = Object.values(watches).find((watch) => String(watch.theatreId) === preview.theatreId && watch.showtimes?.[preview.showtimeId]);
+    if (existing) return Response.json({ status: "already_watched", message: `#${preview.showtimeId} is already in ${existing.name}. Nothing changed.` }, { headers: { "access-control-allow-origin": "*" } });
+    const requestId = crypto.randomUUID();
+    console.log(JSON.stringify({ event: "extension_seat_preview_watch_requested", requestId, ...preview }));
+    await dispatchSeatWatch(env, "watch_preview", "", preview, requestId, "");
+    return Response.json({ status: "queued", message: `Reading #${preview.showtimeId} from Cineplex. It will be added after validation.` }, { status: 202, headers: { "access-control-allow-origin": "*" } });
+  } catch (error) {
+    console.error("Could not dispatch extension preview seat watch:", error);
+    return Response.json({ error: "Could not start the preview seat watch. Please try again shortly." }, { status: 502, headers: { "access-control-allow-origin": "*" } });
   }
 }
 
@@ -838,11 +867,13 @@ async function handleUpdate(request, env) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/extension/watchseat" && request.method === "OPTIONS") return new Response(null, { status: 204, headers: { "access-control-allow-origin": "*", "access-control-allow-methods": "POST, OPTIONS", "access-control-allow-headers": "authorization, content-type" } });
     if ((url.pathname === "/api/queue" || url.pathname === "/api/scan" || url.pathname === "/api/verify" || url.pathname === "/api/seat-watches" || url.pathname.startsWith("/api/seat-watches/")) && request.method === "OPTIONS") {
       if (request.headers.get("Origin") !== env.UI_ORIGIN) return new Response("Forbidden", { status: 403 });
       return new Response(null, { status: 204, headers: queueCorsHeaders(env) });
     }
     if (url.pathname === "/api/queue" && request.method === "POST") return handleQueue(request, env);
+    if (url.pathname === "/api/extension/watchseat" && request.method === "POST") return handleExtensionWatchSeat(request, env);
     if (url.pathname === "/api/queue" && request.method === "DELETE") return handleRemoveWatch(request, env);
     if (url.pathname === "/api/scan" && request.method === "POST") return handleScan(request, env);
     if (url.pathname === "/api/verify" && request.method === "POST") return handleVerifyUiToken(request, env);

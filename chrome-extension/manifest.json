@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Cineplex Seat Watcher",
+  "version": "1.0.0",
+  "description": "Add a Cineplex preview showtime to the seat watcher.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://www.cineplex.com/*", "https://cplex-watcher.cplexwatcher.workers.dev/*"],
+  "background": {"service_worker": "background.js", "type": "module"},
+  "action": {"default_title": "Cineplex Seat Watcher", "default_popup": "popup.html"},
+  "content_scripts": [{"matches": ["https://www.cineplex.com/ticketing/preview*"], "js": ["content.js"], "css": ["content.css"], "run_at": "document_idle"}]
+}
