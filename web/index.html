@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <title>Cineplex Seat Watcher</title>
-    <link rel="stylesheet" href="styles.css?v=20260914-dashboard-1">
+    <link rel="stylesheet" href="styles.css?v=20260914-dashboard-2">
   </head>
   <body>
     <main id="app" hidden>
@@ -45,8 +45,9 @@
       </section>
       <section id="guide-panel" class="tab-panel" role="tabpanel" aria-labelledby="guide-tab" hidden>
         <header class="page-header"><div><h2>Bot command guide</h2><p class="hint">Send commands in your private Telegram chat with the bot.</p></div></header>
-        <article class="command-group"><h3>🎟 Seat watcher</h3><p class="hint">Add theatre details and seat labels in the web interface. Telegram is for quick showtime management and details.</p><div class="command"><code>/watchshowtime Dune 405740,405741</code><span>Start watching comma-separated showtime IDs.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/stopshowtime Dune 405741</code><span>Stop one watched showtime.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/listseats</code><span>Show a short summary of all seat watches.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/seatinfo Dune</code><span>Show available and still-watched showtimes, grouped by day.</span><button class="copy-command" type="button">Copy</button></div></article>
+        <article class="command-group"><h3>🎟 Seat watcher</h3><p class="hint">Add theatre details and seat labels in the web interface. Telegram is for quick showtime management and details.</p><div class="command"><code>/watchshowtime Dune 405740,405741</code><span>Start watching comma-separated showtime IDs.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/stopshowtime Dune 405741</code><span>Stop one watched showtime.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/stopseats Dune</code><span>Stop the complete seat watch, including every showtime.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/refreshseats Dune</code><span>Request an immediate seat check for one watch.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/listseats</code><span>Show a short summary of all seat watches.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/seatinfo Dune</code><span>Show available and still-watched showtimes, grouped by day.</span><button class="copy-command" type="button">Copy</button></div></article>
         <article class="command-group"><h3>🎫 Ticket watcher</h3><p class="hint">Watch a movie until Cineplex starts selling tickets.</p><div class="command"><code>/watch Dune: Part 3</code><span>Start a ticket-sale watch.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/stopwatch Dune: Part 3</code><span>Stop a ticket-sale watch.</span><button class="copy-command" type="button">Copy</button></div><div class="command"><code>/list</code><span>List current ticket-sale watches.</span><button class="copy-command" type="button">Copy</button></div></article>
+        <article class="command-group"><h3>🔐 Access</h3><p class="hint">Use this only in a private chat with the bot.</p><div class="command"><code>/id</code><span>Show your Telegram chat ID so the owner can authorize it.</span><button class="copy-command" type="button">Copy</button></div></article>
         <section class="dashboard-section"><h3 class="dashboard-heading">How seat alerts work</h3><p class="guide-note">A matching seat alerts once when it becomes available. It is not alerted again while it stays available. If it disappears and later reopens, the bot alerts again. Scan failures are sent to Telegram and written to logs.</p></section>
       </section>
     </main>
@@ -79,6 +80,6 @@
         <p id="seat-preview-result" class="summary"></p>
       </div>
     </dialog>
-    <script src="app.js?v=20260914-dashboard-1"></script>
+    <script src="app.js?v=20260914-dashboard-2"></script>
   </body>
 </html>

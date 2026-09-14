@@ -92,6 +92,8 @@
         <article class="command-group"><h3>🎟 Seat watcher</h3><p class="hint">Add and manage precise showtimes. Configure theatre and seat labels in the web interface.</p>
           <div class="command"><code>/watchshowtime Dune 405740,405741</code><span class="hint">Start watching comma-separated showtime IDs.</span><button class="copy">Copy</button></div>
           <div class="command"><code>/stopshowtime Dune 405741</code><span class="hint">Stop one watched showtime.</span><button class="copy">Copy</button></div>
+          <div class="command"><code>/stopseats Dune</code><span class="hint">Stop every showtime in one seat watch.</span><button class="copy">Copy</button></div>
+          <div class="command"><code>/refreshseats Dune</code><span class="hint">Request an immediate check for one seat watch.</span><button class="copy">Copy</button></div>
           <div class="command"><code>/listseats</code><span class="hint">Show a short summary of every seat watch.</span><button class="copy">Copy</button></div>
           <div class="command"><code>/seatinfo Dune</code><span class="hint">Show available and still-watched showtimes, grouped by day.</span><button class="copy">Copy</button></div>
         </article>
@@ -100,6 +102,7 @@
           <div class="command"><code>/stopwatch Dune: Part 3</code><span class="hint">Stop a ticket-sale watch.</span><button class="copy">Copy</button></div>
           <div class="command"><code>/list</code><span class="hint">List current ticket-sale watches.</span><button class="copy">Copy</button></div>
         </article>
+        <article class="command-group"><h3>🔐 Access</h3><p class="hint">Use this only in a private chat with the bot.</p><div class="command"><code>/id</code><span class="hint">Show your Telegram chat ID so the owner can authorize it.</span><button class="copy">Copy</button></div></article>
         <section class="section"><h3 class="section-title">How seat alerts work</h3><div class="info-box">A matching seat alerts once when it becomes available. It is not alerted again while it stays available. If it disappears and later reopens, the bot alerts again. Scan failures are sent to Telegram and written to logs.</div></section>
       </section>
     </main>
