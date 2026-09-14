@@ -122,11 +122,28 @@ def showtime_display_metadata(detail, theatre_id, showtime_id):
         parsed = datetime.fromisoformat(starts_at)
     except ValueError as error:
         raise ValueError(f"Cineplex detail response for #{showtime_id} has an invalid start time") from error
-    return {
+    metadata = {
         "showDate": show_date,
         "startsAt": starts_at,
         "displayTime": parsed.strftime("%b %d, %-I:%M %p").replace(" 0", " "),
     }
+    for field in ("seatMapUrl", "ticketingUrl", "ticketingRedesignUrl", "getTicketingUrlApi", "deeplinkUrl", "showtimeShareKey", "showStartDateTimeUtc", "isInThePast", "isReservedSeating", "isShowtimeEnabledOnline", "seatsRemaining", "isSoldOut", "auditorium"):
+        if field in showtime:
+            metadata[field] = showtime[field]
+    return metadata
+
+
+def watch_movie_metadata(detail):
+    """Keep the stable movie/theatre fields needed by seat watches and the UI."""
+    movie = detail.get("movie")
+    movie_id = detail.get("movieId")
+    theatre = detail.get("theatre")
+    if not isinstance(movie, str) or not movie.strip() or not isinstance(movie_id, int) or not isinstance(theatre, str) or not theatre.strip():
+        raise ValueError("Cineplex detail response is missing movie or theatre metadata")
+    metadata = {"movie": movie.strip(), "movieId": movie_id, "theatre": theatre.strip()}
+    if isinstance(detail.get("runtimeInMinutes"), int): metadata["runtimeInMinutes"] = detail["runtimeInMinutes"]
+    if isinstance(detail.get("experienceTypes"), list) and all(isinstance(value, str) for value in detail["experienceTypes"]): metadata["experienceTypes"] = detail["experienceTypes"]
+    return metadata
 
 
 def command_result_html(result):
@@ -160,6 +177,7 @@ def command_result_html(result):
 def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_json=request_json, details=None):
     for showtime_id in watch["showtimes"]:
         detail = (details or {}).get(showtime_id) or fetch_detail(watch["theatreId"], showtime_id)
+        watch.update(watch_movie_metadata(detail))
         watch["showtimes"][showtime_id].update(showtime_display_metadata(detail, watch["theatreId"], showtime_id))
         layout = fetch_json(layout_url(watch["theatreId"], showtime_id))
         if not select_seats(layout, watch["rule"]):
@@ -172,13 +190,8 @@ def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_jso
 def register_preview_watch(watches, theatre_id, showtime_id, *, fetch_detail=request_showtime_detail, fetch_json=request_json):
     """Register a preview URL showtime, reusing a matching movie/theatre watch."""
     detail = fetch_detail(theatre_id, showtime_id)
-    movie_name = detail.get("movie")
-    theatre_name = detail.get("theatre")
-    if not isinstance(movie_name, str) or not movie_name.strip():
-        raise ValueError("Cineplex detail response is missing the movie name")
-    if not isinstance(theatre_name, str) or not theatre_name.strip():
-        raise ValueError("Cineplex detail response is missing the theatre name")
-    movie_name, theatre_name = movie_name.strip(), theatre_name.strip()
+    profile = watch_movie_metadata(detail)
+    movie_name, theatre_name = profile["movie"], profile["theatre"]
     matching = next((watch for watch in watches.values() if watch.get("enabled") and watch.get("name", "").casefold() == movie_name.casefold() and str(watch.get("theatreId")) == theatre_id), None)
     if matching:
         candidate = {**matching, "showtimes": {showtime_id: {"enabled": True}}}

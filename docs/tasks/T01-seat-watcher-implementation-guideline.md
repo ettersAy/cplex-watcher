@@ -109,7 +109,10 @@ GET /prod/cpx/theatrical/api/v1/theatres/<theatreId>/showtimes/<showtimeId>
 ```
 
 Use its `showDate` and `showtime.showStartDateTime` to save `showDate`,
-`startsAt`, and a formatted `displayTime`. The Action automatically discovers
+`startsAt`, and a formatted `displayTime`. Save the stable watch profile fields
+`movie`, `movieId`, `theatre`, `runtimeInMinutes`, and `experienceTypes`, plus
+the returned ticketing/deeplink URLs, auditorium, sales flags, and initial
+`seatsRemaining` on the registered showtime. The Action automatically discovers
 the temporary public browser header from Cineplex's public website; no user or
 GitHub secret setup is required. This request is never part of the five-minute
 scan. The Action verifies that the returned theatre and Vista session ID match

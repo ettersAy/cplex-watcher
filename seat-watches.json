@@ -43,7 +43,20 @@
           "enabled": true,
           "showDate": "2026-12-14T00:00:00",
           "startsAt": "2026-12-14T18:00:00",
-          "displayTime": "Dec 14, 6:00 PM"
+          "displayTime": "Dec 14, 6:00 PM",
+          "seatMapUrl": "https://www.cineplex.com/en-Mobile/ticketing/preview?theatreId=9406&showtimeId=405740&dbox=False",
+          "ticketingUrl": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/redirect-to-ticketing?VistaSessionId=405740&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "ticketingRedesignUrl": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/redirect-to-ticketing?VistaSessionId=405740&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "getTicketingUrlApi": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/ticketing-url?VistaSessionId=405740&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "deeplinkUrl": "https://apis.cineplex.com/prod/cpx/theatrical/deeplink?s=405740&a=0000000001&l=9406&m=isimax70-dune-part-3-the-imax-experience-in-70mm&ss=False",
+          "showtimeShareKey": "v:405740_t:9406_a:0000000001",
+          "showStartDateTimeUtc": "2026-12-14T23:00:00Z",
+          "isInThePast": false,
+          "isReservedSeating": true,
+          "isShowtimeEnabledOnline": true,
+          "seatsRemaining": 0,
+          "isSoldOut": true,
+          "auditorium": "Salle 13 - IMAX"
         },
         "405741": {
           "enabled": true,
@@ -117,54 +130,15 @@
           "startsAt": "2026-12-23T19:30:00",
           "displayTime": "Dec 23, 7:30 PM"
         }
-      }
-    },
-    "dune-part-3-the-imax-experience-in-70mm": {
-      "id": "dune-part-3-the-imax-experience-in-70mm",
-      "name": "Dune: Part 3: The IMAX Experience\u00ae in 70MM",
-      "enabled": true,
-      "theatreId": "9406",
-      "theatreName": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
-      "rule": {
-        "E": [
-          [
-            9,
-            17
-          ]
-        ],
-        "F": [
-          [
-            14,
-            23
-          ]
-        ],
-        "G": [
-          [
-            14,
-            23
-          ]
-        ],
-        "H": [
-          [
-            14,
-            23
-          ]
-        ],
-        "I": [
-          [
-            14,
-            23
-          ]
-        ]
       },
-      "showtimes": {
-        "405853": {
-          "enabled": false,
-          "showDate": "2027-01-14T00:00:00",
-          "startsAt": "2027-01-14T12:15:00",
-          "displayTime": "Jan 14, 12:15 PM"
-        }
-      }
+      "movie": "Dune: Part Three Insider Screenings in IMAX 70MM",
+      "movieId": 61962,
+      "theatre": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
+      "runtimeInMinutes": 140,
+      "experienceTypes": [
+        "IMAX",
+        "70mm"
+      ]
     }
   }
 }

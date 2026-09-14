@@ -48,7 +48,7 @@ def main():
         assert "two positive integers" in str(error)
 
     metadata = showtime_display_metadata({
-        "theatreId": 9406,
+        "theatreId": 9406, "movie": "Dune", "movieId": 61104, "theatre": "Test",
         "showDate": "2027-01-14T00:00:00",
         "showtime": {"vistaSessionId": 405853, "showStartDateTime": "2027-01-14T12:15:00"},
     }, "9406", "405853")
@@ -66,6 +66,7 @@ def main():
         validation_watch,
         fetch_detail=lambda theatre_id, showtime_id: calls.append((theatre_id, showtime_id)) or {
             "theatreId": 9406,
+            "movie": "Dune", "movieId": 61104, "theatre": "Test",
             "showDate": "2027-01-14T00:00:00",
             "showtime": {"vistaSessionId": 405853, "showStartDateTime": "2027-01-14T12:15:00"},
         },
@@ -78,7 +79,7 @@ def main():
     assert validation_watch["showtimes"]["405853"]["displayTime"] == "Jan 14, 12:15 PM"
 
     preview_detail = {
-        "theatreId": 9406, "theatre": "Scotia Bank", "movie": "Dune: Part 3",
+        "theatreId": 9406, "theatre": "Scotia Bank", "movie": "Dune: Part 3", "movieId": 61104,
         "showDate": "2027-01-14T00:00:00",
         "showtime": {"vistaSessionId": 405853, "showStartDateTime": "2027-01-14T12:15:00"},
     }
