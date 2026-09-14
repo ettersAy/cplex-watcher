@@ -1,6 +1,11 @@
 # Cineplex Watcher web interface
 
-This is a static GitHub Pages interface. It validates a local token with the Cloudflare Worker, loads sales-started and active watches from public JSON files, submits up to 10 newline-separated titles, and can stop an active watch through the Cloudflare Worker.
+This is a static GitHub Pages interface with two tabs:
+
+- **🎟 Seat watcher** lists and manages saved seat watches, grouped by show date.
+- **🎫 Ticket watcher** uses compact ticket cards. It reads active ticket watches, saved scan state, and sales-started state from the repository. From this tab a user can add a movie name (one per line) or stop a still-watching movie.
+
+Both tabs validate the local access token with the Cloudflare Worker before loading protected seat-watch data or submitting a change.
 
 For the complete architecture, deployment, logs, and troubleshooting guide, see [docs/OPERATIONS.md](../docs/OPERATIONS.md).
 
