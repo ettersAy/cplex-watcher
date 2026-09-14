@@ -33,12 +33,16 @@
       .ticket-section { margin-top: 22px; }
       .section-heading { color: light-dark(#476052, #a5c6ae); font-size: 13px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; }
       .ticket-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 9px; }
-      .ticket-card { margin-top: 0; width: min(350px, 100%); }
-      .ticket-status { font-size: 13px; font-weight: 650; }
+      .ticket-card { border-radius: 9px; display: grid; grid-template-columns: minmax(0, 1fr) 54px; margin-top: 0; overflow: hidden; width: min(270px, 100%); }
+      .ticket-main { min-width: 0; padding: 10px 12px; }
+      .ticket-main .meta { margin-top: 6px; }
+      .ticket-stub { align-items: center; border-left: 1px dashed light-dark(#cbd8cf, #4a5c51); display: flex; flex-direction: column; gap: 4px; justify-content: center; padding: 7px 4px; text-align: center; }
+      .ticket-stub .ticket-icon { font-size: 18px; line-height: 1; }
+      .ticket-status { font-size: 10px; font-weight: 700; line-height: 1.15; }
       .ticket-status.waiting { color: light-dark(#8a6400, #ffe078); }
       .ticket-status.started { color: light-dark(#236c43, #78d59a); }
       .ticket-status.failed { color: light-dark(#a43030, #ff9696); }
-      .ticket-footer { align-items: center; border-top: 1px solid light-dark(#e5ece6, #304137); display: flex; gap: 9px; justify-content: space-between; padding: 10px 14px; }
+      .ticket-footer { align-items: center; border-top: 1px dashed light-dark(#cbd8cf, #4a5c51); display: flex; gap: 9px; grid-column: 1 / -1; justify-content: space-between; padding: 7px 10px; }
       dialog { background: light-dark(#fff, #19251e); border: 1px solid light-dark(#d5e0d8, #3b4f42); border-radius: 14px; color: inherit; max-width: 520px; padding: 20px; width: calc(100% - 32px); }
       dialog::backdrop { background: rgba(8, 18, 12, .48); }
       .dialog-header { align-items: flex-start; display: flex; justify-content: space-between; }
@@ -56,7 +60,7 @@
 
       <nav class="tabs" aria-label="Watcher type">
         <button class="tab" id="seat-tab" type="button" role="tab" aria-controls="seat-panel" aria-selected="true">🎟 Seat watcher</button>
-        <button class="tab" id="ticket-tab" type="button" role="tab" aria-controls="ticket-panel" aria-selected="false">🎬 Ticket watcher</button>
+        <button class="tab" id="ticket-tab" type="button" role="tab" aria-controls="ticket-panel" aria-selected="false">🎫 Ticket watcher</button>
       </nav>
 
       <!-- This is the existing Seat watcher layout; no design change is proposed here. -->
@@ -77,12 +81,12 @@
         <p class="result">2 watching · 1 sales started.</p>
 
         <section class="ticket-section"><h3 class="section-heading">🎉 Sales started · 1</h3><div class="ticket-grid">
-          <article class="ticket-card"><header class="ticket-header"><a class="movie-link" href="#">Avatar 4</a><span class="ticket-status started">🎉 Started</span></header><p class="meta" style="padding:0 14px 12px">☀️ Detected at 26-09-13 14:35:02</p><footer class="ticket-footer"><span class="hint">Ticket sales are live</span><a class="icon" href="#" title="Open Cineplex">↗️</a></footer></article>
+          <article class="ticket-card"><div class="ticket-main"><a class="movie-link" href="#">Avatar 4</a><p class="meta">☀️ 26-09-13 14:35:02</p></div><div class="ticket-stub"><span class="ticket-icon">🎉</span><span class="ticket-status started">Started</span></div><footer class="ticket-footer"><span class="hint">Ticket sales are live</span><a class="icon" href="#" title="Open Cineplex">↗️</a></footer></article>
         </div></section>
 
         <section class="ticket-section"><h3 class="section-heading">⏳ Still watching · 2</h3><div class="ticket-grid">
-          <article class="ticket-card"><header class="ticket-header"><a class="movie-link" href="#">The Odyssey</a><span class="ticket-status waiting">⏳ Watching</span></header><p class="meta" style="padding:0 14px 12px">👁️ next check in 12 min<br>☀️ checked at 26-09-13 14:35:02</p><footer class="ticket-footer"><span class="hint">No ticket sales yet</span><button class="icon" title="Stop watching The Odyssey">⏹</button></footer></article>
-          <article class="ticket-card"><header class="ticket-header"><a class="movie-link" href="#">Project Hail Mary</a><span class="ticket-status failed">❌ Failed</span></header><p class="meta" style="padding:0 14px 12px">❌ Cineplex did not return ticket status<br>🔄 retrying in 12 min</p><footer class="ticket-footer"><span class="hint">Last known state retained</span><button class="icon" title="Stop watching Project Hail Mary">⏹</button></footer></article>
+          <article class="ticket-card"><div class="ticket-main"><a class="movie-link" href="#">The Odyssey</a><p class="meta">👁️ next check in 12 min<br>☀️ 26-09-13 14:35:02</p></div><div class="ticket-stub"><span class="ticket-icon">⏳</span><span class="ticket-status waiting">Watching</span></div><footer class="ticket-footer"><span class="hint">No sales yet</span><button class="icon" title="Stop watching The Odyssey">⏹</button></footer></article>
+          <article class="ticket-card"><div class="ticket-main"><a class="movie-link" href="#">Project Hail Mary</a><p class="meta">❌ Cineplex status unavailable<br>🔄 retrying in 12 min</p></div><div class="ticket-stub"><span class="ticket-icon">❌</span><span class="ticket-status failed">Failed</span></div><footer class="ticket-footer"><span class="hint">Last state retained</span><button class="icon" title="Stop watching Project Hail Mary">⏹</button></footer></article>
         </div></section>
       </section>
     </main>
