@@ -260,3 +260,13 @@ test includes the malformed compact shape.
 Lesson retained: validate a command payload's complete nested data contract at
 the command boundary. Do not rely on later scanning code to reveal malformed
 configuration.
+
+## Next implementation step: `/listseats`
+
+The next isolated step renders only enabled seat watches. Each movie line is a
+single Cineplex-preview link: status, available selected-seat count, theatre,
+active-showtime count, and next-check or failure status. The first showtime
+with availability is the link target; if none has availability, it is the
+earliest enabled showtime. The message also gives exact follow-up commands and
+the web-interface link. `scripts/test-seat-list-message.mjs` verifies the
+rendering without network access before the real Telegram command test.

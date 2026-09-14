@@ -400,16 +400,37 @@ async function getSalesStarted(env) {
 }
 
 async function getSeatWatches(env) {
+  return getSeatWatcherFile(env, "seat-watches.json", "watches");
+}
+
+async function getSeatWatcherFile(env, filename, property) {
   if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
-  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/seat-watches.json`, {
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/${filename}`, {
     headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
   });
-  if (!response.ok) throw new Error(`Could not load seat watches: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Could not load ${filename}: HTTP ${response.status}`);
   const config = await response.json();
-  if (!config || typeof config !== "object" || !config.watches || typeof config.watches !== "object") {
-    throw new Error("Seat watches file has an invalid format");
+  if (!config || typeof config !== "object" || !config[property] || typeof config[property] !== "object") {
+    throw new Error(`${filename} has an invalid format`);
   }
-  return config.watches;
+  return config[property];
+}
+
+async function getSeatWatchState(env) {
+  return getSeatWatcherFile(env, "seat-watch-state.json", "watches");
+}
+
+async function getAvailableSeatList(env) {
+  if (!env.GITHUB_REPOSITORY) throw new Error("GitHub repository is not configured");
+  const response = await fetch(`https://raw.githubusercontent.com/${env.GITHUB_REPOSITORY}/main/available-seat-list.json`, {
+    headers: { accept: "application/json", "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache" },
+  });
+  if (!response.ok) throw new Error(`Could not load available-seat-list.json: HTTP ${response.status}`);
+  const seats = await response.json();
+  if (!seats || typeof seats !== "object" || Array.isArray(seats)) {
+    throw new Error("available-seat-list.json has an invalid format");
+  }
+  return seats;
 }
 
 function normalizeSeatWatchName(value) {
@@ -458,6 +479,59 @@ function formatTimestamp(value) {
     hourCycle: "h23",
   }).formatToParts(date).reduce((result, part) => ({ ...result, [part.type]: part.value }), {});
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
+function enabledSeatShowtimeIds(watch) {
+  return Object.entries(watch.showtimes || {})
+    .filter(([, showtime]) => showtime?.enabled)
+    .sort(([, left], [, right]) => String(left?.startsAt || "").localeCompare(String(right?.startsAt || "")))
+    .map(([showtimeId]) => showtimeId);
+}
+
+function seatWatchSummaryHtml(watch, watchState, availableList) {
+  const showtimeIds = enabledSeatShowtimeIds(watch);
+  const availableSeats = Object.values(availableList).filter((seat) => (
+    seat?.watchName === watch.name
+    && String(seat?.theatreId) === String(watch.theatreId)
+    && showtimeIds.includes(String(seat?.showtimeId))
+  ));
+  const firstAvailableShowtimeId = availableSeats.find((seat) => seat.showtimeId)?.showtimeId;
+  const linkShowtimeId = firstAvailableShowtimeId || showtimeIds[0];
+  const failed = watchState?.lastCheckStatus === "failed" || showtimeIds.some((showtimeId) => watchState?.showtimes?.[showtimeId]?.lastCheckStatus === "failed");
+  const icon = failed ? "❌" : "⏳";
+  const scanStatus = failed ? "⚠️ failed" : `👁 ${nextScheduledCheck()}`;
+  const line = `${icon} ${escapeHtml(watch.name)} · 🪑 ${availableSeats.length} · #${escapeHtml(watch.theatreId)} · 🎬 ${showtimeIds.length} · ${scanStatus}`;
+  return `<a href="${escapeHtml(`https://www.cineplex.com/ticketing/preview?theatreId=${watch.theatreId}&showtimeId=${linkShowtimeId}`, true)}">${line}</a>`;
+}
+
+async function handleSeatList(env, chatId) {
+  try {
+    const [watches, states, availableList] = await Promise.all([
+      getSeatWatches(env), getSeatWatchState(env), getAvailableSeatList(env),
+    ]);
+    const enabledWatches = Object.values(watches)
+      .filter((watch) => watch?.enabled && enabledSeatShowtimeIds(watch).length)
+      .sort((left, right) => String(left.name).localeCompare(String(right.name)));
+    console.log(JSON.stringify({ event: "seat_watch_list_requested", activeCount: enabledWatches.length }));
+    if (!enabledWatches.length) {
+      await telegram(env, chatId, "🎟 <b>Seat watches</b>\n\nNo enabled seat watches. Add one from the web interface.", { parse_mode: "HTML" });
+      return;
+    }
+    const blocks = enabledWatches.map((watch) => [
+      seatWatchSummaryHtml(watch, states[watch.id], availableList),
+      `   📖 /seatinfo ${escapeHtml(watch.name)}`,
+      `   ➕ /watchshowtime ${escapeHtml(watch.name)} ShowtimeId`,
+      `   ⏹ /stopseats ${escapeHtml(watch.name)}`,
+    ].join("\n"));
+    await telegram(env, chatId, [
+      "🎟 <b>Seat watches</b>",
+      blocks.join("\n\n"),
+      "🌐 <a href=\"https://ettersay.github.io/cplex-watcher/\">Open web interface</a>",
+    ].join("\n\n"), { parse_mode: "HTML" });
+  } catch (error) {
+    console.error("Could not load seat watches:", error);
+    await telegram(env, chatId, "I could not load the seat watches. Please try again shortly.");
+  }
 }
 
 function formatWatch(movie, check, stateError, salesStarted = false) {
@@ -532,10 +606,12 @@ async function handleUpdate(request, env) {
     await handleWatch(env, chatId, watchCommand[1].trim());
   } else if (stopCommand) {
     await handleStopWatch(env, chatId, stopCommand[1].trim());
+  } else if (/^\/listseats(?:@\w+)?$/i.test(message.text)) {
+    await handleSeatList(env, chatId);
   } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
     await handleList(env, chatId);
   } else {
-    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
+    await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /listseats for seat watches\nExample: /watchshowtime Dune 405765\n\nUse /list to see your watched movies.");
   }
 
   return new Response("ok");
