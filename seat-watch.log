@@ -34,3 +34,9 @@
 [26-09-13 21:50:28] [info] watch=Dune showtime=405853 selected_available=9
 [26-09-13 21:50:29] [info] watch=Dune showtime=405853 telegram availability alert sent seats=E10,E11,E12,E13,E14,E15,E16,E17,E9
 [26-09-13 21:50:29] [info] seat watcher scan completed watches=1 showtimes=1 failures=0 new_seats=9
+[26-09-13 22:01:11] [info] seat watcher scan started
+[26-09-13 22:01:11] [info] watch=Dune showtime=405853 cineplex layout call initiated
+[26-09-13 22:01:11] [info] watch=Dune showtime=405853 cineplex availability call initiated
+[26-09-13 22:01:12] [info] watch=Dune showtime=405853 selected_available=9
+[26-09-13 22:01:12] [info] watch=Dune showtime=405853 telegram availability alert sent seats=E10,E11,E12,E13,E14,E15,E16,E17,E9
+[26-09-13 22:01:12] [info] seat watcher scan completed watches=1 showtimes=1 failures=0 new_seats=9
