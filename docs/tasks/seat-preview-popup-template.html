@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Seat watcher preview popup</title>
+    <style>
+      :root { color-scheme: light dark; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+      * { box-sizing: border-box; }
+      body { background: light-dark(#f7faf7, #101713); color: light-dark(#17211d, #eef8f2); margin: 0; padding: 32px; }
+      button, select { color: inherit; font: inherit; }
+      button { cursor: pointer; }
+      .preview-button { background: transparent; border: 1px solid light-dark(#cbd8cf, #4a5c51); border-radius: 7px; padding: 6px 9px; }
+      dialog { background: light-dark(#fff, #19251e); border: 1px solid light-dark(#d5e0d8, #3b4f42); border-radius: 14px; color: inherit; max-width: 760px; padding: 0; width: calc(100% - 32px); }
+      dialog::backdrop { background: rgba(8, 18, 12, .55); }
+      .dialog-header { align-items: flex-start; border-bottom: 1px solid light-dark(#e5ece6, #304137); display: flex; gap: 16px; justify-content: space-between; padding: 18px 20px; }
+      h1, h2, p { margin: 0; }
+      h2 { font-size: 19px; }
+      .hint { color: light-dark(#5f7066, #a9baaf); font-size: 13px; margin-top: 4px; }
+      .close { background: transparent; border: 0; font-size: 24px; line-height: 1; padding: 0; }
+      .content { display: grid; gap: 18px; padding: 18px 20px 22px; }
+      .toolbar { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; }
+      .legend { display: flex; flex-wrap: wrap; gap: 12px; }
+      .legend-item { align-items: center; display: inline-flex; font-size: 13px; gap: 6px; }
+      .legend-seat { border: 1px solid; border-radius: 5px; height: 17px; width: 17px; }
+      .watched { background: #ffd84d; border-color: #d39f00; color: #342700; }
+      .unwatched { background: #4d9cff; border-color: #176bc4; color: #fff; }
+      .screen { background: light-dark(#e3ebe5, #2a3a30); border-radius: 50% 50% 8px 8px; color: light-dark(#52695a, #b9d4c0); font-size: 11px; letter-spacing: .16em; margin: 0 auto; padding: 8px; text-align: center; text-transform: uppercase; width: min(420px, 100%); }
+      .seat-map { display: grid; gap: 7px; overflow-x: auto; padding-bottom: 4px; }
+      .seat-row { align-items: center; display: grid; gap: 5px; grid-template-columns: 24px repeat(24, 25px); min-width: 650px; }
+      .row-label { color: light-dark(#5f7066, #a9baaf); font-size: 12px; font-weight: 700; text-align: center; }
+      .seat { align-items: center; border: 1px solid; border-radius: 5px; display: flex; font-size: 10px; font-weight: 700; height: 25px; justify-content: center; }
+      .seat.empty { visibility: hidden; }
+      .summary { background: light-dark(#f5f8f5, #111b15); border-radius: 8px; font-size: 13px; line-height: 1.45; padding: 10px 12px; }
+      .summary b { color: light-dark(#795800, #ffdf62); }
+      @media (max-width: 640px) { body { padding: 16px; } .toolbar { align-items: flex-start; flex-direction: column; } }
+    </style>
+  </head>
+  <body>
+    <!-- Place this compact button beside Edit and collapse controls on a watcher card. -->
+    <button class="preview-button" id="open-preview" type="button">👁️ Seats</button>
+
+    <dialog id="seat-preview" aria-labelledby="seat-preview-title">
+      <header class="dialog-header">
+        <div>
+          <h2 id="seat-preview-title">👁️ Watched seats · Dune</h2>
+          <p class="hint">Scotia Bank · #9406 · 49 watched of 216 displayed seats</p>
+        </div>
+        <button class="close" id="close-preview" type="button" aria-label="Close seat preview">×</button>
+      </header>
+
+      <div class="content">
+        <div class="toolbar">
+          <div class="legend" aria-label="Seat colours">
+            <span class="legend-item"><span class="legend-seat watched"></span> Watched</span>
+            <span class="legend-item"><span class="legend-seat unwatched"></span> Not watched</span>
+          </div>
+          <!-- In the live page, populate this from the watch's enabled showtimes. -->
+          <label class="hint">Layout from <select aria-label="Showtime seat layout"><option>#405740 · Dec 14 · 6:00 PM</option></select></label>
+        </div>
+
+        <div class="screen">Screen</div>
+        <!-- Static example only. The live popup must render Cineplex seat-layout rows,
+             including missing/aisle seats, and uses the saved label rule to colour seats. -->
+        <div class="seat-map" id="seat-map" aria-label="Seat map"></div>
+        <p class="summary"><b>49 watched seats:</b> E9–E17 and F14–I23. Blue seats are visible for context but are not scanned or alerted.</p>
+      </div>
+    </dialog>
+
+    <script>
+      const watched = new Set([
+        ...Array.from({ length: 9 }, (_, index) => `E${index + 9}`),
+        ...["F", "G", "H", "I"].flatMap((row) => Array.from({ length: 10 }, (_, index) => `${row}${index + 14}`)),
+      ]);
+      const map = document.querySelector('#seat-map');
+      for (const row of ["A", "B", "C", "D", "E", "F", "G", "H", "I"]) {
+        const line = document.createElement('div');
+        line.className = 'seat-row';
+        line.innerHTML = `<span class="row-label">${row}</span>`;
+        for (let number = 1; number <= 24; number += 1) {
+          const seat = document.createElement('span');
+          const label = `${row}${number}`;
+          seat.className = `seat ${watched.has(label) ? 'watched' : 'unwatched'}`;
+          seat.textContent = number;
+          seat.title = `${label} · ${watched.has(label) ? 'Watched' : 'Not watched'}`;
+          line.append(seat);
+        }
+        map.append(line);
+      }
+      const dialog = document.querySelector('#seat-preview');
+      document.querySelector('#open-preview').onclick = () => dialog.showModal();
+      document.querySelector('#close-preview').onclick = () => dialog.close();
+    </script>
+  </body>
+</html>
