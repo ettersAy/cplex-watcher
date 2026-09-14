@@ -1,8 +1,8 @@
 {
   "watches": {
-    "dune": {
-      "id": "dune",
-      "name": "Dune",
+    "61104": {
+      "id": "61104",
+      "name": "Dune: Part 3: The IMAX Experience® in 70MM",
       "enabled": true,
       "theatreId": "9406",
       "theatreName": "Scotia Bank",
@@ -285,56 +285,7 @@
           "seatsRemaining": 92,
           "isSoldOut": false,
           "auditorium": "Salle 13 - IMAX"
-        }
-      },
-      "movie": "Dune: Part 3: The IMAX Experience\u00ae in 70MM",
-      "movieId": 61104,
-      "theatre": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
-      "runtimeInMinutes": 140,
-      "experienceTypes": [
-        "IMAX",
-        "70mm"
-      ]
-    },
-    "dune-part-3-the-imax-experience-in-70mm": {
-      "id": "dune-part-3-the-imax-experience-in-70mm",
-      "name": "Dune: Part 3: The IMAX Experience\u00ae in 70MM",
-      "enabled": true,
-      "theatreId": "9406",
-      "theatreName": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
-      "rule": {
-        "E": [
-          [
-            9,
-            17
-          ]
-        ],
-        "F": [
-          [
-            14,
-            23
-          ]
-        ],
-        "G": [
-          [
-            14,
-            23
-          ]
-        ],
-        "H": [
-          [
-            14,
-            23
-          ]
-        ],
-        "I": [
-          [
-            14,
-            23
-          ]
-        ]
-      },
-      "showtimes": {
+        },
         "405812": {
           "enabled": true,
           "showDate": "2027-01-03T00:00:00",
@@ -355,9 +306,9 @@
           "auditorium": "Salle 13 - IMAX"
         }
       },
-      "movie": "Dune: Part 3: The IMAX Experience\u00ae in 70MM",
+      "movie": "Dune: Part 3: The IMAX Experience® in 70MM",
       "movieId": 61104,
-      "theatre": "Cin\u00e9ma Banque Scotia Montr\u00e9al",
+      "theatre": "Cinéma Banque Scotia Montréal",
       "runtimeInMinutes": 140,
       "experienceTypes": [
         "IMAX",

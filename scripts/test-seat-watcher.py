@@ -4,6 +4,7 @@
 import sys
 import json
 import tempfile
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -76,6 +77,7 @@ def main():
         ),
     )
     assert calls == [("9406", "405853")]
+    assert validation_watch["id"] == "61104"
     assert validation_watch["showtimes"]["405853"]["displayTime"] == "Jan 14, 12:15 PM"
 
     preview_detail = {
@@ -89,6 +91,7 @@ def main():
         fetch_json=lambda url: layout_fixture() if "seat-layout" in url else {"seatAvailabilities": {}},
     )
     assert preview_operation == "create" and preview_watch["name"] == "Dune: Part 3"
+    assert preview_watch["id"] == "61104"
     assert preview_watch["showtimes"]["405853"]["displayTime"] == "Jan 14, 12:15 PM"
     preview_detail["showtime"] = {"vistaSessionId": 405854, "showStartDateTime": "2027-01-14T18:00:00"}
     preview_watch, preview_operation = register_preview_watch(
@@ -229,6 +232,20 @@ def main():
         assert json.loads((root / "seat-watch-state.json").read_text())["watches"] == {}
         assert json.loads((root / "available-seat-list.json").read_text()) == {}
         assert "Seat watch deleted" in command_result_html(result)
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory)
+        old = {"id": "dune", "name": "Dune", "enabled": True, "theatreId": "9406", "theatreName": "Scotia Bank", "movie": "Dune: Part 3", "movieId": 61104, "rule": rule, "showtimes": {"405740": {"enabled": True}}}
+        duplicate = {"id": "dune-part-3", "name": "Dune: Part 3", "enabled": True, "theatreId": "9406", "theatreName": "Scotia Bank", "movie": "Dune: Part 3", "movieId": 61104, "rule": rule, "showtimes": {"405810": {"enabled": True}}}
+        (root / "seat-watches.json").write_text(json.dumps({"watches": {"dune": old, "dune-part-3": duplicate}}))
+        (root / "seat-watch-state.json").write_text(json.dumps({"watches": {"dune": {"showtimes": {"405740": {"lastCheckStatus": "ok"}}}, "dune-part-3": {"showtimes": {"405810": {"lastCheckStatus": "ok"}}}}}))
+        (root / "available-seat-list.json").write_text(json.dumps({"Dune|9406|405740|one": {"seatId": "one"}, "Dune: Part 3|9406|405810|two": {"seatId": "two"}}))
+        completed = subprocess.run([sys.executable, str(ROOT / "scripts" / "migrate-seat-watch-ids.py"), "--root", str(root)], check=True, capture_output=True, text=True)
+        assert json.loads(completed.stdout) == {"watches": 1, "merged": 1, "ids": ["61104"]}
+        migrated = json.loads((root / "seat-watches.json").read_text())["watches"]
+        assert sorted(migrated) == ["61104"] and sorted(migrated["61104"]["showtimes"]) == ["405740", "405810"]
+        assert sorted(json.loads((root / "seat-watch-state.json").read_text())["watches"]["61104"]["showtimes"]) == ["405740", "405810"]
+        assert all(key.startswith("Dune: Part 3|9406|") for key in json.loads((root / "available-seat-list.json").read_text()))
     print("seat watcher core checks passed")
 
 

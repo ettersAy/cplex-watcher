@@ -22,10 +22,6 @@ from seat_watcher import (
 DEFAULT_RULE = {"E": [[9, 17]], "F": [[14, 23]], "G": [[14, 23]], "H": [[14, 23]], "I": [[14, 23]]}
 
 
-def slug(value):
-    return re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
-
-
 def read_payload(value):
     try:
         result = json.loads(value)
@@ -102,7 +98,7 @@ def validate_watch(payload):
             metadata["displayTime"] = item["displayTime"].strip()
         normalized[showtime_id] = metadata
     return {
-        "id": slug(name), "name": name.strip(), "enabled": True, "theatreId": theatre_id,
+        "id": "", "name": name.strip(), "enabled": True, "theatreId": theatre_id,
         "theatreName": theatre_name.strip(), "rule": rule, "showtimes": normalized,
     }
 
@@ -176,9 +172,14 @@ def command_result_html(result):
 
 
 def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_json=request_json, details=None):
+    movie_id = None
     for showtime_id in watch["showtimes"]:
         detail = (details or {}).get(showtime_id) or fetch_detail(watch["theatreId"], showtime_id)
-        watch.update(watch_movie_metadata(detail))
+        metadata = watch_movie_metadata(detail)
+        if movie_id is not None and metadata["movieId"] != movie_id:
+            raise ValueError("All showtimes in a seat watch must belong to the same Cineplex movie")
+        movie_id = metadata["movieId"]
+        watch.update(metadata)
         watch["showtimes"][showtime_id].update(showtime_display_metadata(detail, watch["theatreId"], showtime_id))
         layout = fetch_json(layout_url(watch["theatreId"], showtime_id))
         if not select_seats(layout, watch["rule"]):
@@ -186,6 +187,7 @@ def validate_showtimes(watch, *, fetch_detail=request_showtime_detail, fetch_jso
         availability = fetch_json(availability_url(watch["theatreId"], showtime_id))
         if not isinstance(availability.get("seatAvailabilities"), dict):
             raise ValueError(f"Showtime #{showtime_id} returned invalid availability data")
+    watch["id"] = str(movie_id)
 
 
 def register_preview_watch(watches, theatre_id, showtime_id, *, fetch_detail=request_showtime_detail, fetch_json=request_json):
@@ -193,19 +195,16 @@ def register_preview_watch(watches, theatre_id, showtime_id, *, fetch_detail=req
     detail = fetch_detail(theatre_id, showtime_id)
     profile = watch_movie_metadata(detail)
     movie_name, theatre_name = profile["movie"], profile["theatre"]
-    matching = next((watch for watch in watches.values() if watch.get("enabled") and watch.get("name", "").casefold() == movie_name.casefold() and str(watch.get("theatreId")) == theatre_id), None)
+    matching = next((watch for watch in watches.values() if watch.get("enabled") and watch.get("movieId") == profile["movieId"] and str(watch.get("theatreId")) == theatre_id), None)
     if matching:
         candidate = {**matching, "showtimes": {showtime_id: {"enabled": True}}}
         validate_showtimes(candidate, fetch_detail=fetch_detail, fetch_json=fetch_json, details={showtime_id: detail})
         matching["showtimes"][showtime_id] = candidate["showtimes"][showtime_id]
         return matching, "add_showtime"
-    name = movie_name
-    if any(watch.get("name", "").casefold() == movie_name.casefold() for watch in watches.values()):
-        name = f"{movie_name} · {theatre_name}"
-    watch = validate_watch({"name": name, "theatreId": theatre_id, "theatreName": theatre_name, "rule": DEFAULT_RULE, "showtimes": [{"id": showtime_id}]})
-    if watch["id"] in watches:
-        raise ValueError(f"A seat watch named {name} already exists")
+    watch = validate_watch({"name": movie_name, "theatreId": theatre_id, "theatreName": theatre_name, "rule": DEFAULT_RULE, "showtimes": [{"id": showtime_id}]})
     validate_showtimes(watch, fetch_detail=fetch_detail, fetch_json=fetch_json, details={showtime_id: detail})
+    if watch["id"] in watches:
+        raise ValueError(f"A seat watch for Cineplex movie #{watch['id']} already exists")
     watches[watch["id"]] = watch
     return watch, "create"
 
@@ -229,9 +228,7 @@ def run(root, operation, payload_value, watch_id):
         message = f"Added preview showtime #{showtime_id} to {watch['name']}."
     elif operation in {"create", "edit"}:
         watch = validate_watch(read_payload(payload_value))
-        if operation == "create" and watch["id"] in watches:
-            raise ValueError(f"A watch named {watch['name']} already exists")
-        target_id = watch_id or watch["id"]
+        target_id = watch_id
         if operation == "edit" and target_id not in watches:
             raise ValueError("Seat watch was not found")
         if operation == "edit":
@@ -240,6 +237,12 @@ def run(root, operation, payload_value, watch_id):
                 _remove_showtime_entries(available, old["name"], old["theatreId"], old_showtime_id)
             state.setdefault("watches", {}).pop(target_id, None)
         validate_showtimes(watch)
+        if operation == "create":
+            target_id = watch["id"]
+            if target_id in watches:
+                raise ValueError(f"A watch for Cineplex movie #{target_id} already exists")
+        elif target_id != watch["id"]:
+            raise ValueError("Edited showtimes must belong to the same Cineplex movie")
         watches[target_id] = {**watch, "id": target_id}
         message = f"Saved seat watch {watch['name']}."
     elif operation == "stop":
