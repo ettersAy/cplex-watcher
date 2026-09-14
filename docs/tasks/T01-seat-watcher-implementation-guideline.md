@@ -57,6 +57,8 @@ The layout/availability API examples do not supply the human-readable showtime d
 
 Implement the dated showtime-card layout in [seat-watcher-layout-template.html](seat-watcher-layout-template.html). It is the approved visual reference: group enabled showtimes by date, order cards by time within the date, use one compact card per showtime, link every showtime to its Cineplex preview page, and include a Stop button for that showtime. The file is static reference markup only; wire it to the protected API and saved watch state during implementation.
 
+Stopped watches must remain visible in a separate compact `Stopped watches` section. Their `Edit` button opens the same form with the saved values; saving it revalidates the full configuration and restarts that watch. Do not require the user to create a duplicate watch merely to restart or change it.
+
 ### 3.2 Protected web API
 
 The web form uses the existing UI-origin and bearer-token security model. The Worker returns `202 Accepted` after dispatching the Action; the Action performs validation and persistence.

@@ -324,3 +324,29 @@ at a time. The protected add dialog accepts comma-separated showtime IDs and
 seat-label ranges. It dispatches `create`; per-card Stop dispatches
 `stop_showtime`. The Worker also exposes the documented protected create,
 edit, and full-stop endpoints for future web editing controls.
+
+## 2026-09-13 — Web-interface correction: compact layout and edit/restart
+
+The first deployed page did not visually match the approved lightweight
+template and made a stopped watch disappear completely. It also allowed a user
+to submit a duplicate Add request, which the Action rejected after the web
+page had already said that the request was queued.
+
+The public page now uses the approved compact, date-grouped card styling. Each
+active showtime has `Edit` and `Stop`; stopped watches appear in their own
+compact section with a Cineplex preview link and `Edit`. Add and Edit share
+one dialog. Edit pre-fills the saved name, theatre, comma-separated showtime
+IDs, and label ranges, then sends the protected `PATCH` request. Saving an
+edit revalidates all showtimes and restarts the watch.
+
+The workflow's command step now continues long enough to send a real
+validation error to the requester, and skips the scan after a rejected create
+or edit. This prevents a failed duplicate request from looking successful.
+
+Verified on the published site without saving a test change: the stopped Dune
+watch rendered in `Stopped watches`; its Cineplex link and Edit button were
+present; Edit opened the populated Dune form with `Save changes`.
+
+Lesson retained: every JavaScript deployment must increment its public asset
+version in `web/index.html`. Otherwise GitHub Pages can serve old client code
+even though the HTML deployment itself succeeded.
