@@ -179,6 +179,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
         run: python watcher.py
 
       - name: Send registration result to Telegram
