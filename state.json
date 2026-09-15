@@ -1,13 +1,5 @@
 {
   "movies": {
-    "sense-and-sensibility-2026": {
-      "name": "Sense and Sensibility",
-      "releaseDate": "2026-10-16T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026",
-      "lastCheckedAt": "2026-09-15T04:21:23.421047+00:00",
-      "lastCheckStatus": "success"
-    },
     "jumanji-open-world": {
       "name": "Jumanji: Open World",
       "releaseDate": "2026-12-25T00:00:00",
