@@ -90,14 +90,6 @@
       "lastCheckedAt": "2026-09-15T01:15:32.532930+00:00",
       "lastCheckStatus": "success",
       "alerted": true
-    },
-    "beware-boiuna": {
-      "name": "Beware Boiuna",
-      "releaseDate": "2026-10-02T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/beware-boiuna",
-      "lastCheckedAt": "2026-09-15T04:21:25.732932+00:00",
-      "lastCheckStatus": "success"
     }
   }
 }
