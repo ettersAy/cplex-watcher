@@ -13,5 +13,15 @@
     "url": "https://www.cineplex.com/movie/between-the-mountain-and-the-sky",
     "name": "BETWEEN THE MOUNTAIN AND THE SKY",
     "salesStartedAt": "2026-09-15T01:15:32.532930+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/hanuman-ansh-hindi-west",
+    "name": "Hanuman Ansh (Hindi w/e.s.t.)",
+    "salesStartedAt": "2026-09-15T03:43:17.842039+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/mitti-de-putt-punjabi-west",
+    "name": "Mitti De Putt (Punjabi w/e.s.t.)",
+    "salesStartedAt": "2026-09-15T03:43:18.606357+00:00"
   }
 ]
