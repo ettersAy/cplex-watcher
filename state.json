@@ -66,14 +66,6 @@
       "lastCheckedAt": "2026-09-15T03:47:39.794850+00:00",
       "lastCheckStatus": "success"
     },
-    "lutt-mubarak-punjabi-west": {
-      "name": "Lutt Mubarak (Punjabi w/e.s.t.)",
-      "releaseDate": "2026-09-25T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/lutt-mubarak-punjabi-west",
-      "lastCheckedAt": "2026-09-15T03:47:40.231090+00:00",
-      "lastCheckStatus": "success"
-    },
     "the-stunt-driver": {
       "name": "The Stunt Driver",
       "releaseDate": "2026-09-25T00:00:00",
