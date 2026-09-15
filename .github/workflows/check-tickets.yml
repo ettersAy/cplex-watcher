@@ -31,6 +31,10 @@ on:
         required: false
         type: string
 
+concurrency:
+  group: ticket-watch-state-write
+  cancel-in-progress: false
+
 permissions:
   contents: write
 
@@ -247,5 +251,18 @@ jobs:
           git config user.name "Cineplex Ticket Watcher"
           git config user.email "actions@github.com"
           git add movies.json sales-started.json state.json
-          git diff --cached --quiet || git commit -m "Update ticket watcher state"
-          git push
+          if git diff --cached --quiet; then
+            echo "No ticket-watch state changes to save"
+            exit 0
+          fi
+          git commit -m "Update ticket watcher state"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push attempt ${attempt} was rejected; rebasing state commit onto latest main"
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "Could not save ticket-watch state after three attempts" >&2
+          exit 1
