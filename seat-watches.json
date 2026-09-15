@@ -676,6 +676,25 @@
           "seatsRemaining": 83,
           "isSoldOut": false,
           "auditorium": "Salle 13 - IMAX"
+        },
+        "406978": {
+          "enabled": true,
+          "showDate": "2026-09-25T00:00:00",
+          "startsAt": "2026-09-25T18:45:00",
+          "displayTime": "Sep 25, 6:45 PM",
+          "seatMapUrl": "https://www.cineplex.com/en-Mobile/ticketing/preview?theatreId=9406&showtimeId=406978&dbox=False",
+          "ticketingUrl": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/redirect-to-ticketing?VistaSessionId=406978&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "ticketingRedesignUrl": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/redirect-to-ticketing?VistaSessionId=406978&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "getTicketingUrlApi": "https://apis.cineplex.com/prod/ticketing/api/v1/routing/ticketing-url?VistaSessionId=406978&VISTAHOCategoryCode=0000000001&LocationId=9406&IsSeriesShowtime=False",
+          "deeplinkUrl": "https://apis.cineplex.com/prod/cpx/theatrical/deeplink?s=406978&a=0000000001&l=9406&m=imax70-the-odyssey-the-imax-experience-in-7&ss=False",
+          "showtimeShareKey": "v:406978_t:9406_a:0000000001",
+          "showStartDateTimeUtc": "2026-09-25T22:45:00Z",
+          "isInThePast": false,
+          "isReservedSeating": true,
+          "isShowtimeEnabledOnline": true,
+          "seatsRemaining": 75,
+          "isSoldOut": false,
+          "auditorium": "Salle 13 - IMAX"
         }
       },
       "movie": "The Odyssey: The IMAX Experience\u00ae in 70MM Film",
