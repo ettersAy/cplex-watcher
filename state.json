@@ -114,14 +114,6 @@
       "url": "https://www.cineplex.com/movie/beware-boiuna",
       "lastCheckedAt": "2026-09-15T03:47:42.231766+00:00",
       "lastCheckStatus": "success"
-    },
-    "big-girls-dont-cry": {
-      "name": "Big Girls Don't Cry",
-      "releaseDate": "2026-10-09T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/big-girls-dont-cry",
-      "lastCheckedAt": "2026-09-15T03:47:42.781357+00:00",
-      "lastCheckStatus": "success"
     }
   }
 }
