@@ -5,7 +5,7 @@
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-09-15T17:33:19.629882+00:00",
+      "lastCheckedAt": "2026-09-15T20:58:45.798181+00:00",
       "lastCheckStatus": "success"
     },
     "george-michael-the-faith-tour": {
@@ -13,7 +13,7 @@
       "releaseDate": "2026-12-11T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-09-15T17:33:19.963816+00:00",
+      "lastCheckedAt": "2026-09-15T20:58:45.912964+00:00",
       "lastCheckStatus": "success"
     },
     "hanuman-ansh-hindi-west": {
@@ -37,10 +37,11 @@
     "red-flag-arabic-west": {
       "name": "Red Flag (Arabic w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/red-flag-arabic-west",
-      "lastCheckedAt": "2026-09-15T17:33:20.175518+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-15T20:58:46.588722+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "between-the-mountain-and-the-sky": {
       "name": "BETWEEN THE MOUNTAIN AND THE SKY",
