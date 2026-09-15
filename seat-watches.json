@@ -343,32 +343,32 @@
       "rule": {
         "E": [
           [
-            9,
-            17
+            10,
+            16
           ]
         ],
         "F": [
           [
-            14,
-            23
+            15,
+            21
           ]
         ],
         "G": [
           [
-            14,
-            23
+            15,
+            21
           ]
         ],
         "H": [
           [
-            14,
-            23
+            15,
+            21
           ]
         ],
         "I": [
           [
-            14,
-            23
+            15,
+            21
           ]
         ]
       },
@@ -426,7 +426,7 @@
           "isInThePast": false,
           "isReservedSeating": true,
           "isShowtimeEnabledOnline": true,
-          "seatsRemaining": 59,
+          "seatsRemaining": 62,
           "isSoldOut": false,
           "auditorium": "Salle 13 - IMAX"
         },
@@ -445,7 +445,7 @@
           "isInThePast": false,
           "isReservedSeating": true,
           "isShowtimeEnabledOnline": true,
-          "seatsRemaining": 62,
+          "seatsRemaining": 64,
           "isSoldOut": false,
           "auditorium": "Salle 13 - IMAX"
         },
@@ -583,7 +583,7 @@
           "auditorium": "Salle 13 - IMAX"
         },
         "406963": {
-          "enabled": false,
+          "enabled": true,
           "showDate": "2026-09-21T00:00:00",
           "startsAt": "2026-09-21T18:20:00",
           "displayTime": "Sep 21, 6:20 PM",
