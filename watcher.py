@@ -21,6 +21,7 @@ USER_AGENT = "CineplexTicketWatcher/1.0 (personal ticket availability monitor)"
 # receives an anti-bot HTML page without __NEXT_DATA__. Update only if Cineplex
 # changes its Next.js build and the fallback reports HTTP 404.
 NEXT_BUILD_ID = "sutiBBvJ_DUSdtn7Z8k2n"
+GEORGE_MICHAEL_FAITH_TOUR_SLUG = "george-michael-the-faith-tour"
 
 
 def request_json(url, data=None):
@@ -81,6 +82,15 @@ def telegram_chat_ids(value):
     return list(dict.fromkeys(chat_id for chat_id in re.split(r"[\s,]+", value or "") if chat_id))
 
 
+def sale_alert_chat_ids(url, default_chat_ids, george_michael_chat_ids):
+    """Return normal recipients plus George Michael's private alert recipient."""
+    recipients = telegram_chat_ids(default_chat_ids)
+    slug = urlparse(url).path.rstrip("/").rsplit("/", 1)[-1]
+    if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG:
+        recipients.extend(telegram_chat_ids(george_michael_chat_ids))
+    return list(dict.fromkeys(recipients))
+
+
 def send_telegram(token, chat_ids, text, parse_mode=None):
     for chat_id in telegram_chat_ids(chat_ids):
         data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
@@ -95,7 +105,7 @@ def main():
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"movies": {}}
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_ids = os.getenv("TELEGRAM_RECIPIENTS") or os.getenv("TELEGRAM_CHAT_IDS") or os.getenv("TELEGRAM_CHAT_ID")
-    can_notify = bool(token and telegram_chat_ids(chat_ids))
+    george_michael_chat_ids = os.getenv("TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS")
     changed = False
     active_movies = []
 
@@ -125,10 +135,11 @@ def main():
         # Send one alert only. This also alerts if tickets were already on sale
         # when Telegram is connected for the first time.
         if current["hasShowtimes"] and not previous.get("alerted"):
-            if can_notify:
+            alert_chat_ids = sale_alert_chat_ids(url, chat_ids, george_michael_chat_ids)
+            if token and alert_chat_ids:
                 send_telegram(
                     token,
-                    chat_ids,
+                    ",".join(alert_chat_ids),
                     "Go run buy your ticket for the movie "
                     f"<a href=\"{html.escape(current['url'], quote=True)}\">{html.escape(current['name'])}</a>.",
                     parse_mode="HTML",

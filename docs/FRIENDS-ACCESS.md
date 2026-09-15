@@ -123,6 +123,16 @@ The login page is <https://ettersay.github.io/cplex-watcher/login.html>. A frien
 
 The web token gives the same shared queue permissions as the owner. Share it only with people who should be able to change the shared lists.
 
+## Give a friend one movie's sale alert only
+
+To send a friend the sale-started alert for **George Michael: The Faith Tour** only:
+
+1. Open <https://github.com/ettersAy/cplex-watcher/settings/secrets/actions>.
+2. Create or update `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`.
+3. Set its value to the friend's private Telegram chat ID.
+
+This affects only the sale-started alert for that movie. Do not add the friend to `TELEGRAM_CHAT_IDS` unless they should also be allowed to use `/watch`, `/stopwatch`, and `/list`.
+
 ## Remove a friend's access
 
 1. Remove the friend's chat ID from the comma-separated list.
