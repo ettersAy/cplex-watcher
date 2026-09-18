@@ -14,21 +14,5 @@
     "seatId": "1_8_11",
     "seatLabel": "E6",
     "availableSince": "2026-09-14T05:52:11.702099+00:00"
-  },
-  "The Odyssey: The IMAX Experience\u00ae in 70MM Film|9406|406956|1_3_17": {
-    "watchName": "The Odyssey: The IMAX Experience\u00ae in 70MM Film",
-    "theatreId": "9406",
-    "showtimeId": "406956",
-    "seatId": "1_3_17",
-    "seatLabel": "I17",
-    "availableSince": "2026-09-18T09:38:31.962729+00:00"
-  },
-  "The Odyssey: The IMAX Experience\u00ae in 70MM Film|9406|406956|1_3_18": {
-    "watchName": "The Odyssey: The IMAX Experience\u00ae in 70MM Film",
-    "theatreId": "9406",
-    "showtimeId": "406956",
-    "seatId": "1_3_18",
-    "seatLabel": "I18",
-    "availableSince": "2026-09-18T09:38:31.962729+00:00"
   }
 }
