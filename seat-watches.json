@@ -494,7 +494,7 @@
           "completed": true
         },
         "406956": {
-          "enabled": true,
+          "enabled": false,
           "showDate": "2026-09-19T00:00:00",
           "startsAt": "2026-09-19T14:45:00",
           "displayTime": "Sep 19, 2:45 PM",
@@ -510,7 +510,8 @@
           "isShowtimeEnabledOnline": true,
           "seatsRemaining": 71,
           "isSoldOut": false,
-          "auditorium": "Salle 13 - IMAX"
+          "auditorium": "Salle 13 - IMAX",
+          "completed": true
         },
         "406957": {
           "enabled": true,
