@@ -380,7 +380,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:30.586744+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:19.532348+00:00",
           "lastCheckStatus": "success"
         },
         "405741": {
@@ -761,7 +761,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:30.879361+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:20.129674+00:00",
           "lastCheckStatus": "success"
         },
         "405743": {
@@ -1142,7 +1142,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:31.169206+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:20.425590+00:00",
           "lastCheckStatus": "success"
         },
         "405745": {
@@ -1523,7 +1523,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:31.554301+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:20.763134+00:00",
           "lastCheckStatus": "success"
         },
         "405750": {
@@ -1904,7 +1904,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:31.952318+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:21.040697+00:00",
           "lastCheckStatus": "success"
         },
         "405751": {
@@ -2285,7 +2285,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:32.238728+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:21.329275+00:00",
           "lastCheckStatus": "success"
         },
         "405752": {
@@ -2666,7 +2666,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:32.573309+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:21.907159+00:00",
           "lastCheckStatus": "success"
         },
         "405753": {
@@ -3047,7 +3047,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:32.933401+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:22.223861+00:00",
           "lastCheckStatus": "success"
         },
         "405754": {
@@ -3428,7 +3428,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:33.339758+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:22.522736+00:00",
           "lastCheckStatus": "success"
         },
         "405755": {
@@ -3809,7 +3809,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:33.600919+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:22.803685+00:00",
           "lastCheckStatus": "success"
         },
         "405760": {
@@ -4190,7 +4190,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:33.872636+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:23.081067+00:00",
           "lastCheckStatus": "success"
         },
         "405761": {
@@ -4571,7 +4571,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:34.223385+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:23.282825+00:00",
           "lastCheckStatus": "success"
         },
         "405765": {
@@ -4952,7 +4952,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:34.511545+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:23.478604+00:00",
           "lastCheckStatus": "success"
         },
         "405812": {
@@ -5588,7 +5588,7 @@
           "lastCheckStatus": "success"
         }
       },
-      "lastCheckedAt": "2026-09-19T22:31:34.512285+00:00",
+      "lastCheckedAt": "2026-09-20T00:20:23.479344+00:00",
       "lastCheckStatus": "success"
     },
     "38376": {
@@ -7038,8 +7038,8 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:35.058175+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-09-20T00:20:23.600630+00:00",
+          "lastCheckStatus": "completed"
         },
         "406958": {
           "selectedSeats": {
@@ -7219,7 +7219,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:35.318019+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:23.874812+00:00",
           "lastCheckStatus": "success"
         },
         "406959": {
@@ -7400,7 +7400,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:35.617552+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:24.361906+00:00",
           "lastCheckStatus": "success"
         },
         "406960": {
@@ -7581,7 +7581,7 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:35.972556+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:24.634620+00:00",
           "lastCheckStatus": "success"
         },
         "406963": {
@@ -7762,11 +7762,11 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-09-19T22:31:36.255791+00:00",
+          "lastCheckedAt": "2026-09-20T00:20:24.926694+00:00",
           "lastCheckStatus": "success"
         }
       },
-      "lastCheckedAt": "2026-09-19T22:31:36.256497+00:00",
+      "lastCheckedAt": "2026-09-20T00:20:24.927429+00:00",
       "lastCheckStatus": "success"
     }
   }
