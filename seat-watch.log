@@ -1,31 +1,3 @@
-[26-09-24 10:57:02] [info] watch=Dune: Part 3 showtime=405745 selected_available=0
-[26-09-24 10:57:02] [info] watch=Dune: Part 3 showtime=405750 cineplex availability call initiated
-[26-09-24 10:57:02] [info] watch=Dune: Part 3 showtime=405750 selected_available=0
-[26-09-24 10:57:02] [info] watch=Dune: Part 3 showtime=405751 cineplex availability call initiated
-[26-09-24 10:57:02] [info] watch=Dune: Part 3 showtime=405751 selected_available=0
-[26-09-24 10:57:02] [info] watch=Dune: Part 3 showtime=405752 cineplex availability call initiated
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405752 selected_available=0
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405753 cineplex availability call initiated
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405753 selected_available=0
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405754 cineplex availability call initiated
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405754 selected_available=0
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405755 cineplex availability call initiated
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405755 selected_available=0
-[26-09-24 10:57:03] [info] watch=Dune: Part 3 showtime=405760 cineplex availability call initiated
-[26-09-24 10:57:04] [info] watch=Dune: Part 3 showtime=405760 selected_available=0
-[26-09-24 10:57:04] [info] watch=Dune: Part 3 showtime=405761 cineplex availability call initiated
-[26-09-24 10:57:04] [info] watch=Dune: Part 3 showtime=405761 selected_available=0
-[26-09-24 10:57:04] [info] watch=Dune: Part 3 showtime=405765 cineplex availability call initiated
-[26-09-24 10:57:05] [info] watch=Dune: Part 3 showtime=405765 selected_available=0
-[26-09-24 10:57:05] [info] seat watcher scan completed watches=1 showtimes=13 failures=0 new_seats=0
-[26-09-24 14:54:11] [info] seat watcher scan started
-[26-09-24 14:54:11] [info] watch=Dune: Part 3 showtime=405740 cineplex availability call initiated
-[26-09-24 14:54:12] [info] watch=Dune: Part 3 showtime=405740 selected_available=0
-[26-09-24 14:54:12] [info] watch=Dune: Part 3 showtime=405741 cineplex availability call initiated
-[26-09-24 14:54:12] [info] watch=Dune: Part 3 showtime=405741 selected_available=0
-[26-09-24 14:54:12] [info] watch=Dune: Part 3 showtime=405743 cineplex availability call initiated
-[26-09-24 14:54:12] [info] watch=Dune: Part 3 showtime=405743 selected_available=0
-[26-09-24 14:54:12] [info] watch=Dune: Part 3 showtime=405745 cineplex availability call initiated
 [26-09-24 14:54:13] [info] watch=Dune: Part 3 showtime=405745 selected_available=0
 [26-09-24 14:54:13] [info] watch=Dune: Part 3 showtime=405750 cineplex availability call initiated
 [26-09-24 14:54:13] [info] watch=Dune: Part 3 showtime=405750 selected_available=0
@@ -998,3 +970,31 @@
 [26-09-30 19:33:43] [info] watch=Dune: Part 3 showtime=405765 cineplex availability call initiated
 [26-09-30 19:33:43] [info] watch=Dune: Part 3 showtime=405765 selected_available=0
 [26-09-30 19:33:43] [info] seat watcher scan completed watches=1 showtimes=13 failures=0 new_seats=0
+[26-09-30 22:21:51] [info] seat watcher scan started
+[26-09-30 22:21:51] [info] watch=Dune: Part 3 showtime=405740 cineplex availability call initiated
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405740 selected_available=0
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405741 cineplex availability call initiated
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405741 selected_available=0
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405743 cineplex availability call initiated
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405743 selected_available=0
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405745 cineplex availability call initiated
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405745 selected_available=0
+[26-09-30 22:21:52] [info] watch=Dune: Part 3 showtime=405750 cineplex availability call initiated
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405750 selected_available=0
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405751 cineplex availability call initiated
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405751 selected_available=0
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405752 cineplex availability call initiated
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405752 selected_available=0
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405753 cineplex availability call initiated
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405753 selected_available=0
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405754 cineplex availability call initiated
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405754 selected_available=0
+[26-09-30 22:21:53] [info] watch=Dune: Part 3 showtime=405755 cineplex availability call initiated
+[26-09-30 22:21:54] [info] watch=Dune: Part 3 showtime=405755 selected_available=0
+[26-09-30 22:21:54] [info] watch=Dune: Part 3 showtime=405760 cineplex availability call initiated
+[26-09-30 22:21:54] [info] watch=Dune: Part 3 showtime=405760 selected_available=0
+[26-09-30 22:21:54] [info] watch=Dune: Part 3 showtime=405761 cineplex availability call initiated
+[26-09-30 22:21:54] [info] watch=Dune: Part 3 showtime=405761 selected_available=0
+[26-09-30 22:21:54] [info] watch=Dune: Part 3 showtime=405765 cineplex availability call initiated
+[26-09-30 22:21:55] [info] watch=Dune: Part 3 showtime=405765 selected_available=0
+[26-09-30 22:21:55] [info] seat watcher scan completed watches=1 showtimes=13 failures=0 new_seats=0
