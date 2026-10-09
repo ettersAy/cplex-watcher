@@ -380,8 +380,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:23.410264+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:20.147022+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405741": {
           "selectedSeats": {
@@ -761,8 +762,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:23.708746+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:21.041411+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405743": {
           "selectedSeats": {
@@ -1142,8 +1144,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:24.208721+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:21.969265+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405745": {
           "selectedSeats": {
@@ -1523,8 +1526,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:24.406095+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:22.909337+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405750": {
           "selectedSeats": {
@@ -1904,8 +1908,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:25.306895+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:23.780413+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405751": {
           "selectedSeats": {
@@ -2285,8 +2290,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:25.601852+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:24.626151+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405752": {
           "selectedSeats": {
@@ -2666,8 +2672,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:25.921157+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:25.460660+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405753": {
           "selectedSeats": {
@@ -3047,8 +3054,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:26.391778+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:26.357640+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405754": {
           "selectedSeats": {
@@ -3428,8 +3436,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:26.738128+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:27.368706+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405755": {
           "selectedSeats": {
@@ -3809,8 +3818,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:27.021849+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:28.181610+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405760": {
           "selectedSeats": {
@@ -4190,8 +4200,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:27.317923+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:28.991750+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405761": {
           "selectedSeats": {
@@ -4571,8 +4582,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:27.627960+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:29.781599+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405765": {
           "selectedSeats": {
@@ -4952,8 +4964,9 @@
               "status": "Occupied"
             }
           },
-          "lastCheckedAt": "2026-10-08T22:22:28.138072+00:00",
-          "lastCheckStatus": "success"
+          "lastCheckedAt": "2026-10-09T02:21:30.616689+00:00",
+          "lastCheckStatus": "failed",
+          "lastError": "HTTP Error 403: Forbidden"
         },
         "405812": {
           "selectedSeats": {
@@ -5588,8 +5601,8 @@
           "lastCheckStatus": "success"
         }
       },
-      "lastCheckedAt": "2026-10-08T22:22:28.138727+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-10-09T02:21:31.245894+00:00",
+      "lastCheckStatus": "failed"
     }
   }
 }
