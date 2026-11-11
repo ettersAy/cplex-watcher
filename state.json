@@ -5,16 +5,17 @@
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-11-11T16:28:47.822429+00:00",
+      "lastCheckedAt": "2026-11-11T22:57:41.880283+00:00",
       "lastCheckStatus": "success"
     },
     "george-michael-the-faith-tour": {
       "name": "George Michael: The Faith Tour",
       "releaseDate": "2026-12-11T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-11-11T16:28:48.350797+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-11-11T22:57:42.764734+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "hanuman-ansh-hindi-west": {
       "name": "Hanuman Ansh (Hindi w/e.s.t.)",
