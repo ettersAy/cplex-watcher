@@ -1,132 +1,57 @@
 {
   "movies": {
-    "cat-in-the-hat": {
-      "name": "Cat in the Hat",
-      "releaseDate": "2026-11-06T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/cat-in-the-hat",
-      "lastCheckedAt": "2026-09-14T01:25:27.377226+00:00",
-      "lastCheckStatus": "success"
-    },
-    "sense-and-sensibility-2026": {
-      "name": "Sense and Sensibility",
-      "releaseDate": "2026-10-16T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/sense-and-sensibility-2026",
-      "lastCheckedAt": "2026-09-14T01:25:27.585566+00:00",
-      "lastCheckStatus": "success"
-    },
     "jumanji-open-world": {
       "name": "Jumanji: Open World",
       "releaseDate": "2026-12-25T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/jumanji-open-world",
-      "lastCheckedAt": "2026-09-14T01:25:27.728522+00:00",
+      "lastCheckedAt": "2026-11-14T09:53:51.339158+00:00",
       "lastCheckStatus": "success"
     },
     "george-michael-the-faith-tour": {
       "name": "George Michael: The Faith Tour",
       "releaseDate": "2026-12-11T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
-      "lastCheckedAt": "2026-09-14T01:25:27.865691+00:00",
-      "lastCheckStatus": "success"
-    },
-    "azaad-singh-haryanvi-west": {
-      "name": "Azaad Singh (Haryanvi w/e.s.t.)",
-      "releaseDate": "2026-09-18T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/azaad-singh-haryanvi-west",
-      "lastCheckedAt": "2026-09-14T01:25:28.016625+00:00",
-      "lastCheckStatus": "success"
-    },
-    "daayra-hindi-west": {
-      "name": "Daayra (Hindi w/e.s.t.)",
-      "releaseDate": "2026-09-18T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/daayra-hindi-west",
-      "lastCheckedAt": "2026-09-14T01:25:28.215273+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-11-11T22:57:42.764734+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "hanuman-ansh-hindi-west": {
       "name": "Hanuman Ansh (Hindi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/hanuman-ansh-hindi-west",
-      "lastCheckedAt": "2026-09-14T01:25:28.340220+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-15T03:43:17.842039+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "mitti-de-putt-punjabi-west": {
       "name": "Mitti De Putt (Punjabi w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/mitti-de-putt-punjabi-west",
-      "lastCheckedAt": "2026-09-14T01:25:28.448266+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-15T03:43:18.606357+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "red-flag-arabic-west": {
       "name": "Red Flag (Arabic w/e.s.t.)",
       "releaseDate": "2026-09-18T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/red-flag-arabic-west",
-      "lastCheckedAt": "2026-09-14T01:25:28.543528+00:00",
-      "lastCheckStatus": "success"
-    },
-    "lutt-mubarak-punjabi-west": {
-      "name": "Lutt Mubarak (Punjabi w/e.s.t.)",
-      "releaseDate": "2026-09-25T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/lutt-mubarak-punjabi-west",
-      "lastCheckedAt": "2026-09-14T01:25:28.678185+00:00",
-      "lastCheckStatus": "success"
-    },
-    "the-stunt-driver": {
-      "name": "The Stunt Driver",
-      "releaseDate": "2026-09-25T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/the-stunt-driver",
-      "lastCheckedAt": "2026-09-14T01:25:28.804038+00:00",
-      "lastCheckStatus": "success"
-    },
-    "the-vvaan-force-of-the-forrest-hindi-west": {
-      "name": "The Vvaan: Force of the Forrest (Hindi w/e.s.t.)",
-      "releaseDate": "2026-09-25T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/the-vvaan-force-of-the-forrest-hindi-west",
-      "lastCheckedAt": "2026-09-14T01:25:29.038983+00:00",
-      "lastCheckStatus": "success"
-    },
-    "tutt-paini-english-ne-punjabi-west": {
-      "name": "Tutt Paini English Ne (Punjabi w/e.s.t.)",
-      "releaseDate": "2026-09-25T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/tutt-paini-english-ne-punjabi-west",
-      "lastCheckedAt": "2026-09-14T01:25:29.165840+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-15T20:58:46.588722+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "between-the-mountain-and-the-sky": {
       "name": "BETWEEN THE MOUNTAIN AND THE SKY",
       "releaseDate": "2026-09-28T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/between-the-mountain-and-the-sky",
-      "lastCheckedAt": "2026-09-14T01:25:29.497583+00:00",
-      "lastCheckStatus": "success"
-    },
-    "beware-boiuna": {
-      "name": "Beware Boiuna",
-      "releaseDate": "2026-10-02T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/beware-boiuna",
-      "lastCheckedAt": "2026-09-14T01:25:29.596598+00:00",
-      "lastCheckStatus": "success"
-    },
-    "big-girls-dont-cry": {
-      "name": "Big Girls Don't Cry",
-      "releaseDate": "2026-10-09T00:00:00",
-      "hasShowtimes": false,
-      "url": "https://www.cineplex.com/movie/big-girls-dont-cry",
-      "lastCheckedAt": "2026-09-14T01:25:29.741876+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-09-15T01:15:32.532930+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     }
   }
 }

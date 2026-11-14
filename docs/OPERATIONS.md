@@ -66,7 +66,7 @@ The scheduled `Check Cineplex ticket sales` workflow runs on this cron schedule:
 */30 * * * *
 ```
 
-`watcher.py` reads Cineplex's `hasShowtimes` value:
+`watcher.py` uses Cineplex's national `hasShowtimes` value for ordinary watches. The George Michael Montréal rule below replaces that value with a local bookable-session check.
 
 | `hasShowtimes` | Displayed sales status | Telegram alert |
 |---|---|---|
@@ -75,6 +75,36 @@ The scheduled `Check Cineplex ticket sales` workflow runs on this cron schedule:
 | Check error | Unable to determine | No sale alert; stores the error. |
 
 The alert is sent directly from GitHub Actions with its Telegram secrets. This avoids the previous Worker callback HTTP 403 issue.
+
+### George Michael — Montréal only
+
+**Prepared locally on 2026-11-14; deployment is pending.**
+
+For the `george-michael-the-faith-tour` URL, `get_movie()` reads the current Cineplex film ID, then checks these public theatrical API endpoints:
+
+1. `theatres?language=en&filmId={filmId}`: find theatres showing that movie, and match their `location.city` to Montréal (accent-insensitive).
+2. For matching theatres, `dates/bookable?language=en&filmId={filmId}&locationId={theatreId}`: get actual available dates.
+3. For those dates, `showtimes?language=en&filmId={filmId}&locationId={theatreId}&date={M/D/YYYY}`: require the correct film and theatre, an online-enabled session with a `vistaSessionId`, and neither `isInThePast` nor `isSoldOut`.
+
+The search stops at the first bookable Montréal session. With no Montréal theatre in the movie's theatre list, the check needs the movie page and one theatre lookup. No date-range polling, seat-layout requests, or additional scheduler is involved. The shared seat-metadata API helper uses Cineplex's verified public frontend key, and rediscovers it once per process only if rejected. A failed refresh propagates the original API error.
+
+This means Montréal city, not the wider metropolitan area: Laval, Brossard, Kirkland, and Mont-Royal are separate cities in Cineplex's directory. The theatre IDs are not hardcoded.
+
+`state.json` records `city`, the original `nationalHasShowtimes`, and the first matching `showtime`; its existing `hasShowtimes` field now means Montréal availability for this movie. Both scheduled checks and `/watch` registration use `get_movie()`, so a national sale does not reject a new Montréal watch. Telegram sale messages include Montréal, the theatre, and the local screening time. Existing recipients, including `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`, are preserved.
+
+On the first updated run, `rearm_montreal_watch()` moves the old national result back into the active queue and clears its national alert flag. The saved `city` marks that correction as complete, so later successful Montréal alerts stay completed. A movie absent from both the active and completed lists is not recreated. Other movie records are preserved.
+
+API failures are saved as failed checks and leave the movie active. Missing Telegram configuration or failed delivery also retains the movie for retry while allowing other movies to run. A partial failure across multiple Telegram recipients can resend to an earlier successful recipient on retry; per-recipient delivery state is not tracked.
+
+Verification on 2026-11-14:
+
+- The changed `get_movie()` returned `nationalHasShowtimes: true`, `hasShowtimes: false`, `city: Montréal`, and no local session for the supplied George Michael URL.
+- A positive control in Toronto returned theatre `7400`, session `314899`, December 9 at 19:00. This was a read-only API check; no ticket purchase or Telegram message was sent.
+- The production-state rehearsal used temporary JSON files and live Cineplex reads: George Michael returned to the active list, six other completed movies were preserved, and no Telegram message was sent.
+- All 26 focused tests passed with `python3 -m unittest discover -s tests -v`; the existing seat-watcher checks passed with `/opt/homebrew/bin/python3 scripts/test-seat-watcher.py`. The changed shared helper also returned live seat metadata successfully for the Toronto control session.
+- Production state still records the national alert from `2026-11-11T22:57:42.764734+00:00`; the local migration has not been run against production.
+
+Publish the Python changes through the existing GitHub repository, then run the normal ticket check and inspect its saved state. No Cloudflare Worker or Pages deployment is required for this change. Preserve the upstream workflow's concurrency group and push-retry logic when merging the local branch. The configured schedule is every 30 minutes; GitHub controls the actual start time.
 
 ## Web interface
 
@@ -125,9 +155,11 @@ Content-Type: application/json
 
 The Action removes the exact URL from `movies.json` and the matching state entry from `state.json`, then sends a Telegram confirmation.
 
-### Manual Scan all
+### Legacy manual scan endpoint
 
-**Scan all** is a manual, browser-initiated check. The page requests one protected Worker scan for each active Cineplex URL, waits five seconds between each request, and updates the cards as results arrive.
+The current `web/app.js` reads the saved ticket state and does not call `/api/scan`. That older endpoint still returns national movie-page data and does not send sale alerts. The Montréal rule is enforced by the Python scheduled and registration paths described above.
+
+The former **Scan all** button requested one protected Worker scan for each active Cineplex URL, waited five seconds between requests, and updated the cards as results arrived.
 
 The static GitHub Pages site cannot request Cineplex directly because Cineplex does not permit browser CORS access. The page therefore calls Worker JavaScript, which requests Cineplex's static movie data endpoint. This is not a GitHub Action.
 

@@ -3,5 +3,35 @@
     "url": "https://www.cineplex.com/movie/dune-part-3",
     "name": "Dune: Part 3",
     "salesStartedAt": "2026-09-13T06:54:31.109476+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/practical-magic-2",
+    "name": "Practical Magic 2",
+    "salesStartedAt": "2026-09-14T06:01:33.965044+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/between-the-mountain-and-the-sky",
+    "name": "BETWEEN THE MOUNTAIN AND THE SKY",
+    "salesStartedAt": "2026-09-15T01:15:32.532930+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/hanuman-ansh-hindi-west",
+    "name": "Hanuman Ansh (Hindi w/e.s.t.)",
+    "salesStartedAt": "2026-09-15T03:43:17.842039+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/mitti-de-putt-punjabi-west",
+    "name": "Mitti De Putt (Punjabi w/e.s.t.)",
+    "salesStartedAt": "2026-09-15T03:43:18.606357+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/red-flag-arabic-west",
+    "name": "Red Flag (Arabic w/e.s.t.)",
+    "salesStartedAt": "2026-09-15T20:58:46.588722+00:00"
+  },
+  {
+    "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
+    "name": "George Michael: The Faith Tour",
+    "salesStartedAt": "2026-11-11T22:57:42.764734+00:00"
   }
 ]

@@ -17,7 +17,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin
+from urllib.parse import urlencode, urljoin
 from urllib.request import Request, urlopen
 
 
@@ -26,7 +26,9 @@ SEAT_LABEL_PATTERN = re.compile(r"^([A-Z]+)(\d+)$")
 USER_AGENT = "CineplexTicketWatcher/1.0 (personal ticket availability monitor)"
 THEATRICAL_BASE_URL = "https://apis.cineplex.com/prod/cpx/theatrical/api/v1"
 CINEPLEX_HOME_URL = "https://www.cineplex.com/"
-_discovered_subscription_key = None
+# Public frontend configuration, verified in Cineplex's browser bundle on 2026-11-14.
+# This is not a user credential. Rediscover only if Cineplex rejects it.
+_discovered_subscription_key = "dcdac5601d864addbc2675a2e96cb1f8"
 _subscription_key_discovery_attempted = False
 
 
@@ -168,12 +170,15 @@ def _write_json(path: Path, value) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n")
 
 
-def request_json(url: str, headers: dict[str, str] | None = None) -> dict:
+def request_json(url: str, headers: dict[str, str] | None = None, *, response_type=dict):
     request = Request(url, headers={"User-Agent": USER_AGENT, **(headers or {})})
     with urlopen(request, timeout=30) as response:
+        if response.status == 204 and response_type is list:
+            return []
         value = json.loads(response.read().decode("utf-8"))
-    if not isinstance(value, dict):
-        raise ValueError("Cineplex response must be a JSON object")
+    if not isinstance(value, response_type):
+        expected = "object" if response_type is dict else "array"
+        raise ValueError(f"Cineplex response must be a JSON {expected}")
     return value
 
 
@@ -225,25 +230,41 @@ def _discover_public_subscription_key() -> str | None:
                 key = _extract_public_subscription_key(_request_text(url))
                 if key:
                     return key
-            except (HTTPError, URLError, UnicodeDecodeError):
+            except (HTTPError, URLError, UnicodeDecodeError) as error:
+                print(f"WARNING: Cineplex public configuration bundle {url}: {error}", file=sys.stderr)
                 continue
-    except (HTTPError, URLError, UnicodeDecodeError):
+    except (HTTPError, URLError, UnicodeDecodeError) as error:
+        print(f"WARNING: Could not discover Cineplex public API configuration: {error}", file=sys.stderr)
         return None
     return None
 
 
+def request_theatrical_json(path: str, params=None, *, response_type=dict):
+    """Use the same public API configuration for seat metadata and ticket sales."""
+    global _discovered_subscription_key, _subscription_key_discovery_attempted
+    url = f"{THEATRICAL_BASE_URL}/{path}"
+    if params:
+        url += "?" + urlencode(params)
+    try:
+        return request_json(url, {"Ocp-Apim-Subscription-Key": _discovered_subscription_key}, response_type=response_type)
+    except HTTPError as error:
+        if error.code not in (401, 403) or _subscription_key_discovery_attempted:
+            raise
+        _subscription_key_discovery_attempted = True
+        key = _discover_public_subscription_key()
+        if not key or key == _discovered_subscription_key:
+            raise
+        _discovered_subscription_key = key
+    return request_json(
+        url,
+        {"Ocp-Apim-Subscription-Key": _discovered_subscription_key},
+        response_type=response_type,
+    )
+
+
 def request_showtime_detail(theatre_id: str, showtime_id: str) -> dict:
     """Fetch display metadata once while registering a showtime, never while scanning."""
-    global _discovered_subscription_key, _subscription_key_discovery_attempted
-    if not _subscription_key_discovery_attempted:
-        _subscription_key_discovery_attempted = True
-        _discovered_subscription_key = _discover_public_subscription_key()
-    if not _discovered_subscription_key:
-        raise ValueError("Could not retrieve Cineplex's public showtime-date configuration")
-    return request_json(
-        showtime_detail_url(theatre_id, showtime_id),
-        {"Ocp-Apim-Subscription-Key": _discovered_subscription_key},
-    )
+    return request_theatrical_json(f"theatres/{theatre_id}/showtimes/{showtime_id}")
 
 
 def montreal_timestamp(value: datetime | None = None) -> str:

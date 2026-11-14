@@ -131,7 +131,7 @@ To send a friend the sale-started alert for **George Michael: The Faith Tour** o
 2. Create or update `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`.
 3. Set its value to the friend's private Telegram chat ID.
 
-This affects only the sale-started alert for that movie. Do not add the friend to `TELEGRAM_CHAT_IDS` unless they should also be allowed to use `/watch`, `/stopwatch`, and `/list`.
+This affects only the sale-started alert for that movie. Do not add the friend to `TELEGRAM_CHAT_IDS` unless they should also be allowed to use `/watch`, `/stopwatch`, and `/list`. If the friend was previously added there, remove their ID from both the GitHub and Cloudflare `TELEGRAM_CHAT_IDS` secrets.
 
 ## Remove a friend's access
 
