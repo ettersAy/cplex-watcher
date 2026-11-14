@@ -2,6 +2,10 @@ name = "cplex-watcher"
 main = "src.js"
 compatibility_date = "2026-09-13"
 
+[triggers]
+# Check Saturday-noon delivery and retry failures; completed weeks do not dispatch again.
+crons = ["*/5 * * * *"]
+
 [vars]
 GITHUB_REPOSITORY = "ettersAy/cplex-watcher"
 UI_ORIGIN = "https://ettersay.github.io"

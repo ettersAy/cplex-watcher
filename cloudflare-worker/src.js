@@ -25,6 +25,53 @@ async function notificationRecipientKey(env, chatId) {
   return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+async function dispatchNotificationWorkflow(env, inputs) {
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/telegram-reminders.yml/dispatches`, {
+    method: "POST",
+    headers: {
+      accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+      "content-type": "application/json", "user-agent": "CineplexTicketWatcher",
+      "x-github-api-version": "2022-11-28",
+    },
+    body: JSON.stringify({ ref: "main", inputs }),
+  });
+  if (!response.ok) throw new Error(`GitHub notification dispatch failed: HTTP ${response.status}`);
+}
+
+function reminderWeek(now) {
+  const local = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", hourCycle: "h23",
+  }).formatToParts(now).map(({ type, value }) => [type, value]));
+  // Use UTC only for calendar arithmetic after converting to the Montréal date.
+  const date = new Date(`${local.year}-${local.month}-${local.day}T00:00:00Z`);
+  const daysSinceSaturday = (date.getUTCDay() + 1) % 7;
+  date.setUTCDate(date.getUTCDate() - daysSinceSaturday - (daysSinceSaturday === 0 && Number(local.hour) < 12 ? 7 : 0));
+  return date.toISOString().slice(0, 10);
+}
+
+async function checkWeeklyReminder(env, scheduledTime) {
+  const week = reminderWeek(new Date(scheduledTime));
+  const requestId = `weekly-${week}`;
+  const runName = `Telegram remind ${requestId}`;
+  const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/telegram-reminders.yml/runs?branch=main&event=workflow_dispatch&per_page=100`, {
+    headers: {
+      accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+      "user-agent": "CineplexTicketWatcher", "cache-control": "no-cache",
+    },
+  });
+  if (!response.ok) throw new Error(`Could not check weekly reminder runs: HTTP ${response.status}`);
+  const runs = (await response.json()).workflow_runs.filter((run) => run.display_title === runName);
+  const finished = runs.find((run) => run.conclusion === "success");
+  const pending = runs.find((run) => run.status !== "completed");
+  if (finished || pending) {
+    console.log(JSON.stringify({ event: finished ? "weekly_reminder_complete" : "weekly_reminder_pending", week, runId: (finished || pending).id }));
+    return;
+  }
+  await dispatchNotificationWorkflow(env, { operation: "remind", request_id: requestId });
+  console.log(JSON.stringify({ event: "weekly_reminder_queued", week, requestId }));
+}
+
 async function handleNotificationPreference(env, chatId, operation, query) {
   const requestId = crypto.randomUUID();
   try {
@@ -36,16 +83,7 @@ async function handleNotificationPreference(env, chatId, operation, query) {
       await telegram(env, chatId, "Use /stop Movie Name, /stop all, or /stop reminder.\nResume with /start all or /start reminder.");
       return;
     }
-    const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/telegram-reminders.yml/dispatches`, {
-      method: "POST",
-      headers: {
-        accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
-        "content-type": "application/json", "user-agent": "CineplexTicketWatcher",
-        "x-github-api-version": "2022-11-28",
-      },
-      body: JSON.stringify({ ref: "main", inputs: { operation, query, recipient_key: recipientKey, request_id: requestId } }),
-    });
-    if (!response.ok) throw new Error(`GitHub preference dispatch failed: HTTP ${response.status}`);
+    await dispatchNotificationWorkflow(env, { operation, query, recipient_key: recipientKey, request_id: requestId });
     console.log(JSON.stringify({ event: "notification_preference_queued", requestId, operation }));
     await telegram(env, chatId, "Updating your notification preferences. I'll confirm when saved.");
   } catch (error) {
@@ -938,9 +976,16 @@ export default {
     if (request.method === "POST" && url.pathname === "/telegram") return handleUpdate(request, env);
     return Response.json({ status: "ok", service: "Cineplex ticket watcher" });
   },
-  async scheduled(_event, _env, _ctx) {
-    // An older Cloudflare cron trigger may remain active after the schedule
-    // moved to GitHub Actions. Keep it harmless and visible until removed.
-    console.log(JSON.stringify({ event: "legacy_cron_ignored", scheduler: "github-actions" }));
+  async scheduled(event, env) {
+    if (event.cron !== "*/5 * * * *") {
+      console.log(JSON.stringify({ event: "legacy_cron_ignored" }));
+      return;
+    }
+    try {
+      await checkWeeklyReminder(env, event.scheduledTime);
+    } catch (error) {
+      console.error("Weekly reminder scheduler failed; retrying at the next tick:", error);
+      throw error;
+    }
   },
 };

@@ -19,7 +19,7 @@ GitHub Pages <── reads public JSON ─────────────�
 
 | Component | Responsibility |
 |---|---|
-| Cloudflare Worker | Validates Telegram updates, protects the web queue API, dispatches GitHub Actions, and formats `/list`. |
+| Cloudflare Worker | Validates Telegram updates, protects the web queue API, dispatches GitHub Actions, formats `/list`, and schedules/retries weekly reminders. |
 | GitHub Actions | Looks up titles, deduplicates Cineplex URLs, performs 30-minute checks, persists check state, and sends Telegram messages. |
 | `movies.json` | Source of truth for active watches. Each entry is one official Cineplex URL. |
 | `sales-started.json` | Movies moved out of the active queue after Cineplex reports that sales started. |
@@ -62,7 +62,11 @@ Sales-started movies are listed first, then active watches. Each movie uses one 
 
 ## Weekly reminders and personal stop commands
 
-`telegram-reminders.yml` is scheduled for **Saturday at 12:00, America/Toronto (Montréal)**. It uses GitHub's [timezone-aware schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onschedule), so noon follows daylight saving time. GitHub can delay scheduled runs; delivery is not guaranteed at exactly 12:00.
+The **Cloudflare Worker** starts the weekly reminder job at **Saturday 12:00, America/Toronto (Montréal)**. Its `*/5 * * * *` Cron Trigger checks whether the latest Saturday-noon reminder completed successfully. Winter noon is 17:00 UTC; summer noon is 16:00 UTC. GitHub Actions still runs `telegram_reminders.py`, but its unreliable weekly `schedule` trigger has been removed.
+
+The timer explicitly dispatches `telegram-reminders.yml` with `request_id=weekly-YYYY-MM-DD`. A matching successful run means the week is complete; a queued/running run is left alone; a failed or missing run is retried at the next five-minute tick. This also catches up after an outage during the week. Existing per-recipient `lastReminderWeek` records prevent resending to accounts already delivered. No new database, secrets, or duplicated reminder sender are needed.
+
+See [the missed-reminder incident and recovery procedure](Incidents/02-weekly-reminder-missed-schedule.md) for evidence and exact diagnostic commands. Dispatch and runner startup still take time, so this targets noon rather than guaranteeing delivery at precisely 12:00:00.
 
 The message uses saved active ticket watches and enabled, upcoming seat watches. It makes no Cineplex requests. Default recipients receive their shared watches; `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS` recipients receive only the George Michael ticket watch unless also included in the default list. Completed, stopped, or empty personal lists receive no reminder.
 
@@ -106,12 +110,12 @@ The Worker dispatches personal commands to the new Action. The Action validates 
 
    Confirm the run succeeds and `notification-preferences.json` contains opaque recipient keys. Repeat initialization after adding recipients.
 
-4. Deploy the Worker with `npx wrangler deploy` from `cloudflare-worker/`. No Pages deployment or new database is needed.
+4. Deploy the Worker with `npx wrangler deploy` from `cloudflare-worker/`. Confirm the output includes `schedule: */5 * * * *`. Cloudflare documents up to 15 minutes for [Cron Trigger propagation](https://developers.cloudflare.com/workers/configuration/cron-triggers/); observe a real scheduled event after propagation. No Pages deployment or new database is needed.
 5. Tail the Worker, send `/stop reminder` from a real authorized Telegram account, and verify the acknowledgement, successful Action, saved preference, and final reply. Send `/start reminder` to restore the test account.
 
 ### Failure and retry behavior
 
-Each account's successful delivery records the Saturday date in `lastReminderWeek`. Repeating a run during that week skips accounts already sent. A failed recipient is logged with the original error (private values redacted), does not block other recipients, and makes the workflow fail. The save step still retains successful deliveries. Rerun the failed workflow to retry the unsent recipients; next week's schedule also retries naturally.
+Each account's successful delivery records the Saturday date in `lastReminderWeek`. Repeating a run during that week skips accounts already sent. A failed recipient is logged with the original error (private values redacted), does not block other recipients, and makes the workflow fail. The save step still retains successful deliveries. Cloudflare checks every five minutes and retries failed runs automatically; queued/running jobs are not duplicated. Manual recovery is also available in the incident guide.
 
 The Telegram send and Git commit cannot be atomic: a crash or failed state push after delivery can cause a duplicate on retry. No reminder failure is silently treated as success. The existing seat scanner's delivery-error logging behavior is retained; reminder retries do not change seat-alert retry behavior.
 
@@ -122,6 +126,7 @@ cd /Users/Ayoub/Developer/cplex-watcher
 python3 -m unittest discover -s tests -v
 python3 scripts/test-seat-watcher.py
 node scripts/test-notification-preferences.mjs
+node scripts/test-reminder-schedule.mjs
 node scripts/test-seat-list-message.mjs
 node scripts/test-preview-url-parameters.mjs
 ```
@@ -136,6 +141,8 @@ These are no-network script tests, including recipient isolation, failed deliver
 - `/start reminder` produced another acknowledgement and final reply, [successful run 43613881184](https://github.com/ettersAy/cplex-watcher/actions/runs/43613881184), and restored the owner's reminder preference. Worker request ID: `aa74ea13-610c-48b8-8a69-61a8531ee28a`. Both webhook requests completed with HTTP 200 and no Worker exceptions.
 - Final state in `7aee8e7` has reminders and watch alerts enabled for both recipients. Neither has a `lastReminderWeek`: no early weekly broadcast was sent. Actual scheduled reminder delivery remains to be observed at noon.
 - All 44 local Python tests, the Worker command tests, existing seat/message/preview regressions, YAML checks, and Worker dry-run build passed. Telegram Web was used for the real command test because the local user-client session lacked its API ID/hash environment settings.
+
+The initial verification above covered commands, not automatic weekly delivery. At noon GitHub did not create a scheduled reminder run. The later delivery and scheduler correction are recorded in [incident 02](Incidents/02-weekly-reminder-missed-schedule.md).
 
 ## Ticket-sale alert behavior
 

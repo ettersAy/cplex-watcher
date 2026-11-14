@@ -1,9 +1,8 @@
 name: Telegram weekly reminders and preferences
+run-name: Telegram ${{ inputs.operation }} ${{ inputs.request_id }}
 
 on:
-  schedule:
-    - cron: "0 12 * * 6"
-      timezone: America/Toronto
+  # The existing Cloudflare Worker owns the clock and retries missed/failed deliveries.
   workflow_dispatch:
     inputs:
       operation:
@@ -51,7 +50,7 @@ jobs:
       - name: Process reminders or personal command
         id: process
         env:
-          OPERATION: ${{ github.event_name == 'schedule' && 'remind' || inputs.operation }}
+          OPERATION: ${{ inputs.operation }}
         run: python telegram_reminders.py "$OPERATION"
 
       - name: Save notification preferences
