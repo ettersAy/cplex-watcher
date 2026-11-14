@@ -312,11 +312,12 @@ def _fetch_with_retry(fetch_json, url: str, *, sleep=time.sleep, attempts: int =
     raise RuntimeError("unreachable retry state")
 
 
-def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sleep, watch_id: str | None = None) -> dict:
+def scan_all(root: Path, *, fetch_json=request_json, notify=None, notify_watch=None, sleep=time.sleep, watch_id: str | None = None) -> dict:
     """Scan enabled watches, persist state, and return a safe result summary.
 
     `fetch_json` and `notify` are injected by tests. `notify(text)` must raise on
     delivery failure; an alert failure is logged but does not erase seat state.
+    `notify_watch(watch_id, text)` lets production apply per-watch recipient preferences.
     """
     config_path = root / "seat-watches.json"
     state_path = root / "seat-watch-state.json"
@@ -337,6 +338,7 @@ def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sle
             continue
         if not watch.get("enabled"):
             continue
+        send_notification = (lambda text: notify_watch(current_watch_id, text)) if notify_watch else notify
         result["watches"] += 1
         theatre_id = str(watch["theatreId"])
         watch_name = str(watch["name"])
@@ -387,13 +389,13 @@ def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sle
                 append_log(log_path, "info", f"watch={watch_name} showtime={showtime_id} selected_available={found}")
                 if new_seats:
                     result["newSeats"] += len(new_seats)
-                    if notify:
+                    if send_notification:
                         try:
-                            notify(grouped_alert_html(
+                            send_notification(grouped_alert_html(
                                 watch_name, theatre_id, showtime_id, new_seats,
                                 theatre_name=str(watch.get("theatreName") or ""), showtime=showtime,
                             ))
-                            append_log(log_path, "info", f"watch={watch_name} showtime={showtime_id} telegram availability alert sent seats=" + ",".join(seat["seatLabel"] for seat in new_seats))
+                            append_log(log_path, "info", f"watch={watch_name} showtime={showtime_id} telegram notification handled seats=" + ",".join(seat["seatLabel"] for seat in new_seats))
                         except Exception as error:  # Do not hide delivery error from the durable log.
                             append_log(log_path, "error", f"watch={watch_name} showtime={showtime_id} telegram delivery failed: {type(error).__name__}")
             except (HTTPError, URLError, ValueError, json.JSONDecodeError) as error:
@@ -401,10 +403,10 @@ def scan_all(root: Path, *, fetch_json=request_json, notify=None, sleep=time.sle
                 checked_at = datetime.now(timezone.utc).isoformat()
                 current.update({"lastCheckedAt": checked_at, "lastCheckStatus": "failed", "lastError": str(error)})
                 append_log(log_path, "error", f"watch={watch_name} showtime={showtime_id} cineplex availability call failed: {type(error).__name__}: {error}")
-                if notify:
+                if send_notification:
                     try:
                         display_time = str(showtime.get("displayTime") or "Time unavailable")
-                        notify(
+                        send_notification(
                             f"❌ <b>Seat scan failed — {html.escape(watch_name)}</b>\n"
                             f"{html.escape(str(watch.get('theatreName') or 'Theatre'))} · #{html.escape(theatre_id)}\n\n"
                             f"<a href=\"{html.escape(preview_url(theatre_id, showtime_id), quote=True)}\">#{html.escape(showtime_id)} · {html.escape(display_time)}</a>\n\n"
@@ -434,17 +436,24 @@ def main() -> None:
     parser.add_argument("--notify", action="store_true", help="send configured Telegram notifications")
     parser.add_argument("--watch-id", help="scan one enabled seat watch")
     args = parser.parse_args()
-    notify = None
+    notify_watch = None
     if args.notify:
         token = os.getenv("TELEGRAM_BOT_TOKEN")
         recipients = os.getenv("TELEGRAM_RECIPIENTS") or os.getenv("TELEGRAM_CHAT_IDS") or os.getenv("TELEGRAM_CHAT_ID")
         if not token or not recipients:
             raise SystemExit("seat watcher notification requested but Telegram secrets are not configured")
-        from watcher import send_telegram
+        from watcher import send_telegram, telegram_chat_ids
+        from notification_preferences import load_preferences, recipient_key, watches_enabled
 
-        notify = lambda text: send_telegram(token, recipients, text, parse_mode="HTML")
+        preferences = load_preferences(args.root)
+        # Resolve preferences before scanning so a missing key cannot consume a new-seat alert.
+        chat_preferences = {chat_id: preferences.get(recipient_key(chat_id), {})
+                            for chat_id in telegram_chat_ids(recipients)}
+        notify_watch = lambda watch_id, text: send_telegram(
+            token, ",".join(chat_id for chat_id, preference in chat_preferences.items()
+                            if watches_enabled(preference, f"seat:{watch_id}")), text, parse_mode="HTML")
     try:
-        result = scan_all(args.root, notify=notify, watch_id=args.watch_id)
+        result = scan_all(args.root, notify_watch=notify_watch, watch_id=args.watch_id)
     except (OSError, ValueError, HTTPError, URLError, json.JSONDecodeError) as error:
         print(f"seat watcher failed: {error}", file=sys.stderr)
         raise SystemExit(1)

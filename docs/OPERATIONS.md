@@ -24,6 +24,8 @@ GitHub Pages <── reads public JSON ─────────────�
 | `movies.json` | Source of truth for active watches. Each entry is one official Cineplex URL. |
 | `sales-started.json` | Movies moved out of the active queue after Cineplex reports that sales started. |
 | `state.json` | Last successful or failed check for each active watch, including `hasShowtimes`, timestamp, and error. |
+| `telegram_reminders.py` | Weekly personal watch lists and `/stop`/`/start` preference updates; sends results directly to Telegram. |
+| `notification_preferences.py` / `notification-preferences.json` | Shared notification filtering and per-recipient preferences, indexed by private HMAC identifiers rather than chat IDs. |
 | GitHub Pages | Static admin page. It validates a local browser token, then reads the public JSON lists and posts new titles to the Worker. |
 | Telegram | Admin command and notification channel. |
 
@@ -57,6 +59,74 @@ Sales-started movies are listed first, then active watches. Each movie uses one 
 - Timestamps are displayed in Montréal time (`America/Toronto`) in `YY-MM-DD HH:MM:SS` format. Stored timestamps remain UTC.
 - `Status: Failed` and `Sales: Unable to determine` mean the last GitHub Action check failed; the error is retained in `state.json`.
 - `Status: Success` with `Sales: Not Yet` means the latest official Cineplex check found no showtimes.
+
+## Weekly reminders and personal stop commands
+
+`telegram-reminders.yml` is scheduled for **Saturday at 12:00, America/Toronto (Montréal)**. It uses GitHub's [timezone-aware schedule](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onschedule), so noon follows daylight saving time. GitHub can delay scheduled runs; delivery is not guaranteed at exactly 12:00.
+
+The message uses saved active ticket watches and enabled, upcoming seat watches. It makes no Cineplex requests. Default recipients receive their shared watches; `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS` recipients receive only the George Michael ticket watch unless also included in the default list. Completed, stopped, or empty personal lists receive no reminder.
+
+Example:
+
+```text
+Weekly reminder
+
+You're watching:
+• George Michael: The Faith Tour — ticket sales in Montréal
+• Dune: Part 3 — seats at Scotia Bank
+
+Stop one: /stop Movie Name
+Stop all: /stop all
+Turn off weekly reminders: /stop reminder
+```
+
+Personal commands affect only the sender. `/stop Movie Name` accepts a full or uniquely matching name; ambiguous matches return exact commands. `/stop all` also suppresses future watches until `/start all`. `/stop reminder` leaves watch-alert settings unchanged; `/start reminder` restores weekly reminders. `/start all` restores watch alerts while preserving the reminder preference. Existing `/stopwatch`, `/stopseats`, `/list`, and the web page continue to manage/display shared state.
+
+The Worker dispatches personal commands to the new Action. The Action validates the recipient, saves preferences, and only then confirms success to Telegram. Notification-only friends get no shared-watch permissions. The workflow uses [queued concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency) and checks out current `main`, so queued commands retain earlier changes.
+
+### One-time deployment
+
+1. Renew Wrangler authentication if needed: `npx wrangler login` from `cloudflare-worker/`.
+2. Create one random, stable `TELEGRAM_PREFERENCES_KEY` in a private password manager and set the **same value** in GitHub Actions and Cloudflare secrets. Enter it at the private prompts; do not put it in source, chat, or shell arguments:
+
+   ```bash
+   gh secret set TELEGRAM_PREFERENCES_KEY --repo ettersAy/cplex-watcher
+   cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
+   npx wrangler secret put TELEGRAM_PREFERENCES_KEY
+   ```
+
+   Keep this key stable across bot-token rotation. Changing it changes recipient identifiers and requires migrating existing preferences to preserve opt-outs.
+
+3. Publish the code to `main`, then initialize the recipient registry without sending messages:
+
+   ```bash
+   gh workflow run telegram-reminders.yml --repo ettersAy/cplex-watcher -f operation=initialize
+   gh run list --repo ettersAy/cplex-watcher --workflow telegram-reminders.yml --limit 5
+   ```
+
+   Confirm the run succeeds and `notification-preferences.json` contains opaque recipient keys. Repeat initialization after adding recipients.
+
+4. Deploy the Worker with `npx wrangler deploy` from `cloudflare-worker/`. No Pages deployment or new database is needed.
+5. Tail the Worker, send `/stop reminder` from a real authorized Telegram account, and verify the acknowledgement, successful Action, saved preference, and final reply. Send `/start reminder` to restore the test account.
+
+### Failure and retry behavior
+
+Each account's successful delivery records the Saturday date in `lastReminderWeek`. Repeating a run during that week skips accounts already sent. A failed recipient is logged with the original error (private values redacted), does not block other recipients, and makes the workflow fail. The save step still retains successful deliveries. Rerun the failed workflow to retry the unsent recipients; next week's schedule also retries naturally.
+
+The Telegram send and Git commit cannot be atomic: a crash or failed state push after delivery can cause a duplicate on retry. No reminder failure is silently treated as success. The existing seat scanner's delivery-error logging behavior is retained; reminder retries do not change seat-alert retry behavior.
+
+### Local verification
+
+```bash
+cd /Users/Ayoub/Developer/cplex-watcher
+python3 -m unittest discover -s tests -v
+python3 scripts/test-seat-watcher.py
+node scripts/test-notification-preferences.mjs
+node scripts/test-seat-list-message.mjs
+node scripts/test-preview-url-parameters.mjs
+```
+
+These are no-network script tests, including recipient isolation, failed delivery/retry, opt-outs, authorization, and existing Montréal/seat regressions. They do not prove a deployed Telegram round trip.
 
 ## Ticket-sale alert behavior
 

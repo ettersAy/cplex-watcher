@@ -10,6 +10,7 @@ from urllib.error import HTTPError, URLError
 import register_watch
 import seat_watcher
 import watcher
+from notification_preferences import recipient_key, save_preferences
 from watcher import sale_alert_chat_ids
 
 
@@ -177,7 +178,9 @@ class TheatricalResponseTest(unittest.TestCase):
     @patch("seat_watcher._discover_public_subscription_key", return_value="new-public-key")
     @patch("seat_watcher.request_json")
     def test_rejected_public_key_is_refreshed_once(self, request, discover):
-        request.side_effect = [HTTPError("https://example.test", 401, "Unauthorized", {}, None), {}]
+        error = HTTPError("https://example.test", 401, "Unauthorized", {}, io.BytesIO())
+        self.addCleanup(error.close)
+        request.side_effect = [error, {}]
         self.assertEqual(seat_watcher.request_theatrical_json("theatres"), {})
         discover.assert_called_once()
         self.assertEqual(request.call_args.args[1]["Ocp-Apim-Subscription-Key"], "new-public-key")
@@ -186,7 +189,8 @@ class TheatricalResponseTest(unittest.TestCase):
     @patch("seat_watcher._discover_public_subscription_key", return_value=None)
     @patch("seat_watcher.request_json")
     def test_unsuccessful_key_refresh_preserves_the_api_error(self, request, discover):
-        error = HTTPError("https://example.test", 403, "Forbidden", {}, None)
+        error = HTTPError("https://example.test", 403, "Forbidden", {}, io.BytesIO())
+        self.addCleanup(error.close)
         request.side_effect = error
         with self.assertRaises(HTTPError) as raised:
             seat_watcher.request_theatrical_json("theatres")
@@ -217,8 +221,8 @@ class WatchLifecycleTest(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         patches = [
-            patch.multiple(watcher, MOVIES_FILE=self.root / "movies.json", STATE_FILE=self.root / "state.json", SALES_STARTED_FILE=self.root / "sales-started.json"),
-            patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_CHAT_IDS": "owner-id", "TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS": "friend-id"}, clear=True),
+            patch.multiple(watcher, ROOT=self.root, MOVIES_FILE=self.root / "movies.json", STATE_FILE=self.root / "state.json", SALES_STARTED_FILE=self.root / "sales-started.json"),
+            patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "test-token", "TELEGRAM_CHAT_IDS": "owner-id", "TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS": "friend-id", "TELEGRAM_PREFERENCES_KEY": "test-secret"}, clear=True),
             patch("watcher.get_movie"), patch("watcher.send_telegram"),
             patch("sys.stdout", new=io.StringIO()), patch("sys.stderr", new=io.StringIO()),
         ]
@@ -228,6 +232,23 @@ class WatchLifecycleTest(unittest.TestCase):
             self.addCleanup(item.stop)
         self.get_movie, self.send = mocks[2:4]
         self.get_movie.side_effect = lambda url: movie_result(url)
+        save_preferences(self.root, {})
+
+    def test_personal_stop_excludes_only_that_recipient_from_sale_alert(self):
+        self.seed([{"url": GEORGE_MICHAEL_URL}])
+        save_preferences(self.root, {recipient_key("friend-id"): {"stoppedWatches": [f"ticket:{watcher.GEORGE_MICHAEL_FAITH_TOUR_SLUG}"]}})
+        self.get_movie.side_effect = lambda url: movie_result(url, on_sale=True)
+        watcher.main()
+        self.assertEqual(self.send.call_args.args[1], "owner-id")
+
+    def test_everyone_opted_out_archives_the_sale_without_sending(self):
+        self.seed([{"url": GEORGE_MICHAEL_URL}])
+        save_preferences(self.root, {recipient_key(chat): {"stoppedAll": True} for chat in ("owner-id", "friend-id")})
+        self.get_movie.side_effect = lambda url: movie_result(url, on_sale=True)
+        watcher.main()
+        self.send.assert_not_called()
+        self.assertEqual(self.read("movies.json"), [])
+        self.assertEqual(len(self.read("sales-started.json")), 1)
 
     def seed(self, movies, sales=None, state=None):
         for name, data in [("movies.json", movies), ("sales-started.json", sales or []), ("state.json", state or {"movies": {}})]:

@@ -1,0 +1,82 @@
+name: Telegram weekly reminders and preferences
+
+on:
+  schedule:
+    - cron: "0 12 * * 6"
+      timezone: America/Toronto
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Initialize recipients, send weekly reminders, or apply a personal command
+        type: choice
+        options: [initialize, remind, stop, start]
+        default: initialize
+      recipient_key:
+        description: Opaque recipient identifier from the Worker (never a chat ID)
+        type: string
+      query:
+        description: Movie name, all, or reminder
+        type: string
+      request_id:
+        description: Worker request identifier
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: telegram-notification-preferences
+  queue: max
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
+      TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
+      RECIPIENT_KEY: ${{ inputs.recipient_key }}
+      PREFERENCE_QUERY: ${{ inputs.query }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Queued commands must read the preferences saved by the previous run.
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Process reminders or personal command
+        id: process
+        env:
+          OPERATION: ${{ github.event_name == 'schedule' && 'remind' || inputs.operation }}
+        run: python telegram_reminders.py "$OPERATION"
+
+      - name: Save notification preferences
+        id: save
+        if: always()
+        run: |
+          git config user.name "Cineplex Ticket Watcher"
+          git config user.email "actions@github.com"
+          git add notification-preferences.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "Update Telegram notification preferences"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "Could not save notification preferences after three attempts" >&2
+          exit 1
+
+      - name: Reply to personal command
+        if: always() && (inputs.operation == 'stop' || inputs.operation == 'start')
+        env:
+          PREFERENCE_SAVED: ${{ steps.process.outcome == 'success' && steps.save.outcome == 'success' }}
+        run: python telegram_reminders.py reply

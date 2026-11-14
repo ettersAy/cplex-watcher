@@ -165,6 +165,14 @@ def main():
         assert failed_result["failures"] == 1
         assert json.loads((root / "available-seat-list.json").read_text())
         assert "[error]" in (root / "seat-watch.log").read_text()
+        contextual_alerts = []
+        (root / "available-seat-list.json").write_text("{}")
+        notify_watch = lambda watch_id, text: contextual_alerts.append((watch_id, text))
+        scan_all(root, fetch_json=responses.__getitem__, notify_watch=notify_watch, sleep=lambda _: None)
+        scan_all(root, fetch_json=failed_responses.__getitem__, notify_watch=notify_watch, sleep=lambda _: None)
+        assert [watch_id for watch_id, _ in contextual_alerts] == ["dune", "dune"]
+        assert "New selected seats" in contextual_alerts[0][1]
+        assert "Seat scan failed" in contextual_alerts[1][1]
 
     with tempfile.TemporaryDirectory() as temporary_directory:
         root = Path(temporary_directory)

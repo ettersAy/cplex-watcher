@@ -58,6 +58,7 @@ jobs:
         if: github.event_name != 'workflow_dispatch' || inputs.operation == 'scan' || ((inputs.operation == 'create' || inputs.operation == 'edit' || inputs.operation == 'add_showtime' || inputs.operation == 'refresh' || inputs.operation == 'watch_preview') && steps.command.outcome == 'success')
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
           TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
         run: python seat_watcher.py scan --notify ${{ inputs.operation == 'refresh' && format('--watch-id {0}', inputs.watch_id) || '' }}
 

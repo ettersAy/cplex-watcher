@@ -14,6 +14,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from seat_watcher import request_theatrical_json
+from notification_preferences import load_preferences, notification_chat_ids
 
 ROOT = Path(__file__).parent
 MOVIES_FILE = ROOT / "movies.json"
@@ -187,6 +188,7 @@ def send_telegram(token, chat_ids, text, parse_mode=None):
 
 def main():
     movies = json.loads(MOVIES_FILE.read_text())
+    preferences = load_preferences(ROOT)
     sales_started = json.loads(SALES_STARTED_FILE.read_text()) if SALES_STARTED_FILE.exists() else []
     state = json.loads(STATE_FILE.read_text()) if STATE_FILE.exists() else {"movies": {}}
     token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -233,18 +235,20 @@ def main():
             try:
                 if not token or not alert_chat_ids:
                     raise ValueError("Telegram alert credentials are missing; keeping the watch for retry")
+                alert_chat_ids = notification_chat_ids(alert_chat_ids, f"ticket:{key}", preferences)
                 message = ("Go run buy your ticket for the movie "
                            f"<a href=\"{html.escape(current['url'], quote=True)}\">{html.escape(current['name'])}</a>{html.escape(location)}.")
                 showtime = current.get("showtime")
                 if showtime:
                     when = datetime.fromisoformat(showtime["startsAt"]).strftime("%b %d at %I:%M %p")
                     message += f"\n{html.escape(showtime['theatreName'])} · {when}"
-                send_telegram(
-                    token,
-                    ",".join(alert_chat_ids),
-                    message,
-                    parse_mode="HTML",
-                )
+                if alert_chat_ids:
+                    send_telegram(
+                        token,
+                        ",".join(alert_chat_ids),
+                        message,
+                        parse_mode="HTML",
+                    )
             except (HTTPError, URLError, TimeoutError, ValueError) as error:
                 previous["lastCheckStatus"] = "failed"
                 previous["lastError"] = f"Telegram sale alert failed: {error}"
@@ -252,7 +256,7 @@ def main():
                 active_movies.append(movie)
                 continue
             previous["alerted"] = True
-            print("  Telegram alert sent")
+            print("  Telegram alert sent" if alert_chat_ids else "  All recipients opted out; no alert sent")
 
         if current["hasShowtimes"]:
             if not any(existing["url"] == url for existing in sales_started):

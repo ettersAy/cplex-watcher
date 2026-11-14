@@ -14,6 +14,7 @@ Personal Cineplex movie-availability watcher with Telegram notifications and a s
 3. The Action finds the official Cineplex movie URL and deduplicates watches by URL.
 4. GitHub Actions checks every active movie every 30 minutes.
 5. When Cineplex reports ticket sales started, the Action alerts every authorized recipient in Telegram once.
+6. Every Saturday at noon Montréal time, accounts with active watches receive their own weekly watch list.
 
 The app uses GitHub Actions for Cineplex requests because Cineplex blocks Cloudflare Worker requests.
 
@@ -25,7 +26,12 @@ Telegram:
 /watch Runner
 /stopwatch Runner
 /list
+/stop Movie Name
+/stop all
+/stop reminder
 ```
+
+`/stop` changes only your notifications. `/stop reminder` keeps your watch alert settings unchanged. Use `/start all` or `/start reminder` to resume. `/stopwatch` and the web page still manage the shared watch list.
 
 Web page:
 

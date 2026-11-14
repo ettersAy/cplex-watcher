@@ -17,6 +17,43 @@ function allowedTelegramChatIds(env) {
   return new Set(value.split(/[\s,]+/).map((chatId) => chatId.trim()).filter(Boolean));
 }
 
+async function notificationRecipientKey(env, chatId) {
+  if (!env.TELEGRAM_PREFERENCES_KEY) throw new Error("Telegram preferences key is not configured");
+  const bytes = new TextEncoder();
+  const key = await crypto.subtle.importKey("raw", bytes.encode(env.TELEGRAM_PREFERENCES_KEY), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, bytes.encode(chatId));
+  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function handleNotificationPreference(env, chatId, operation, query) {
+  const requestId = crypto.randomUUID();
+  try {
+    const recipientKey = await notificationRecipientKey(env, chatId);
+    const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
+    // Notification-only friends can manage themselves without gaining shared-watch permissions.
+    if (!Object.hasOwn(recipients, recipientKey)) return;
+    if (!query || query.length > 200) {
+      await telegram(env, chatId, "Use /stop Movie Name, /stop all, or /stop reminder.\nResume with /start all or /start reminder.");
+      return;
+    }
+    const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/telegram-reminders.yml/dispatches`, {
+      method: "POST",
+      headers: {
+        accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+        "content-type": "application/json", "user-agent": "CineplexTicketWatcher",
+        "x-github-api-version": "2022-11-28",
+      },
+      body: JSON.stringify({ ref: "main", inputs: { operation, query, recipient_key: recipientKey, request_id: requestId } }),
+    });
+    if (!response.ok) throw new Error(`GitHub preference dispatch failed: HTTP ${response.status}`);
+    console.log(JSON.stringify({ event: "notification_preference_queued", requestId, operation }));
+    await telegram(env, chatId, "Updating your notification preferences. I'll confirm when saved.");
+  } catch (error) {
+    console.error("Could not update notification preference:", error);
+    await telegram(env, chatId, "I could not update your notification preferences. Please try again shortly.");
+  }
+}
+
 async function dispatchWatch(env, titles, requestId, chatId = "") {
   if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
     throw new Error("GitHub Actions dispatch is not configured");
@@ -828,6 +865,11 @@ async function handleUpdate(request, env) {
   const chatId = String(message.chat.id);
   if (/^\/id(?:@\w+)?$/i.test(message.text)) {
     await telegram(env, chatId, `Your Telegram chat ID is ${chatId}. Send it to the watcher owner so they can authorize you.`);
+    return new Response("ok");
+  }
+  const preferenceCommand = message.text.trim().match(/^\/(stop|start)(?:@\w+)?(?:\s+(.+))?$/i);
+  if (preferenceCommand && (preferenceCommand[1].toLowerCase() === "stop" || preferenceCommand[2])) {
+    await handleNotificationPreference(env, chatId, preferenceCommand[1].toLowerCase(), (preferenceCommand[2] || "").trim());
     return new Response("ok");
   }
   if (!allowedTelegramChatIds(env).has(chatId)) return new Response("ok");

@@ -14,13 +14,15 @@ After authorization, each friend can send the bot:
 
 - A command acknowledgement and its final search/removal result go to the person who sent the command.
 - `movies.json`, `sales-started.json`, and `state.json` are shared by everyone.
-- When ticket sales start, every authorized person receives this Telegram message:
+- When ticket sales start, each configured recipient who has not stopped that watch receives this Telegram message:
 
 ```text
 Go run buy your ticket for the movie Movie Name.
 ```
 
 `Movie Name` is a clickable link to its official Cineplex page.
+
+Every Saturday at noon Montréal time, each account with active watches also receives a weekly list. Use `/stop Movie Name` to stop your notifications for one watch, `/stop all` to stop all of them, or `/stop reminder` to turn off only the weekly message. `/start all` and `/start reminder` resume those settings. These personal commands do not remove anyone else's watch; `/stopwatch` still removes the shared watch.
 
 ## Before starting
 
@@ -83,7 +85,15 @@ Expected: `TELEGRAM_CHAT_IDS` appears in the list.
 4. Paste the **same complete comma-separated list** from step 2 as the secret value.
 5. Select **Add secret**.
 
-GitHub Actions uses this secret only for the scheduled ticket-sale alert. The previous `TELEGRAM_CHAT_ID` secret remains a fallback until the new secret is set.
+GitHub Actions uses this secret for ticket alerts, seat alerts, and weekly reminders. The previous `TELEGRAM_CHAT_ID` secret remains a fallback until the new secret is set.
+
+After changing recipients, initialize their private notification identifiers without sending messages:
+
+```bash
+gh workflow run telegram-reminders.yml --repo ettersAy/cplex-watcher -f operation=initialize
+```
+
+This requires the one-time reminder setup in [OPERATIONS.md](OPERATIONS.md#weekly-reminders-and-personal-stop-commands).
 
 ## 5. Deploy the shared-access code
 
@@ -131,7 +141,7 @@ To send a friend the sale-started alert for **George Michael: The Faith Tour** o
 2. Create or update `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`.
 3. Set its value to the friend's private Telegram chat ID.
 
-This affects only the sale-started alert for that movie. Do not add the friend to `TELEGRAM_CHAT_IDS` unless they should also be allowed to use `/watch`, `/stopwatch`, and `/list`. If the friend was previously added there, remove their ID from both the GitHub and Cloudflare `TELEGRAM_CHAT_IDS` secrets.
+This subscribes the friend only to that movie's sale alert and weekly reminder. Run the initialization command from step 4 after changing this secret. The friend can then use the personal `/stop` and `/start` commands. Do not add the friend to `TELEGRAM_CHAT_IDS` unless they should also receive all watches and use `/watch`, `/stopwatch`, and `/list`. If the friend was previously added there, remove their ID from both the GitHub and Cloudflare `TELEGRAM_CHAT_IDS` secrets.
 
 ## Remove a friend's access
 
