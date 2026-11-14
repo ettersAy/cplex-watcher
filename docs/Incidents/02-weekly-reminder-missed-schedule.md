@@ -80,4 +80,9 @@ To send a missed reminder immediately, use the recovery command near the top of 
 
 ## Scheduler deployment evidence
 
-Pending the live Cron Trigger observation. The manual reminder above is already delivered; it does not by itself prove the replacement timer works.
+- Fix commit: `86d24a0006031f907f382e0aa0318c50c8df71a4`, published before the Worker deployment.
+- Worker version: `0ef9fce7-e32f-4dfc-a76c-4ad5c1573535`. The deployment output explicitly registered `schedule: */5 * * * *` at about 17:44 UTC.
+- A real Cloudflare scheduled event fired at **12:50:18 PM Montréal** and finished `Ok`. It logged `weekly_reminder_queued`, week `2026-11-14`, request ID `weekly-2026-11-14`.
+- Cloudflare created [run 43623262366](https://github.com/ettersAy/cplex-watcher/actions/runs/43623262366) at 17:50:20 UTC on the fix commit. Its exact title was `Telegram remind weekly-2026-11-14`; processing and state saving both succeeded.
+- Both saved delivery markers remained `2026-11-14`, both reminder preferences remained enabled, and the owner's Telegram chat still contained exactly **one** weekly reminder after the automatic run. This verifies that the recovery did not duplicate today's delivery.
+- The next real timer event at **12:55:18 PM Montréal** also finished `Ok` and logged `weekly_reminder_complete`, week `2026-11-14`, run ID `43623262366`. It did not dispatch another job. This verifies the completed-week branch in production, separately from local mocks.
