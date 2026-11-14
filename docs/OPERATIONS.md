@@ -128,6 +128,15 @@ node scripts/test-preview-url-parameters.mjs
 
 These are no-network script tests, including recipient isolation, failed delivery/retry, opt-outs, authorization, and existing Montréal/seat regressions. They do not prove a deployed Telegram round trip.
 
+### Live verification — 2026-11-14
+
+- Published implementation: `ab0c6bfea6ee18acac72a4cbbbaafb86e1748dba`; Worker version `be5ff7cb-0b93-484e-916d-5e0455673989`. The same preferences key is installed in GitHub and Cloudflare. The workflow is active.
+- [Initialization run 43613550663](https://github.com/ettersAy/cplex-watcher/actions/runs/43613550663) succeeded and registered two recipients without sending messages.
+- A real `/stop reminder` from the owner's signed-in Telegram Web account produced a Worker acknowledgement, [successful run 43613742506](https://github.com/ettersAy/cplex-watcher/actions/runs/43613742506), saved opt-out, and the final Telegram confirmation. Worker request ID: `2c909455-6135-44f4-bb01-185504d6cfd2`. The other recipient and all watch-alert preferences remained unchanged.
+- `/start reminder` produced another acknowledgement and final reply, [successful run 43613881184](https://github.com/ettersAy/cplex-watcher/actions/runs/43613881184), and restored the owner's reminder preference. Worker request ID: `aa74ea13-610c-48b8-8a69-61a8531ee28a`. Both webhook requests completed with HTTP 200 and no Worker exceptions.
+- Final state in `7aee8e7` has reminders and watch alerts enabled for both recipients. Neither has a `lastReminderWeek`: no early weekly broadcast was sent. Actual scheduled reminder delivery remains to be observed at noon.
+- All 44 local Python tests, the Worker command tests, existing seat/message/preview regressions, YAML checks, and Worker dry-run build passed. Telegram Web was used for the real command test because the local user-client session lacked its API ID/hash environment settings.
+
 ## Ticket-sale alert behavior
 
 The scheduled `Check Cineplex ticket sales` workflow runs on this cron schedule:
