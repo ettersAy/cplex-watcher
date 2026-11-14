@@ -1,6 +1,6 @@
 # Cineplex Ticket Watcher operations guide
 
-This guide documents the deployed watcher as of 2026-09-13. It describes the current architecture only; old Cloudflare KV watch records and the GitHub-Action-to-Worker callback are retired.
+This guide documents the deployed watcher, including the Montréal ticket-sale rule verified on 2026-11-14. Old Cloudflare KV watch records and the GitHub-Action-to-Worker callback are retired.
 
 ## Architecture
 
@@ -78,7 +78,7 @@ The alert is sent directly from GitHub Actions with its Telegram secrets. This a
 
 ### George Michael — Montréal only
 
-**Prepared locally on 2026-11-14; deployment is pending.**
+**Deployed and verified on 2026-11-14.**
 
 For the `george-michael-the-faith-tour` URL, `get_movie()` reads the current Cineplex film ID, then checks these public theatrical API endpoints:
 
@@ -102,9 +102,9 @@ Verification on 2026-11-14:
 - A positive control in Toronto returned theatre `7400`, session `314899`, December 9 at 19:00. This was a read-only API check; no ticket purchase or Telegram message was sent.
 - The production-state rehearsal used temporary JSON files and live Cineplex reads: George Michael returned to the active list, six other completed movies were preserved, and no Telegram message was sent.
 - All 26 focused tests passed with `python3 -m unittest discover -s tests -v`; the existing seat-watcher checks passed with `/opt/homebrew/bin/python3 scripts/test-seat-watcher.py`. The changed shared helper also returned live seat metadata successfully for the Toronto control session.
-- Production state still records the national alert from `2026-11-11T22:57:42.764734+00:00`; the local migration has not been run against production.
+- [GitHub Actions run 43607203993](https://github.com/ettersAy/cplex-watcher/actions/runs/43607203993) succeeded on code commit `4f93617d1de4d7ea1ddc76d8ce65b928423c1475`. It rearmed the old national alert from November 11 and saved `city: Montréal`, `nationalHasShowtimes: true`, `hasShowtimes: false`, `lastCheckStatus: success`, with no alert flag, at `2026-11-14T14:53:32.098927+00:00` (09:53 Montréal time). George Michael is active exactly once, absent from the completed list, and the six other completed movies were preserved. No sale alert was sent.
 
-Publish the Python changes through the existing GitHub repository, then run the normal ticket check and inspect its saved state. No Cloudflare Worker or Pages deployment is required for this change. Preserve the upstream workflow's concurrency group and push-retry logic when merging the local branch. The configured schedule is every 30 minutes; GitHub controls the actual start time.
+The Python changes run through the existing GitHub repository and ticket-check workflow. No Cloudflare Worker or Pages deployment was needed. The upstream workflow's concurrency group and push-retry logic were preserved. The configured schedule is every 30 minutes; GitHub controls the actual start time.
 
 ## Web interface
 
