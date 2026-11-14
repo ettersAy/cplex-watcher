@@ -2,7 +2,7 @@
   "recipients": {
     "e515dd77ff1d704816c0fa65c0d5ac48d22573c6ae4a099925aef05407d84b4a": {},
     "fa0bdbf7aa50ca8a3875df7f6f3b33865b7bd6c2dc6a41b9a3b676835f6abbe1": {
-      "remindersEnabled": false
+      "remindersEnabled": true
     }
   }
 }
