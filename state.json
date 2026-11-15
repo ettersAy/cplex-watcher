@@ -8,8 +8,9 @@
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
       "nationalHasShowtimes": true,
       "showtime": null,
-      "lastCheckedAt": "2026-11-14T20:52:42.120896+00:00",
-      "lastCheckStatus": "success"
+      "lastCheckedAt": "2026-11-15T00:52:05.709524+00:00",
+      "lastCheckStatus": "failed",
+      "lastError": "The read operation timed out"
     },
     "hanuman-ansh-hindi-west": {
       "name": "Hanuman Ansh (Hindi w/e.s.t.)",
