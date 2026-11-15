@@ -4,13 +4,18 @@
       "city": "Montr\u00e9al",
       "name": "George Michael: The Faith Tour",
       "releaseDate": "2026-12-11T00:00:00",
-      "hasShowtimes": false,
+      "hasShowtimes": true,
       "url": "https://www.cineplex.com/movie/george-michael-the-faith-tour",
       "nationalHasShowtimes": true,
-      "showtime": null,
-      "lastCheckedAt": "2026-11-15T00:52:05.709524+00:00",
-      "lastCheckStatus": "failed",
-      "lastError": "The read operation timed out"
+      "showtime": {
+        "theatreId": 9109,
+        "theatreName": "Cin\u00e9ma Cineplex Forum et VIP",
+        "showtimeId": 499144,
+        "startsAt": "2026-12-09T19:00:00"
+      },
+      "lastCheckedAt": "2026-11-15T07:38:28.022300+00:00",
+      "lastCheckStatus": "success",
+      "alerted": true
     },
     "hanuman-ansh-hindi-west": {
       "name": "Hanuman Ansh (Hindi w/e.s.t.)",
