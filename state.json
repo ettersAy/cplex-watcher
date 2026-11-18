@@ -52,6 +52,14 @@
       "lastCheckedAt": "2026-09-15T01:15:32.532930+00:00",
       "lastCheckStatus": "success",
       "alerted": true
+    },
+    "paper-tiger": {
+      "name": "Paper Tiger",
+      "releaseDate": "2026-11-20T00:00:00",
+      "hasShowtimes": false,
+      "url": "https://www.cineplex.com/movie/paper-tiger",
+      "lastCheckedAt": "2026-11-18T00:38:43.293831+00:00",
+      "lastCheckStatus": "success"
     }
   }
 }
