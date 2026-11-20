@@ -14,7 +14,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 
 from seat_watcher import request_theatrical_json
-from notification_preferences import load_preferences, notification_chat_ids
+from notification_preferences import load_preferences, notification_chat_ids, recipient_key, telegram_chat_ids
 
 ROOT = Path(__file__).parent
 MOVIES_FILE = ROOT / "movies.json"
@@ -164,17 +164,13 @@ def rearm_montreal_watch(movies, sales_started, state):
     return True
 
 
-def telegram_chat_ids(value):
-    """Return distinct chat IDs from a comma- or whitespace-separated secret."""
-    return list(dict.fromkeys(chat_id for chat_id in re.split(r"[\s,]+", value or "") if chat_id))
-
-
-def sale_alert_chat_ids(url, default_chat_ids, george_michael_chat_ids):
-    """Return normal recipients plus George Michael's private alert recipient."""
+def sale_alert_chat_ids(url, default_chat_ids, secondary_chat_ids, subscribers=()):
+    """Owners get every movie; secondary accounts get their subscriptions."""
     recipients = telegram_chat_ids(default_chat_ids)
     slug = movie_slug(url)
-    if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG:
-        recipients.extend(telegram_chat_ids(george_michael_chat_ids))
+    for chat_id in telegram_chat_ids(secondary_chat_ids):
+        if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG or (subscribers and recipient_key(chat_id) in subscribers):
+            recipients.append(chat_id)
     return list(dict.fromkeys(recipients))
 
 
@@ -231,8 +227,8 @@ def main():
         # Send one alert only. This also alerts if tickets were already on sale
         # when Telegram is connected for the first time.
         if current["hasShowtimes"] and not previous.get("alerted"):
-            alert_chat_ids = sale_alert_chat_ids(url, chat_ids, george_michael_chat_ids)
             try:
+                alert_chat_ids = sale_alert_chat_ids(url, chat_ids, george_michael_chat_ids, movie.get("subscribers", []))
                 if not token or not alert_chat_ids:
                     raise ValueError("Telegram alert credentials are missing; keeping the watch for retry")
                 alert_chat_ids = notification_chat_ids(alert_chat_ids, f"ticket:{key}", preferences)
@@ -259,13 +255,18 @@ def main():
             print("  Telegram alert sent" if alert_chat_ids else "  All recipients opted out; no alert sent")
 
         if current["hasShowtimes"]:
-            if not any(existing["url"] == url for existing in sales_started):
-                sales_started.append({
+            completed = next((existing for existing in sales_started if existing["url"] == url), None)
+            if completed is None:
+                completed = {
+                    **movie,
                     "url": url,
                     "name": current["name"],
                     "salesStartedAt": previous["lastCheckedAt"],
-                })
+                }
+                sales_started.append(completed)
                 print("  Moved to sales-started list")
+            if movie.get("subscribers"):
+                completed["subscribers"] = list(dict.fromkeys(completed.get("subscribers", []) + movie["subscribers"]))
             continue
 
         active_movies.append(movie)

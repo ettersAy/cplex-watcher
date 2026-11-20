@@ -21,11 +21,12 @@ GitHub Pages <── reads public JSON ─────────────�
 |---|---|
 | Cloudflare Worker | Validates Telegram updates, protects the web queue API, dispatches GitHub Actions, formats `/list`, and schedules/retries weekly reminders. |
 | GitHub Actions | Looks up titles, deduplicates Cineplex URLs, performs 30-minute checks, persists check state, and sends Telegram messages. |
-| `movies.json` | Source of truth for active watches. Each entry is one official Cineplex URL. |
+| `movies.json` | Source of truth for active watches. Each entry is one official Cineplex URL, with optional `subscribers` containing friends' HMAC account identifiers. |
+| `register_watch.py` | Finds movies and saves shared watches plus personal subscriptions. |
 | `sales-started.json` | Movies moved out of the active queue after Cineplex reports that sales started. |
 | `state.json` | Last successful or failed check for each active watch, including `hasShowtimes`, timestamp, and error. |
 | `telegram_reminders.py` | Weekly personal watch lists and `/stop`/`/start` preference updates; sends results directly to Telegram. |
-| `notification_preferences.py` / `notification-preferences.json` | Shared notification filtering and per-recipient preferences, indexed by private HMAC identifiers rather than chat IDs. |
+| `notification_preferences.py` / `notification-preferences.json` | Recipient configuration, notification filtering and per-recipient preferences, indexed by private HMAC identifiers rather than chat IDs. |
 | GitHub Pages | Static admin page. It validates a local browser token, then reads the public JSON lists and posts new titles to the Worker. |
 | Telegram | Admin command and notification channel. |
 
@@ -48,9 +49,13 @@ The Action then sends one result:
 | `Tickets are already on sale …` | The movie has showtimes, so it is not added as a future-sale watch. |
 | Search error | The title was not found, was ambiguous, or Cineplex could not be checked. |
 
+Secondary friends can register their own watches. The owner receives every shared movie; friends receive only their subscriptions, plus the existing George Michael subscription. Adding an already shared movie still registers the friend's subscription. The workflow confirms success only after saving state. Existing `/stop` settings remain in force; a paused account gets a reminder to use `/start all` in its registration reply.
+
+See [friend access](FRIENDS-ACCESS.md) and [the personal-watch implementation record](Incidents/03-friend-personal-watch-access.md) for configuration, rollout and verification.
+
 ### `/list`
 
-Sales-started movies are listed first, then active watches. Each movie uses one compact line:
+The owner's list is shared. A secondary friend's list is filtered to their subscribed, non-stopped movies, including their completed sales history. Sales-started movies are listed first, then active watches. Each movie uses one compact line:
 
 ```text
 ⏳ Clickable movie title 👁️ in X min ☀️ Last check YY-MM-DD HH:MM:SS
@@ -68,7 +73,7 @@ The timer explicitly dispatches `telegram-reminders.yml` with `request_id=weekly
 
 See [the missed-reminder incident and recovery procedure](Incidents/02-weekly-reminder-missed-schedule.md) for evidence and exact diagnostic commands. Dispatch and runner startup still take time, so this targets noon rather than guaranteeing delivery at precisely 12:00:00.
 
-The message uses saved active ticket watches and enabled, upcoming seat watches. It makes no Cineplex requests. Default recipients receive their shared watches; `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS` recipients receive only the George Michael ticket watch unless also included in the default list. Completed, stopped, or empty personal lists receive no reminder.
+The message uses saved active ticket watches and enabled, upcoming seat watches. It makes no Cineplex requests. Default recipients receive their shared watches; `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS` recipients receive their personal movie subscriptions plus the existing George Michael ticket watch. Secondary friends do not receive shared seat watches. Completed, stopped, or empty personal lists receive no reminder.
 
 Example:
 
@@ -340,7 +345,7 @@ npx wrangler secret put UI_ACCESS_TOKEN
 | Secret | Purpose |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Lets the Worker acknowledge Telegram commands and answer `/list`. |
-| `TELEGRAM_CHAT_IDS` | Comma-separated private Telegram chat IDs authorized to use bot commands. Falls back to `ADMIN_CHAT_ID` when absent. |
+| `TELEGRAM_CHAT_IDS` | Main accounts allowed to manage shared watches. Falls back to `ADMIN_CHAT_ID` when absent. Secondary accounts are authorized through the initialized HMAC preference registry. |
 | `TELEGRAM_WEBHOOK_SECRET` | Verifies that incoming updates came through Telegram's webhook. |
 | `GITHUB_ACTIONS_TOKEN` | Fine-grained GitHub token used only to dispatch `check-tickets.yml`. |
 | `UI_ACCESS_TOKEN` | Shared private token required by the GitHub Pages queue form. |
@@ -370,7 +375,8 @@ In GitHub: **Repository** → **Settings** → **Secrets and variables** → **A
 | Secret | Purpose |
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Lets Actions send registration results and sale alerts. |
-| `TELEGRAM_CHAT_IDS` | Comma-separated private Telegram chat IDs that receive ticket-sale alerts. Falls back to `TELEGRAM_CHAT_ID` when absent. |
+| `TELEGRAM_CHAT_IDS` | Main accounts that receive all shared ticket/seat watches, subject to personal opt-outs. Falls back to `TELEGRAM_CHAT_ID` when absent. |
+| `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS` | Secondary accounts: their own movie subscriptions plus the existing George Michael watch. Historical name retained to avoid secret migration. |
 
 The current flow does **not** use `WORKER_CALLBACK_URL` or `WATCHER_CALLBACK_SECRET`. Do not recreate them for this design.
 
@@ -459,8 +465,10 @@ Expected workflow steps:
 1. **Find requested movies** for `/watch` or web requests; multi-line web titles run sequentially in one Action.
 2. **Save requested movies**, which deduplicates by official URL, or **Remove requested movie** for a stop request.
 3. **Check movies and notify Telegram**.
-4. **Send registration result to Telegram**.
-5. **Save alert state**, which commits changed `movies.json` and `state.json`.
+4. **Save alert state**, which commits changed `movies.json`, `sales-started.json` and `state.json`, even when a subsequent notification fails.
+5. **Send registration result to Telegram**; success requires the registration and persistence steps to succeed.
+
+Ticket workflows use `queue: max` and check out the latest `main` when starting, so queued friends' commands keep earlier subscriptions. This follows [GitHub's concurrency queue behavior](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency). Preference commands write their separate file through the existing reminder workflow.
 
 ### End-to-end smoke test
 

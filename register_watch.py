@@ -5,10 +5,12 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from watcher import get_movie
+from notification_preferences import configured_recipients, telegram_chat_ids
 
 
 SITEMAP_URL = "https://www.cineplex.com/dynamic-sitemap.xml"
@@ -51,6 +53,42 @@ def find_movie(title):
     if len(matches) > 1:
         return {"status": "error", "error": "I found several matches. Send a more specific title:\n" + "\n".join(f"• {movie['name']}" for movie in matches)}
     return {"status": "error", "error": f"I could not confirm a Cineplex movie matching “{title}" + "”."}
+
+
+def save_registration(root, registration, recipient_key=""):
+    """Save one shared watch, plus the requesting friend's private subscription."""
+    subscriber = ""
+    if recipient_key:
+        default, _, recipients = configured_recipients()
+        if recipient_key not in recipients:
+            raise ValueError("This recipient is not configured for watch notifications")
+        if recipients[recipient_key] not in telegram_chat_ids(default):
+            subscriber = recipient_key
+
+    movies_path = root / "movies.json"
+    sales_path = root / "sales-started.json"
+    movies = json.loads(movies_path.read_text())
+    sales = json.loads(sales_path.read_text()) if sales_path.exists() else []
+    for result in registration.get("results", [registration]):
+        if result["status"] not in ("watching", "already_on_sale"):
+            continue
+        movie = result["movie"]
+        target = movies if result["status"] == "watching" else sales
+        existing = next((entry for entry in target if entry["url"] == movie["url"]), None)
+        if existing is None:
+            existing = {"url": movie["url"], "name": movie["name"]}
+            if result["status"] == "already_on_sale":
+                existing["salesStartedAt"] = datetime.now(timezone.utc).isoformat()
+            target.append(existing)
+        elif result["status"] == "watching":
+            result["status"] = "already_watching"
+        if subscriber and subscriber not in existing.setdefault("subscribers", []):
+            existing["subscribers"].append(subscriber)
+            # A globally existing watch can still be new to this friend.
+            if result["status"] == "already_watching":
+                result["status"] = "watching"
+    movies_path.write_text(json.dumps(movies, indent=2) + "\n")
+    sales_path.write_text(json.dumps(sales, indent=2) + "\n")
 
 
 def main():

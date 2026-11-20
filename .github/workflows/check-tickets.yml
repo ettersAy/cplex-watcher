@@ -30,10 +30,14 @@ on:
         description: Telegram chat to receive this command's final result
         required: false
         type: string
+      recipient_key:
+        description: Opaque Telegram account identifier for a personal subscription and reply
+        required: false
+        type: string
 
 concurrency:
   group: ticket-watch-state-write
-  cancel-in-progress: false
+  queue: max
 
 permissions:
   contents: write
@@ -43,6 +47,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Each queued command reads the watches saved by the previous run.
+          ref: main
 
       - uses: actions/setup-python@v5
         with:
@@ -76,45 +83,23 @@ jobs:
           PY
 
       - name: Save requested movies
+        id: registration
         if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch'
+        env:
+          RECIPIENT_KEY: ${{ inputs.recipient_key }}
+          TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
+          TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
         run: |
           python - <<'PY'
           import json
-          from datetime import datetime, timezone
+          import os
           from pathlib import Path
+          from register_watch import save_registration
 
           registration_path = Path("registration.json")
           registration = json.loads(registration_path.read_text())
-          results = registration.get("results", [registration])
-          movies_path = Path("movies.json")
-          sales_started_path = Path("sales-started.json")
-          movies = json.loads(movies_path.read_text())
-          sales_started = json.loads(sales_started_path.read_text()) if sales_started_path.exists() else []
-          changed = False
-          for result in results:
-              if result["status"] == "watching":
-                  movie = result["movie"]
-                  url = movie["url"]
-                  if any(existing["url"] == url for existing in movies):
-                      result["status"] = "already_watching"
-                      print(f"Movie is already watched: {url}")
-                  else:
-                      movies.append({"url": url, "name": movie["name"]})
-                      changed = True
-                      print(f"Added watched movie: {url}")
-              elif result["status"] == "already_on_sale":
-                  movie = result["movie"]
-                  if not any(existing["url"] == movie["url"] for existing in sales_started):
-                      sales_started.append({
-                          "url": movie["url"],
-                          "name": movie["name"],
-                          "salesStartedAt": datetime.now(timezone.utc).isoformat(),
-                      })
-                      changed = True
-                      print(f"Added sales-started movie: {movie['url']}")
-          if changed:
-              movies_path.write_text(json.dumps(movies, indent=2) + "\n")
-              sales_started_path.write_text(json.dumps(sales_started, indent=2) + "\n")
+          save_registration(Path("."), registration, os.environ["RECIPIENT_KEY"])
           registration_path.write_text(json.dumps(registration) + "\n")
           PY
 
@@ -187,24 +172,58 @@ jobs:
           TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
         run: python watcher.py
 
+      - name: Save alert state
+        id: save
+        if: always()
+        run: |
+          git config user.name "Cineplex Ticket Watcher"
+          git config user.email "actions@github.com"
+          git add movies.json sales-started.json state.json
+          if git diff --cached --quiet; then
+            echo "No ticket-watch state changes to save"
+            exit 0
+          fi
+          git commit -m "Update ticket watcher state"
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push attempt ${attempt} was rejected; rebasing state commit onto latest main"
+            git fetch origin main
+            git rebase origin/main
+          done
+          echo "Could not save ticket-watch state after three attempts" >&2
+          exit 1
+
       - name: Send registration result to Telegram
         if: github.event_name == 'workflow_dispatch' && inputs.operation == 'watch' && always()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_RECIPIENTS: ${{ inputs.chat_id || secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
+          TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
+          RECIPIENT_KEY: ${{ inputs.recipient_key }}
+          COMMAND_CHAT_ID: ${{ inputs.chat_id }}
+          REGISTRATION_SAVED: ${{ steps.registration.outcome == 'success' && steps.save.outcome == 'success' }}
         run: |
           python - <<'PY'
           import json
           import os
           from pathlib import Path
-          from watcher import send_telegram
+          from watcher import movie_slug, send_telegram
+          from notification_preferences import configured_recipients, load_preferences, watches_enabled
 
+          key = os.environ["RECIPIENT_KEY"]
+          chat_ids = configured_recipients()[2][key] if key else os.environ["COMMAND_CHAT_ID"] or os.environ["TELEGRAM_RECIPIENTS"]
+          preference = load_preferences(Path(".")).get(key, {})
           try:
               result = json.loads(Path("registration.json").read_text())
           except (OSError, json.JSONDecodeError) as error:
               result = {"results": [{"status": "error", "error": f"GitHub registration failed: {error}"}]}
           for item in result.get("results", [result]):
-              if item.get("status") == "watching":
+              if os.environ["REGISTRATION_SAVED"] != "true":
+                  text = "I could not save your watch. Please try again shortly."
+              elif item.get("status") == "watching":
                   movie = item["movie"]
                   text = f"Started watching {movie['name']}.\nNext check: within 30 minutes.\n{movie['url']}"
               elif item.get("status") == "already_watching":
@@ -215,7 +234,10 @@ jobs:
                   text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
               else:
                   text = item.get("error", "I could not complete the Cineplex search.")
-              send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text)
+              if (os.environ["REGISTRATION_SAVED"] == "true" and item.get("status") in ("watching", "already_watching")
+                      and not watches_enabled(preference, f"ticket:{movie_slug(item['movie']['url'])}")):
+                  text += "\nYour alerts are paused. Use /start all to resume your watches."
+              send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], chat_ids, text)
               print(f"Telegram registration result sent: status={item.get('status')}")
           PY
 
@@ -246,24 +268,3 @@ jobs:
                   send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_RECIPIENTS"], text)
                   print("Telegram removal result sent")
           PY
-
-      - name: Save alert state
-        run: |
-          git config user.name "Cineplex Ticket Watcher"
-          git config user.email "actions@github.com"
-          git add movies.json sales-started.json state.json
-          if git diff --cached --quiet; then
-            echo "No ticket-watch state changes to save"
-            exit 0
-          fi
-          git commit -m "Update ticket watcher state"
-          for attempt in 1 2 3; do
-            if git push origin HEAD:main; then
-              exit 0
-            fi
-            echo "Push attempt ${attempt} was rejected; rebasing state commit onto latest main"
-            git fetch origin main
-            git rebase origin/main
-          done
-          echo "Could not save ticket-watch state after three attempts" >&2
-          exit 1

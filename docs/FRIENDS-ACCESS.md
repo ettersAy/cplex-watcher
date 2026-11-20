@@ -1,175 +1,87 @@
 # Share Cineplex Watcher with friends
 
-Use this guide when you and friends share the same movie watch lists. Everyone uses the same bot, active-watch list, sales-started list, and optional web UI token.
+There are two access levels:
 
-## What each person can do
+| Account | Watches and alerts | Commands |
+|---|---|---|
+| Owner/main list | Every shared movie, including movies added by friends | Shared movie/seat management and personal notification settings |
+| Secondary friend | Movies they add, plus their existing George Michael subscription | `/watch`, personal `/list`, `/stop`, `/start`; `/stopwatch` is a personal stop alias |
 
-After authorization, each friend can send the bot:
+One shared movie check serves everyone. Friends never receive the owner's unrelated movies or another friend's movies unless they subscribe to the same movie themselves. Their weekly reminders follow the same rule. Personal opt-outs always apply.
+
+## Everyday commands
 
 ```text
 /watch Movie Name
-/stopwatch Movie Name
 /list
+/stop Movie Name
+/stop all
+/stop reminder
+/start all
+/start reminder
 ```
 
-- A command acknowledgement and its final search/removal result go to the person who sent the command.
-- `movies.json`, `sales-started.json`, and `state.json` are shared by everyone.
-- When ticket sales start, each configured recipient who has not stopped that watch receives this Telegram message:
+A friend's `/watch` adds the movie to their list and the owner's shared list. It also works when the owner already watches that movie. The final confirmation goes to the sender after the Action saves the subscription. Movies already on sale get an immediate result and appear in personal sales history, without creating an active watch.
 
-```text
-Go run buy your ticket for the movie Movie Name.
-```
+`/stop Movie Name` and `/stop all` affect only the sender. The owner's watch remains. `/stop reminder` disables only the weekly message. Adding a movie does not undo an existing stop setting; the reply explains how to resume paused alerts.
 
-`Movie Name` is a clickable link to its official Cineplex page.
+For the owner, `/stopwatch` still removes the shared watch. For a secondary friend, it means `/stop` and cannot delete someone else's watch. Seat-management commands remain limited to main accounts.
 
-Every Saturday at noon Montréal time, each account with active watches also receives a weekly list. Use `/stop Movie Name` to stop your notifications for one watch, `/stop all` to stop all of them, or `/stop reminder` to turn off only the weekly message. `/start all` and `/start reminder` resume those settings. These personal commands do not remove anyone else's watch; `/stopwatch` still removes the shared watch.
+## Add a secondary friend
 
-## Before starting
+1. Have the friend open a private chat with [@cplxwatcher_bot](https://t.me/cplxwatcher_bot), press **Start**, and send `/id`. They send their chat ID privately to the owner.
+2. In [GitHub Actions secrets](https://github.com/ettersAy/cplex-watcher/settings/secrets/actions), add the ID to `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`, preserving any existing IDs. Commas or whitespace separate multiple accounts. This historical secret name now holds the secondary list; no replacement secret is needed.
+3. Keep secondary friends out of `TELEGRAM_CHAT_IDS` in both GitHub and Cloudflare. Main-list membership grants all shared watches and management commands.
+4. Initialize the private account registry, without sending Telegram messages:
 
-Only the watcher owner changes configuration. Do not put chat IDs, bot tokens, UI tokens, or GitHub tokens in the repository, screenshots, or messages sent to people who do not need access.
+   ```bash
+   gh workflow run telegram-reminders.yml --repo ettersAy/cplex-watcher -f operation=initialize
+   gh run list --repo ettersAy/cplex-watcher --workflow telegram-reminders.yml --limit 3
+   ```
 
-The owner needs:
+   Wait for the initialization run to succeed. The existing `TELEGRAM_PREFERENCES_KEY` must match in GitHub and Cloudflare; do not rotate it. The repository saves HMAC identifiers, never chat IDs.
+5. The friend can now send `/watch Movie Name` and `/list`. The existing secondary friend already has a registry entry, so deploying the feature needs no secret change or reinitialization.
 
-- Local access to this repository and `wrangler` authentication.
-- Admin access to the `ettersAy/cplex-watcher` GitHub repository.
-- The friends' Telegram chat IDs.
+The historical George Michael subscription remains for all secondary accounts. They can stop it personally using `/stop George Michael` while it is active.
 
-## 1. Ask each friend for their chat ID
+## Main accounts and web access
 
-Each friend must open a **private chat** with [@cplxwatcher_bot](https://t.me/cplxwatcher_bot), press **Start**, and send:
-
-```text
-/id
-```
-
-The bot replies with that person's Telegram chat ID. Each friend sends their number only to the watcher owner.
-
-`/id` is deliberately available before authorization. It only returns the sender's own chat ID; it does not grant watcher access.
-
-Do not use a group chat ID unless you deliberately want the entire Telegram group to share bot responses.
-
-## 2. Build the authorized-recipient list
-
-Create one comma-separated list containing the owner's chat ID and every friend chat ID. Example only:
-
-```text
-111111111,222222222,333333333
-```
-
-Keep this exact list private. You will enter the same list in Cloudflare and GitHub.
-
-## 3. Authorize commands in Cloudflare
-
-From the Worker directory, set the `TELEGRAM_CHAT_IDS` secret. Wrangler prompts privately; paste the complete comma-separated list when prompted.
+To deliberately give another person full shared access, add their private ID to `TELEGRAM_CHAT_IDS` in **both** GitHub and Cloudflare, then initialize the registry. Cloudflare accepts the secret with:
 
 ```bash
 cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
 npx wrangler secret put TELEGRAM_CHAT_IDS
 ```
 
-This allows the listed people to use `/watch`, `/stopwatch`, and `/list`. The existing `ADMIN_CHAT_ID` secret remains only as a one-person fallback; once `TELEGRAM_CHAT_IDS` exists, it takes priority.
+The GitHub fallback is `TELEGRAM_CHAT_ID`; the Worker fallback is `ADMIN_CHAT_ID`. Keep the main lists consistent.
 
-Confirm only the secret name, never its value:
+The [web interface](https://ettersay.github.io/cplex-watcher/login.html) uses a shared `UI_ACCESS_TOKEN` and manages everyone's watches. Give it only to people who should have that access; it is not a personal-list interface.
 
-```bash
-npx wrangler secret list --name cplex-watcher
-```
+## Deploy and verify
 
-Expected: `TELEGRAM_CHAT_IDS` appears in the list.
-
-## 4. Configure GitHub Actions sale-alert recipients
-
-1. Open <https://github.com/ettersAy/cplex-watcher/settings/secrets/actions>.
-2. Select **New repository secret**.
-3. Set the name to `TELEGRAM_CHAT_IDS`.
-4. Paste the **same complete comma-separated list** from step 2 as the secret value.
-5. Select **Add secret**.
-
-GitHub Actions uses this secret for ticket alerts, seat alerts, and weekly reminders. The previous `TELEGRAM_CHAT_ID` secret remains a fallback until the new secret is set.
-
-After changing recipients, initialize their private notification identifiers without sending messages:
-
-```bash
-gh workflow run telegram-reminders.yml --repo ettersAy/cplex-watcher -f operation=initialize
-```
-
-This requires the one-time reminder setup in [OPERATIONS.md](OPERATIONS.md#weekly-reminders-and-personal-stop-commands).
-
-## 5. Deploy the shared-access code
-
-The Worker must be deployed after pulling the code containing this feature:
-
-```bash
-cd /Users/Ayoub/Developer/cplex-watcher
-git pull --ff-only
-cd cloudflare-worker
-npx wrangler deploy
-```
-
-The GitHub Actions workflow is used automatically from the repository's `main` branch after the shared-access change is pushed. No manual Pages deployment is required for Telegram-only sharing.
-
-## 6. Test each part safely
-
-Open a Worker log tail first:
+Push the updated Action and Python files **before** deploying the Worker, because the Worker sends the new `recipient_key` workflow input. Then:
 
 ```bash
 cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
+npx wrangler deploy
 npx wrangler tail cplex-watcher --format pretty
 ```
 
-Then test in this order:
+Have the friend send `/watch` for a real desired movie. Verify the acknowledgement, successful Action, final Telegram reply, and saved `subscribers` entry. Their `/list` should show that movie and exclude unrelated owner movies; the owner's `/list` should include it too. Repeating the command must not duplicate the movie. Test stopping only when the friend intends to stop it.
 
-1. The owner sends `/list`; the owner receives the shared list.
-2. One friend sends `/list`; that friend receives the same shared list.
-3. One friend sends `/watch` with a movie not already on the list; that friend receives the acknowledgement and final lookup result.
-4. Confirm the Worker log records the friend command and GitHub Actions has a successful `Check Cineplex ticket sales` run.
-5. When Cineplex later reports sales started, confirm every listed person receives the same clickable sale-alert message.
+See [the implementation and verification record](Incidents/03-friend-personal-watch-access.md) for the exact source, evidence and remaining verification boundary. Unit tests do not prove that a friend received a Telegram message.
 
-Do not add a fake watch just to force a sale alert. The scheduled check runs every 30 minutes and sends the alert once when a real watch first reports sales started.
+## Remove access
 
-## Optional: share the web interface
-
-The login page is <https://ettersay.github.io/cplex-watcher/login.html>. A friend who knows the shared `UI_ACCESS_TOKEN` can add movies, stop active watches, refresh the lists, and run manual scans.
-
-The web token gives the same shared queue permissions as the owner. Share it only with people who should be able to change the shared lists.
-
-## Give a friend one movie's sale alert only
-
-To send a friend the sale-started alert for **George Michael: The Faith Tour** only:
-
-1. Open <https://github.com/ettersAy/cplex-watcher/settings/secrets/actions>.
-2. Create or update `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`.
-3. Set its value to the friend's private Telegram chat ID.
-
-This subscribes the friend only to that movie's sale alert and weekly reminder. Run the initialization command from step 4 after changing this secret. The friend can then use the personal `/stop` and `/start` commands. Do not add the friend to `TELEGRAM_CHAT_IDS` unless they should also receive all watches and use `/watch`, `/stopwatch`, and `/list`. If the friend was previously added there, remove their ID from both the GitHub and Cloudflare `TELEGRAM_CHAT_IDS` secrets.
-
-## Remove a friend's access
-
-1. Remove the friend's chat ID from the comma-separated list.
-2. Update the Cloudflare `TELEGRAM_CHAT_IDS` secret using step 3.
-3. Update the GitHub `TELEGRAM_CHAT_IDS` repository secret using step 4.
-4. Deploy the Worker again:
-
-   ```bash
-   cd /Users/Ayoub/Developer/cplex-watcher/cloudflare-worker
-   npx wrangler deploy
-   ```
-
-5. If the friend also knew the web UI token, rotate it:
-
-   ```bash
-   openssl rand -hex 32
-   npx wrangler secret put UI_ACCESS_TOKEN
-   ```
-
-   Give the replacement token only to people who should retain web access. Existing browsers with the old token redirect to the login page after their next protected request.
+Remove the ID from its GitHub secret and from Cloudflare `TELEGRAM_CHAT_IDS` if it had main access. Run `operation=initialize` again: this removes obsolete registry entries while preserving current accounts' settings. The sender also validates the current secret list, so a removed account cannot add new subscriptions or receive alerts. Rotate `UI_ACCESS_TOKEN` if that person had shared web access.
 
 ## Troubleshooting
 
-| Symptom | Check | Fix |
-|---|---|---|
-| Friend receives no `/watch` or `/list` response | Ask them to send `/id` again | Ensure their exact private-chat ID is in Cloudflare `TELEGRAM_CHAT_IDS`, then deploy the Worker. |
-| Friend receives a command reply but no sale alert | Compare the two configured lists | Add the same ID to GitHub `TELEGRAM_CHAT_IDS`. |
-| Only the owner receives alerts | Check that GitHub has `TELEGRAM_CHAT_IDS`, not only `TELEGRAM_CHAT_ID` | Add the multi-recipient secret and wait for the next scheduled check. |
-| Wrong people can change web watches | Review who knows the UI token | Rotate `UI_ACCESS_TOKEN` and share the replacement only with trusted people. |
-| No sale alert yet | Inspect `sales-started.json` and the latest Action run | Alerts are sent only once, when a real active watch first reports `hasShowtimes: true`. |
+| Symptom | Check |
+|---|---|
+| Friend's `/watch` is ignored | Confirm the new Worker is deployed and initialization succeeded after adding the secondary ID. Do not add the friend to the main list as a workaround. |
+| Friend receives everyone's movies | Remove them from both main lists; keep them only in the secondary secret. |
+| `/watch` confirms a movie but says alerts are paused | Their previous `/stop` setting is still active. `/start all` restores their subscribed watches. |
+| Friend can acknowledge a command but it fails later | Inspect the matching Action; confirm GitHub and Worker use the same HMAC key and that the account remains configured. |
+| `/list` is briefly stale | Public movie JSON can be cached. Check the state commit and retry shortly; do not create a second watch. |
+| Friend has no weekly message | Only active, non-stopped watches produce reminders; completed movies remain in `/list` history only. |

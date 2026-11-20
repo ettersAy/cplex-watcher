@@ -13,7 +13,7 @@ Personal Cineplex movie-availability watcher with Telegram notifications and a s
 2. The Cloudflare Worker starts a GitHub Actions lookup.
 3. The Action finds the official Cineplex movie URL and deduplicates watches by URL.
 4. GitHub Actions checks every active movie every 30 minutes.
-5. When Cineplex reports ticket sales started, the Action alerts every authorized recipient in Telegram once.
+5. When Cineplex reports ticket sales started, the Action alerts the owner and friends subscribed to that movie, respecting personal opt-outs.
 6. Every Saturday at noon Montréal time, accounts with active watches receive their own weekly watch list.
 
 The app uses GitHub Actions for Cineplex requests because Cineplex blocks Cloudflare Worker requests.
@@ -31,7 +31,9 @@ Telegram:
 /stop reminder
 ```
 
-`/stop` changes only your notifications. `/stop reminder` keeps your watch alert settings unchanged. Use `/start all` or `/start reminder` to resume. `/stopwatch` and the web page still manage the shared watch list.
+Friends in the secondary list can use `/watch` for their own movies. Every movie they add is also watched for the owner; they do not receive the owner's other movies. `/list` and weekly reminders show their own subscriptions.
+
+`/stop` changes only your notifications. `/stop reminder` keeps your watch alert settings unchanged. Use `/start all` or `/start reminder` to resume. `/stopwatch` removes a shared watch for the owner, but only stops personal alerts for a secondary friend. The web page remains shared administration.
 
 Web page:
 

@@ -11,22 +11,12 @@ from http.client import HTTPException
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from notification_preferences import load_preferences, recipient_key, save_preferences, watches_enabled
+from notification_preferences import configured_recipients, load_preferences, save_preferences, watches_enabled
 from watcher import (GEORGE_MICHAEL_FAITH_TOUR_SLUG, MONTREAL_CITY, movie_slug,
                      sale_alert_chat_ids, send_telegram, telegram_chat_ids)
 
 ROOT = Path(__file__).parent
 MONTREAL = ZoneInfo("America/Toronto")
-
-
-def configured_recipients():
-    default = (os.getenv("TELEGRAM_RECIPIENTS") or os.getenv("TELEGRAM_CHAT_IDS")
-               or os.getenv("TELEGRAM_CHAT_ID") or "")
-    special = os.getenv("TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS", "")
-    recipients = {recipient_key(chat_id): chat_id for chat_id in telegram_chat_ids(f"{default},{special}")}
-    if not recipients:
-        raise ValueError("Telegram recipients are not configured")
-    return default, special, recipients
 
 
 def active_watches(root, default, special, now):
@@ -35,7 +25,7 @@ def active_watches(root, default, special, now):
         slug = movie_slug(movie["url"])
         detail = f"ticket sales in {MONTREAL_CITY}" if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG else "ticket sales"
         watches.append({"key": f"ticket:{slug}", "name": movie.get("name") or slug.replace("-", " "),
-                        "detail": detail, "recipients": sale_alert_chat_ids(movie["url"], default, special)})
+                        "detail": detail, "recipients": sale_alert_chat_ids(movie["url"], default, special, movie.get("subscribers", []))})
     for watch_id, watch in json.loads((root / "seat-watches.json").read_text())["watches"].items():
         if not watch["enabled"]:
             continue
@@ -151,7 +141,10 @@ def main():
         send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], recipients[key], text)
         return
     preferences = load_preferences(args.root)
-    # Also registers notification-only recipients so the Worker can accept their personal commands.
+    # Explicit initialization also revokes accounts removed from the secrets.
+    if args.operation == "initialize":
+        preferences = {recipient: preferences.get(recipient, {}) for recipient in recipients}
+    # Registers friends so the Worker can accept their personal commands.
     for recipient in recipients:
         preferences.setdefault(recipient, {})
     now = datetime.now(MONTREAL)

@@ -77,7 +77,7 @@ async function handleNotificationPreference(env, chatId, operation, query) {
   try {
     const recipientKey = await notificationRecipientKey(env, chatId);
     const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
-    // Notification-only friends can manage themselves without gaining shared-watch permissions.
+    // Friends can manage themselves without gaining shared-watch administration.
     if (!Object.hasOwn(recipients, recipientKey)) return;
     if (!query || query.length > 200) {
       await telegram(env, chatId, "Use /stop Movie Name, /stop all, or /stop reminder.\nResume with /start all or /start reminder.");
@@ -92,7 +92,7 @@ async function handleNotificationPreference(env, chatId, operation, query) {
   }
 }
 
-async function dispatchWatch(env, titles, requestId, chatId = "") {
+async function dispatchWatch(env, titles, requestId, recipientKey = "") {
   if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
     throw new Error("GitHub Actions dispatch is not configured");
   }
@@ -106,7 +106,7 @@ async function dispatchWatch(env, titles, requestId, chatId = "") {
       "user-agent": "CineplexTicketWatcher",
       "x-github-api-version": "2022-11-28",
     },
-    body: JSON.stringify({ ref: "main", inputs: { title: titles[0], titles: titles.join("\n"), operation: "watch", request_id: requestId, chat_id: chatId } }),
+    body: JSON.stringify({ ref: "main", inputs: { title: titles[0], titles: titles.join("\n"), operation: "watch", request_id: requestId, recipient_key: recipientKey } }),
   });
   if (!response.ok) throw new Error(`GitHub Actions dispatch failed: ${await response.text()}`);
 }
@@ -443,7 +443,7 @@ async function handleWatch(env, chatId, title) {
 
   try {
     console.log(JSON.stringify({ event: "github_dispatch_started", requestId }));
-    await dispatchWatch(env, [title], requestId, chatId);
+    await dispatchWatch(env, [title], requestId, await notificationRecipientKey(env, chatId));
     console.log(JSON.stringify({ event: "github_dispatch_accepted", requestId }));
   } catch (error) {
     console.error("Could not dispatch GitHub Actions watch:", error);
@@ -867,15 +867,19 @@ function formatWatch(movie, check, stateError, salesStarted = false) {
   ].join(" ");
 }
 
-async function handleList(env, chatId) {
+async function handleList(env, chatId, recipientKey = "", preference = {}) {
   try {
     const [salesStarted, movies, stateResult] = await Promise.all([
       getSalesStarted(env),
       getManagedWatches(env),
       getWatchState(env).then((state) => ({ state })).catch((error) => ({ error: error.message })),
     ]);
-    const uniqueMovies = [...new Map(movies.map((movie) => [movie.url, movie])).values()];
-    const uniqueSalesStarted = [...new Map(salesStarted.map((movie) => [movie.url, movie])).values()];
+    const visible = (movie) => !recipientKey || (
+      (movieKey(movie.url) === "george-michael-the-faith-tour" || movie.subscribers?.includes(recipientKey))
+      && !preference.stoppedAll && !preference.stoppedWatches?.includes(`ticket:${movieKey(movie.url)}`)
+    );
+    const uniqueMovies = [...new Map(movies.filter(visible).map((movie) => [movie.url, movie])).values()];
+    const uniqueSalesStarted = [...new Map(salesStarted.filter(visible).map((movie) => [movie.url, movie])).values()];
     console.log(JSON.stringify({ event: "watch_list_requested", activeCount: uniqueMovies.length, salesStartedCount: uniqueSalesStarted.length }));
     const sections = [];
     if (uniqueSalesStarted.length) {
@@ -910,10 +914,29 @@ async function handleUpdate(request, env) {
     await handleNotificationPreference(env, chatId, preferenceCommand[1].toLowerCase(), (preferenceCommand[2] || "").trim());
     return new Response("ok");
   }
-  if (!allowedTelegramChatIds(env).has(chatId)) return new Response("ok");
-
   const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
   const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);
+  if (!allowedTelegramChatIds(env).has(chatId)) {
+    try {
+      const recipientKey = await notificationRecipientKey(env, chatId);
+      const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
+      if (!Object.hasOwn(recipients, recipientKey)) return new Response("ok");
+      if (watchCommand) {
+        await handleWatch(env, chatId, watchCommand[1].trim());
+      } else if (stopCommand) {
+        await handleNotificationPreference(env, chatId, "stop", stopCommand[1].trim());
+      } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
+        await handleList(env, chatId, recipientKey, recipients[recipientKey]);
+      } else {
+        await telegram(env, chatId, "Use /watch Movie Name to add to your list.\nUse /list to see your movies.\nUse /stop Movie Name or /stop all to stop your alerts.\nUse /start all to resume them.");
+      }
+    } catch (error) {
+      console.error("Could not process personal watch command:", error);
+      await telegram(env, chatId, "I could not load your watch settings. Please try again shortly.");
+    }
+    return new Response("ok");
+  }
+
   const watchShowtimeCommand = message.text.match(/^\/watchshowtime(?:@\w+)?\s+(.+)$/i);
   const watchSeatCommand = message.text.match(/^\/watchseat(?:@\w+)?\s+(.+)$/i);
   const stopShowtimeCommand = message.text.match(/^\/stopshowtime(?:@\w+)?\s+(.+)$/i);

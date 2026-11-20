@@ -40,9 +40,9 @@ async function command(text, chatId = "friend-id", secret = "webhook-secret") {
 
 assert.equal((await command("/stop reminder", "friend-id", "invalid")).status, 403);
 await command("/stop reminder", "stranger-id");
-await command("/watch Some Movie"); // Notification-only friend must not gain admin access.
+await command("/watchseat Some Movie"); // Friends must not gain shared seat-management access.
 assert.equal(dispatched.length, 0);
-assert.equal(sent.length, 0);
+assert.match(sent.pop().text, /Use \/watch Movie Name/);
 
 await command("/stop@cplxwatcher_bot reminder");
 assert.equal(dispatched.length, 1);

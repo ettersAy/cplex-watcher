@@ -4,10 +4,26 @@ import hashlib
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 
 
 PREFERENCES_FILE = "notification-preferences.json"
+
+
+def telegram_chat_ids(value):
+    """Return distinct chat IDs from a comma- or whitespace-separated secret."""
+    return list(dict.fromkeys(chat_id for chat_id in re.split(r"[\s,]+", value or "") if chat_id))
+
+
+def configured_recipients():
+    default = (os.getenv("TELEGRAM_RECIPIENTS") or os.getenv("TELEGRAM_CHAT_IDS")
+               or os.getenv("TELEGRAM_CHAT_ID") or "")
+    special = os.getenv("TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS", "")
+    recipients = {recipient_key(chat_id): chat_id for chat_id in telegram_chat_ids(f"{default},{special}")}
+    if not recipients:
+        raise ValueError("Telegram recipients are not configured")
+    return default, special, recipients
 
 
 def recipient_key(chat_id):
