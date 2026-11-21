@@ -12,7 +12,7 @@ Personal Cineplex movie-availability watcher with Telegram notifications and a s
 1. You submit `/watch Movie Name` in Telegram or use the web page.
 2. The Cloudflare Worker starts a GitHub Actions lookup.
 3. The Action finds the official Cineplex movie URL and deduplicates watches by URL.
-4. GitHub Actions checks every active movie every 30 minutes.
+4. The Cloudflare timer targets one GitHub Actions scan per half hour; GitHub's own offset schedule is a backup.
 5. When Cineplex reports ticket sales started, the Action alerts the owner and friends subscribed to that movie, respecting personal opt-outs.
 6. Every Saturday at noon Montréal time, accounts with active watches receive their own weekly watch list.
 

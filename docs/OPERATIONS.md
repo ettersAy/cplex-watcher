@@ -151,10 +151,18 @@ The initial verification above covered commands, not automatic weekly delivery. 
 
 ## Ticket-sale alert behavior
 
-The scheduled `Check Cineplex ticket sales` workflow runs on this cron schedule:
+The existing Cloudflare timer wakes every five minutes. With `TICKET_SCHEDULER_ENABLED = "true"`, it starts the `Check Cineplex ticket sales` Action at most once per completed UTC half-hour slot (`:00` and `:30`). Incomplete dispatches or failed Actions can be retried on the next five-minute tick; queued/running Actions are left alone and expired slot requests do no work. The off-peak GitHub schedule (`:17` and `:47`) stays active as a fallback. Both timer paths share the Action's existing state-write queue and `lastTicketCheckSlot` in `state.json` so they do not repeat a scan that already saved state for that slot. Registration still scans immediately.
 
-```text
-*/30 * * * *
+A completed slot means the scan ran and saved state, not that Cineplex responded successfully for every movie. Check the logs and each active movie's `lastCheckedAt` and `lastCheckStatus`. Per-movie errors are saved and retried at the next regular scan, without increasing the Cineplex request rate. Dispatch or runner delays can still affect exact start times.
+
+Rollout: publish the workflow and Python guard on `main` before deploying the Worker with `npx wrangler deploy` from `cloudflare-worker/`. Verify actual `Ticket check ticket-check-…` runs in successive slots and confirm their per-movie results; a healthy Worker endpoint does not prove a timer ran. For rollback, set `TICKET_SCHEDULER_ENABLED = "false"` in the Worker config and redeploy; the GitHub fallback keeps running.
+
+Validation (no live requests or Telegram sends):
+
+```bash
+python3 -m unittest discover -s tests
+node scripts/test-ticket-schedule.mjs
+node scripts/test-reminder-schedule.mjs
 ```
 
 `watcher.py` uses Cineplex's national `hasShowtimes` value for ordinary watches. The George Michael Montréal rule below replaces that value with a local bookable-session check.
@@ -491,7 +499,7 @@ Ticket workflows use `queue: max` and check out the latest `main` when starting,
 | Web form returns 403 | Wrong browser origin | Confirm `UI_ORIGIN` matches the GitHub Pages origin, then deploy the Worker. |
 | `/list` shows failed/unable status | Read displayed error and `state.json` | The latest check failed. Wait for the next Action run or inspect its logs. |
 | Duplicate movie appears requested | Compare official URL in `movies.json` | The Action deduplicates by canonical URL; exact duplicate URLs are not added. |
-| Cloudflare reports a scheduled-event warning | Tail log | The Worker exports a harmless `scheduled()` handler; GitHub Actions is the actual ticket scheduler. |
+| Cloudflare reports a scheduled-event warning | Tail log | Check the ticket timer flag, Worker cron logs, and GitHub fallback runs. |
 
 ## Current repository map
 

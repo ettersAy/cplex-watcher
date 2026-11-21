@@ -3,9 +3,12 @@ main = "src.js"
 compatibility_date = "2026-09-13"
 
 [triggers]
-# Check Saturday-noon delivery and retry failures; completed weeks do not dispatch again.
+# Check the current ticket slot and Saturday-noon reminder; retry incomplete work.
 crons = ["*/5 * * * *"]
 
 [vars]
 GITHUB_REPOSITORY = "ettersAy/cplex-watcher"
 UI_ORIGIN = "https://ettersay.github.io"
+
+# Roll out only after the matching GitHub workflow is on main.
+TICKET_SCHEDULER_ENABLED = "true"

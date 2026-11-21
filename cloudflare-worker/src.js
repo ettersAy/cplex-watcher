@@ -72,6 +72,38 @@ async function checkWeeklyReminder(env, scheduledTime) {
   console.log(JSON.stringify({ event: "weekly_reminder_queued", week, requestId }));
 }
 
+const TICKET_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+const TICKET_CHECK_RUN_PREFIX = "Ticket check ticket-check-";
+
+async function checkTickets(env, scheduledTime) {
+  // Never dispatch an expired slot when Cloudflare delivers an old event late.
+  const slot = Math.floor(scheduledTime / TICKET_CHECK_INTERVAL_MS);
+  if (slot !== Math.floor(Date.now() / TICKET_CHECK_INTERVAL_MS)) return;
+
+  const requestId = `ticket-check-${slot}`;
+  const endpoint = `https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/check-tickets.yml`;
+  const headers = {
+    accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+    "user-agent": "CineplexTicketWatcher", "x-github-api-version": "2022-11-28",
+  };
+  const response = await fetch(`${endpoint}/runs?branch=main&event=workflow_dispatch&per_page=100`, {
+    headers: { ...headers, "cache-control": "no-cache" },
+  });
+  if (!response.ok) throw new Error(`Could not check ticket workflow runs: HTTP ${response.status}`);
+  const runs = (await response.json()).workflow_runs;
+  const completed = runs.some((run) => run.display_title === `Ticket check ${requestId}` && run.conclusion === "success");
+  const busy = runs.some((run) => run.display_title?.startsWith(TICKET_CHECK_RUN_PREFIX) && run.status !== "completed");
+  if (completed || busy) return;
+
+  const dispatch = await fetch(`${endpoint}/dispatches`, {
+    method: "POST",
+    headers: { ...headers, "content-type": "application/json" },
+    body: JSON.stringify({ ref: "main", inputs: { operation: "check", request_id: requestId } }),
+  });
+  if (!dispatch.ok) throw new Error(`GitHub ticket check dispatch failed: HTTP ${dispatch.status}`);
+  console.log(JSON.stringify({ event: "ticket_check_queued", requestId }));
+}
+
 async function handleNotificationPreference(env, chatId, operation, query) {
   const requestId = crypto.randomUUID();
   try {
@@ -1004,11 +1036,16 @@ export default {
       console.log(JSON.stringify({ event: "legacy_cron_ignored" }));
       return;
     }
-    try {
-      await checkWeeklyReminder(env, event.scheduledTime);
-    } catch (error) {
-      console.error("Weekly reminder scheduler failed; retrying at the next tick:", error);
-      throw error;
+    const jobs = [["Weekly reminder", checkWeeklyReminder(env, event.scheduledTime)]];
+    if (env.TICKET_SCHEDULER_ENABLED === "true") {
+      jobs.push(["Ticket check", checkTickets(env, event.scheduledTime)]);
     }
+    const results = await Promise.allSettled(jobs.map(([, job]) => job));
+    const errors = results.flatMap((result, index) => {
+      if (result.status === "fulfilled") return [];
+      console.error(`${jobs[index][0]} scheduler failed; retrying at the next tick:`, result.reason);
+      return [result.reason];
+    });
+    if (errors.length) throw errors[0];
   },
 };

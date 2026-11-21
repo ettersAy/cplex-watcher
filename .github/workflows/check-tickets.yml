@@ -1,8 +1,10 @@
 name: Check Cineplex ticket sales
+run-name: ${{ inputs.operation == 'check' && format('Ticket check {0}', inputs.request_id) || 'Check Cineplex ticket sales' }}
 
 on:
   schedule:
-    - cron: "*/30 * * * *"
+    # Cloudflare is primary; keep an off-peak fallback in each half-hour.
+    - cron: "17,47 * * * *"
   workflow_dispatch:
     inputs:
       title:
@@ -14,7 +16,7 @@ on:
         required: false
         type: string
       operation:
-        description: watch, remove, or remove_by_title
+        description: watch, check, remove, or remove_by_title
         required: false
         default: watch
         type: string
@@ -164,13 +166,14 @@ jobs:
           PY
 
       - name: Check movies and notify Telegram
-        if: github.event_name != 'workflow_dispatch' || (inputs.operation != 'remove' && inputs.operation != 'remove_by_title')
+        if: github.event_name == 'schedule' || inputs.operation == 'watch' || inputs.operation == 'check'
         env:
+          TICKET_CHECK_REQUEST: ${{ github.event_name == 'schedule' && 'fallback' || (inputs.operation == 'check' && inputs.request_id || '') }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
           TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
-        run: python watcher.py
+        run: python ticket_check.py
 
       - name: Save alert state
         id: save
