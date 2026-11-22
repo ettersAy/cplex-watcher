@@ -58,17 +58,19 @@ class RemindersTest(unittest.TestCase):
         self.assertNotIn("Dune", friend.args[2])
         self.assertNotIn("Odyssey", friend.args[2])
         self.assertIn("/stop reminder", friend.args[2])
-        self.assertIn("Watching: You + Friend", owner.args[2])
-        self.assertIn("Watching: You + Owner", friend.args[2])
+        self.assertIn("Following: You and Friend", owner.args[2])
+        self.assertIn("Your ticket alerts: on", friend.args[2])
         self.assertNotIn("friend-id", owner.args[2])
         self.assertNotIn("owner-id", friend.args[2])
+        self.assertNotIn("Owner", friend.args[2])
+        self.assertNotIn("Following:", friend.args[2])
 
     def test_paused_friend_is_labeled_for_owner_and_skipped_without_identifier(self):
         self.preferences[self.friend]["stoppedAll"] = True
         with redirect_stdout(io.StringIO()) as logs:
             self.assertEqual(self.deliver(), 0)
         self.send.assert_called_once()
-        self.assertIn("Watching: You + Friend: paused", self.send.call_args.args[2])
+        self.assertIn("Ticket alerts: You on; Friend off (all alerts paused)", self.send.call_args.args[2])
         self.assertIn("role=owner result=accepted watches=3", logs.getvalue())
         self.assertIn("role=friend result=skipped reason=all_paused", logs.getvalue())
         self.assertNotIn("friend-id", logs.getvalue())
@@ -81,10 +83,10 @@ class RemindersTest(unittest.TestCase):
         self.preferences[second] = {}
         self.watches[0]["recipients"].append("other-friend-id")
         self.assertEqual(self.deliver(), 0)
-        self.assertIn("Watching: You + 2 friends", self.send.call_args_list[0].args[2])
+        self.assertIn("Following: You and Friend 1 and Friend 2", self.send.call_args_list[0].args[2])
         for call in self.send.call_args_list[1:]:
             msg = call.args[2]
-            self.assertIn("Watching: You + Owner", msg)
+            self.assertIn("Your ticket alerts: on", msg)
             self.assertNotIn("Friend", msg)
             self.assertNotIn("Odyssey", msg)
 

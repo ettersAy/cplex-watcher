@@ -50,43 +50,45 @@ def active_watches(root, default, special, now):
     return watches
 
 
-def watch_audience(watch, viewer_key, recipients, preferences):
-    """Show a viewer only their role and the allowed scope of this watch."""
-    viewer_is_owner = recipients[viewer_key] in watch["owners"]
-    active_friends = paused_friends = 0
-    owner_in_scope = False
-    for key, chat_id in recipients.items():
-        if key == viewer_key or chat_id not in watch["recipients"]:
-            continue
-        is_owner = chat_id in watch["owners"]
-        active = watches_enabled(preferences.get(key, {}), watch["key"])
-        if is_owner:
-            owner_in_scope = True
-        elif viewer_is_owner:
-            active_friends += int(active)
-            paused_friends += int(not active)
+def alert_status(preference, watch_key):
+    if preference.get("stoppedAll"):
+        return "off (all alerts paused)"
+    if watch_key in preference.get("stoppedWatches", []):
+        return "off (paused for this title)"
+    return "on"
 
-    labels = ["You"]
-    if viewer_is_owner:
-        if active_friends:
-            labels.append(f"{active_friends} friends" if active_friends > 1 else "Friend")
-        if paused_friends:
-            labels.append(f"{paused_friends} friends: paused" if paused_friends > 1 else "Friend: paused")
-    elif owner_in_scope:
-        labels.append("Owner")
-    return " + ".join(labels)
+
+def watch_audience(watch, viewer_key, recipients, preferences):
+    """Describe scope and alert settings separately; friends see only their own alert setting."""
+    key = watch["key"]
+    alert_kind = "Seat alerts" if key.startswith("seat:") else "Ticket alerts"
+    mine = alert_status(preferences[viewer_key], key)
+    if recipients[viewer_key] not in watch["owners"]:
+        return [f"Your {alert_kind.lower()}: {mine}"]
+
+    followers = [("You", mine)]
+    for keys, role in (
+        (sorted(key for key, chat_id in recipients.items() if chat_id in watch["owners"] and key != viewer_key), "Other owner"),
+        (sorted(key for key, chat_id in recipients.items() if chat_id not in watch["owners"]), "Friend"),
+    ):
+        for index, recipient in enumerate(keys, 1):
+            if recipients[recipient] in watch["recipients"]:
+                label = role if len(keys) == 1 else f"{role} {index}"
+                followers.append((label, alert_status(preferences[recipient], key)))
+    more = f"; {len(followers) - 12} more in /state" if len(followers) > 12 else ""
+    shown = followers[:12]
+    return ["Following: " + " and ".join(label for label, _ in shown) + more,
+            f"{alert_kind}: " + "; ".join(f"{label} {setting}" for label, setting in shown) + more]
 
 
 def weekly_message(watches):
-    lines = ["<b>Weekly reminder</b>", "", "You're watching:"]
-    lines.extend(
-        f"• {html.escape(watch['name'])} — {html.escape(watch['detail'])}"
-        + (f"\n   Watching: {html.escape(watch['audience'])}" if watch.get("audience") else "")
-        for watch in watches
-    )
-    lines.extend(["", "Stop one: <code>/stop Movie Name</code>",
-                  "Stop all: <code>/stop all</code>",
-                  "Turn off weekly reminders: <code>/stop reminder</code>"])
+    lines = ["<b>Weekly watch reminder</b>", "", "Active watches with your alerts on:"]
+    for watch in watches:
+        lines.append(f"• {html.escape(watch['name'][:120])} — {html.escape(watch['detail'][:200])}")
+        lines.extend(f"   {html.escape(detail)}" for detail in watch.get("audience", []))
+    lines.extend(["", "Pause an alert: <code>/stop Movie Name</code>",
+                  "Turn off only this reminder: <code>/stop reminder</code>",
+                  "Manage alert and reminder settings: <code>/state</code>"])
     return "\n".join(lines)
 
 

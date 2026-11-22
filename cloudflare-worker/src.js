@@ -654,7 +654,8 @@ async function getSeatWatcherFile(env, filename, property) {
   });
   if (!response.ok) throw new Error(`Could not load ${filename}: HTTP ${response.status}`);
   const content = await response.json();
-  const config = JSON.parse(atob(String(content.content || "").replace(/\s/g, "")));
+  const bytes = Uint8Array.from(atob(String(content.content || "").replace(/\s/g, "")), (char) => char.charCodeAt(0));
+  const config = JSON.parse(new TextDecoder().decode(bytes));
   if (!config || typeof config !== "object" || !config[property] || typeof config[property] !== "object") {
     throw new Error(`${filename} has an invalid format`);
   }
@@ -886,72 +887,211 @@ function ticketScope(movie, recipientKey) {
   return movieKey(movie.url) === "george-michael-the-faith-tour" || movie.subscribers?.includes(recipientKey);
 }
 
-function ticketWatchAudience(movie, { viewerKey, ownerKeys, recipients }) {
-  const isPaused = (key) => recipients[key]?.stoppedAll
-    || recipients[key]?.stoppedWatches?.includes(`ticket:${movieKey(movie.url)}`);
-  const labels = [isPaused(viewerKey) ? "You: paused" : "You"];
-  if (!ownerKeys.has(viewerKey)) {
-    if (ownerKeys.size) labels.push("Owner");
-    return labels.join(" + ");
+function alertStatus(preference = {}, watchKey) {
+  if (preference.stoppedAll) return "off (all alerts paused)";
+  if (watchKey && preference.stoppedWatches?.includes(watchKey)) return "off (paused for this title)";
+  return "on";
+}
+
+function accountLabels({ viewerKey, ownerKeys, recipients }) {
+  const labels = new Map([[viewerKey, "You"]]);
+  for (const [keys, role] of [[[...ownerKeys].sort().filter((key) => key !== viewerKey), "Other owner"],
+    [Object.keys(recipients).sort().filter((key) => !ownerKeys.has(key)), "Friend"]]) {
+    keys.forEach((key, index) => labels.set(key, keys.length === 1 ? role : `${role} ${index + 1}`));
   }
-  const friends = Object.keys(recipients).filter((key) => !ownerKeys.has(key) && ticketScope(movie, key));
-  const paused = friends.filter(isPaused).length;
-  const active = friends.length - paused;
-  if (active) labels.push(active === 1 ? "Friend" : `${active} friends`);
-  if (paused) labels.push(paused === 1 ? "Friend: paused" : `${paused} friends: paused`);
-  return labels.join(" + ");
+  return labels;
 }
 
-function formatWatch(movie, check, stateError, salesStarted = false, audience = "") {
-  const name = movie.name || check?.name || nameFromUrl(movie.url);
-  const link = `<a href="${escapeHtml(movie.url)}">${escapeHtml(name)}</a>`;
-  const hasSalesStarted = salesStarted || check?.hasShowtimes;
-  const failed = !salesStarted && Boolean(stateError || !check || check.lastCheckStatus === "failed" || check.lastError);
-  const error = stateError || check?.lastError;
-  const icon = failed ? "🔴" : (hasSalesStarted ? "🎉" : "⏳");
-  const lastCheckIcon = failed ? "❌" : "☀️";
-  return [
-    icon,
-    link,
-    ...(!salesStarted ? [`👁️ ${nextScheduledCheck()}`] : []),
-    `${lastCheckIcon} Last check ${formatTimestamp(check?.lastCheckedAt || movie.salesStartedAt)}`,
-    ...(error ? [`📢 ${escapeHtml(error)}`] : []),
-  ].join(" ") + (audience ? `\n   Watching: ${escapeHtml(audience)}` : "");
+function titleText(value, max = 120) {
+  const chars = Array.from(String(value || "").replace(/\s+/g, " ").trim());
+  return escapeHtml(chars.length > max ? chars.slice(0, max).join("") + "…" : chars.join(""));
 }
 
-async function handleList(env, chatId, context) {
+function titleName(movie, check) {
+  return titleText(movie.name || check?.name || nameFromUrl(movie.url));
+}
+
+function ticketLink(movie, check) {
+  const name = titleName(movie, check);
+  return /^https:\/\/www\.cineplex\.com\/movie\/[a-z0-9-]{1,240}\/?$/i.test(movie.url)
+    ? `<a href="${escapeHtml(movie.url)}">${name}</a>` : name;
+}
+
+function ticketLabel(check, unavailable) {
+  if (unavailable || !check?.lastCheckedAt) return "Ticket status unknown";
+  if (check.lastCheckStatus === "failed" || check.lastError) return "Last check failed";
+  if (check.lastCheckStatus !== "success" || typeof check.hasShowtimes !== "boolean") return "Ticket status unknown";
+  return check.hasShowtimes ? "Tickets on sale" : "Tickets not on sale";
+}
+
+function ticketListEntry(movie, state, unavailable, context, labels) {
+  const slug = movieKey(movie.url);
+  const check = state[slug];
+  const watchKey = `ticket:${slug}`;
+  const details = [];
+  const base = `• ${ticketLink(movie, check)} · ${ticketLabel(check, unavailable)}`;
+  details.push(base);
+  if (check?.lastCheckedAt) details.push(`Last ${ticketLabel(check, unavailable) === "Last check failed" ? "attempt" : "scan"}: ${formatTimestamp(check.lastCheckedAt)} Montréal time`);
+  if (context.ownerKeys.has(context.viewerKey)) {
+    const scope = [...labels.entries()].filter(([key]) => context.ownerKeys.has(key) || ticketScope(movie, key));
+    const shown = scope.slice(0, 12);
+    const more = scope.length > shown.length ? `; ${scope.length - shown.length} more in /state` : "";
+    details.push(`Following: ${shown.map(([, label]) => label).join(" and ")}${more}`);
+    details.push(`Ticket alerts: ${shown.map(([key, label]) => `${label} ${alertStatus(context.recipients[key], watchKey)}`).join("; ")}${more}`);
+  } else {
+    details.push(`Your ticket alerts: ${alertStatus(context.recipients[context.viewerKey], watchKey)}`);
+  }
+  return details.join("\n");
+}
+
+function watchHints(preference = {}) {
+  const hints = [];
+  if (preference.stoppedAll || preference.stoppedWatches?.length) {
+    hints.push("<code>/start all</code> resumes all your alerts and clears title pauses.");
+  }
+  if (preference.remindersEnabled === false) {
+    hints.push("<code>/start reminder</code> turns on weekly reminders.");
+  }
+  return hints;
+}
+
+function boundedHtml(blocks, maxLength = 3800) {
+  const pages = [];
+  let page = "";
+  for (const block of blocks) {
+    // Keep a movie's status and alerts on one page; split only large accounts between complete lines.
+    const entries = block.length <= maxLength ? [block] : block.split("\n").filter(Boolean);
+    for (const item of entries) {
+      const separator = entries.length === 1 ? "\n\n" : "\n";
+      if (page && page.length + separator.length + item.length > maxLength) {
+        pages.push(page);
+        page = "";
+      }
+      page += (page ? separator : "") + item;
+    }
+  }
+  if (page) pages.push(page);
+  return pages;
+}
+
+async function sendWatchPages(env, chatId, blocks) {
+  for (const text of boundedHtml(blocks)) await telegram(env, chatId, text, { parse_mode: "HTML" });
+}
+
+function nextReminderDate(now) {
+  const date = new Date(`${reminderWeek(now)}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 7);
+  return new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", timeZone: "UTC" }).format(date);
+}
+
+function weeklyState(preference, eligible, now) {
+  const disabled = preference.remindersEnabled === false;
+  const reason = disabled ? "Disabled by preference" : preference.stoppedAll
+    ? "Enabled, but not sent while all alerts are paused"
+    : eligible === null ? "Enabled, eligibility unavailable"
+    : !eligible ? "Enabled, but no eligible active watches"
+    : `Enabled · ${eligible} eligible · Next usual slot: Sat ${nextReminderDate(now)}, noon Montréal`;
+  const last = /^\d{4}-\d{2}-\d{2}$/.test(preference.lastReminderWeek || "")
+    ? preference.lastReminderWeek : "";
+  const pending = !disabled && !preference.stoppedAll && eligible > 0 && last !== reminderWeek(now);
+  return [`Weekly reminders: ${reason}`, last ? `Last accepted by Telegram: week of ${last}` : "No accepted weekly reminder recorded",
+    ...(pending ? ["No acceptance recorded for the most recent scheduled slot."] : [])];
+}
+
+function activeSeatScope(seats, now) {
+  const clock = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    second: "2-digit", hourCycle: "h23",
+  }).formatToParts(now).map(({ type, value }) => [type, value]));
+  const local = `${clock.year}-${clock.month}-${clock.day}T${clock.hour}:${clock.minute}:${clock.second}`;
+  return Object.entries(seats).filter(([, watch]) => watch?.enabled && Object.values(watch.showtimes || {}).some((showtime) => {
+    if (!showtime?.enabled || showtime.completed) return false;
+    const start = showtime.showStartDateTimeUtc || showtime.startsAt;
+    if (!start) return true;
+    if (/^\d{4}-\d{2}-\d{2}T\d\d:\d\d(?::\d\d)?(?:\.\d+)?$/.test(start)) {
+      return (start.length === 16 ? start + ":00" : start.slice(0, 19)) > local;
+    }
+    return Date.parse(start) > now.getTime();
+  }));
+}
+
+function accountState(label, key, context, movies, seats, now) {
+  const preference = context.recipients[key] || {};
+  const isOwner = context.ownerKeys.has(key);
+  const scoped = isOwner ? movies : movies.filter((movie) => ticketScope(movie, key));
+  const ticketOn = scoped.filter((movie) => alertStatus(preference, `ticket:${movieKey(movie.url)}`) === "on").length;
+  const seatOn = isOwner && seats ? seats.filter(([id]) => alertStatus(preference, `seat:${id}`) === "on").length : 0;
+  const eligible = isOwner && seats === null && !preference.stoppedAll ? null : ticketOn + seatOn;
+  const lines = [`<b>${label}${isOwner ? " (owner)" : ""}</b>`,
+    `Overall alert setting: ${preference.stoppedAll ? "all alerts paused" : "not paused globally"}`,
+    `Ticket subscriptions: ${scoped.length} · alerts on for ${ticketOn}`];
+  for (const movie of scoped) lines.push(`• ${titleName(movie)}: ${alertStatus(preference, `ticket:${movieKey(movie.url)}`)}`);
+  if (isOwner && seats === null) lines.push("Seat alert status temporarily unavailable.");
+  if (isOwner && seats) {
+    lines.push(`Seat subscriptions: ${seats.length} · alerts on for ${seatOn} · <code>/listseats</code> for details`);
+    for (const [id, watch] of seats) {
+      if (alertStatus(preference, `seat:${id}`) !== "on") lines.push(`• ${titleText(watch.name)} seat alerts: ${alertStatus(preference, `seat:${id}`)}`);
+    }
+  }
+  lines.push(...weeklyState(preference, eligible, now));
+  if (key === context.viewerKey) lines.push(...watchHints(preference));
+  return lines.join("\n");
+}
+
+async function handleList(env, chatId, context, command) {
   try {
-    const [salesStarted, movies, stateResult] = await Promise.all([
-      getSalesStarted(env),
+    const isOwner = context.ownerKeys.has(context.viewerKey);
+    const now = new Date();
+    const [salesStarted, movies, stateResult, seatResult] = await Promise.all([
+      command === "state" && !isOwner ? [] : getSalesStarted(env).catch(() => null),
       getManagedWatches(env),
-      getWatchState(env).then((state) => ({ state })).catch((error) => ({ error: error.message })),
+      command === "state" && !isOwner ? { state: {} }
+        : getWatchState(env).then((state) => ({ state })).catch(() => ({ state: {}, unavailable: true })),
+      command === "state" && isOwner ? getSeatWatches(env).then((seats) => activeSeatScope(seats, now)).catch(() => null) : null,
     ]);
-    const ownerView = context.ownerKeys.has(context.viewerKey);
-    // Pausing alerts does not remove a subscription; keep it visible but labeled paused.
-    const visible = (movie) => ownerView || ticketScope(movie, context.viewerKey);
-    const status = context.recipients[context.viewerKey] || {};
-    const visibleHistory = (movie) => ownerView || (visible(movie) && !status.stoppedAll
-      && !status.stoppedWatches?.includes(`ticket:${movieKey(movie.url)}`));
-    const uniqueMovies = [...new Map(movies.filter(visible).map((movie) => [movie.url, movie])).values()];
-    const uniqueSalesStarted = [...new Map(salesStarted.filter(visibleHistory).map((movie) => [movie.url, movie])).values()];
-    console.log(JSON.stringify({ event: "watch_list_requested", activeCount: uniqueMovies.length, salesStartedCount: uniqueSalesStarted.length }));
+    const { state, unavailable } = stateResult;
+    const preference = context.recipients[context.viewerKey] || {};
+    const visible = (movie) => isOwner || ticketScope(movie, context.viewerKey);
+    const visibleHistory = (movie) => isOwner || (visible(movie) && alertStatus(preference, `ticket:${movieKey(movie.url)}`) === "on");
+    const unique = (rows) => [...new Map(rows.map((movie) => [movie.url, movie])).values()];
+    const pending = unique(movies.filter(visible));
+    const started = unique((salesStarted || []).filter(visibleHistory));
+    const labels = isOwner ? accountLabels(context) : new Map([[context.viewerKey, "You"]]);
     const sections = [];
-    if (uniqueMovies.length && (status.stoppedAll || status.remindersEnabled === false)) {
-      sections.push(status.stoppedAll
-        ? "Your alerts and weekly reminders are paused. Use <code>/start all</code> to resume your watches."
-          + (status.remindersEnabled === false ? " Weekly reminders were also turned off separately; use <code>/start reminder</code> to turn them back on." : "")
-        : "Your weekly reminders are off. Use <code>/start reminder</code> to turn them on.");
+    if (command === "state") {
+      sections.push(`<b>${isOwner ? "Watcher state" : "Your watcher state"}</b>`);
+      if (isOwner) {
+        const checks = pending.map((movie) => state[movieKey(movie.url)]).filter((check) => Number.isFinite(Date.parse(check?.lastCheckedAt)));
+        const latest = (filter) => checks.filter(filter).sort((a, b) => Date.parse(b.lastCheckedAt) - Date.parse(a.lastCheckedAt))[0]?.lastCheckedAt;
+        const success = latest((check) => check.lastCheckStatus === "success" && !check.lastError);
+        const failed = latest((check) => check.lastCheckStatus === "failed" || check.lastError);
+        sections.push(`Active ticket watches: ${pending.length} · ticket-sale history: ${salesStarted === null ? "unavailable" : started.length}
+${unavailable ? "Ticket scan state temporarily unavailable." : `Latest successful result: ${success ? formatTimestamp(success) + " Montréal time" : "none in current results"}${failed ? "\nLatest failed attempt: " + formatTimestamp(failed) + " Montréal time" : ""}`}`);
+      }
+      for (const [key, label] of labels) sections.push(accountState(label, key, context, pending, seatResult, now));
+      sections.push("Use <code>/list</code> for ticket status.");
+    } else {
+      sections.push("<b>Ticket watchlist</b>");
+      if (pending.length && env.TICKET_SCHEDULER_ENABLED === "true") sections.push(`Next expected ticket scan: ${nextScheduledCheck()}`);
+      if (pending.length) {
+        sections.push("<b>Active watches</b>");
+        for (const movie of pending) sections.push(ticketListEntry(movie, state, unavailable, context, labels));
+      } else sections.push("No active ticket watches.");
+      if (started.length) {
+        sections.push("<b>Recent ticket sales</b>");
+        started.sort((a, b) => (Date.parse(b.salesStartedAt) || 0) - (Date.parse(a.salesStartedAt) || 0));
+        for (const movie of started.slice(0, 6)) {
+          const when = Number.isFinite(Date.parse(movie.salesStartedAt)) ? ` · ${formatTimestamp(movie.salesStartedAt)} Montréal time` : "";
+          sections.push(`• ${ticketLink(movie, state[movieKey(movie.url)])}${when}`);
+        }
+      }
+      if (salesStarted === null) sections.push("Recent ticket sales are temporarily unavailable.");
+      sections.push(...watchHints(preference), "Use <code>/state</code> for alert and weekly reminder settings.");
     }
-    if (uniqueSalesStarted.length) {
-      sections.push(`🎉 Sales started:\n${uniqueSalesStarted.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error, true)).join("\n")}`);
-    }
-    if (uniqueMovies.length) {
-      sections.push(`⏳ <b>Active watches</b>\n${uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error, false, ticketWatchAudience(movie, context))).join("\n")}`);
-    }
-    await telegram(env, chatId, sections.length ? sections.join("\n\n") : "You are not watching any movies.", { parse_mode: "HTML" });
+    await sendWatchPages(env, chatId, sections);
   } catch (error) {
-    console.error("Could not load watched movies:", error);
-    await telegram(env, chatId, "I could not load the active watches. Please try again shortly.");
+    console.error("Could not load watch information:", error instanceof Error ? error.name : "unknown");
+    await telegram(env, chatId, "I could not load the watch information. Please try again shortly.");
   }
 }
 
@@ -970,6 +1110,23 @@ async function handleUpdate(request, env) {
   if (!message?.text) return new Response("ok");
 
   const chatId = String(message.chat.id);
+  const watchView = message.text.trim().match(/^\/(list|state)(?:@\w+)?$/i)?.[1].toLowerCase();
+  if (watchView) {
+    // Never place watch membership or alert settings in a group or channel.
+    if (message.chat.type !== "private") return new Response("ok");
+    try {
+      const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
+      const context = await listContext(env, chatId, recipients);
+      if (!context.ownerKeys.has(context.viewerKey) && !Object.hasOwn(recipients, context.viewerKey)) return new Response("ok");
+      await handleList(env, chatId, context, watchView);
+    } catch (error) {
+      console.error("Could not load watch scope:", error instanceof Error ? error.name : "unknown");
+      if (allowedTelegramChatIds(env).has(chatId)) {
+        await telegram(env, chatId, "I could not load the watch settings. Please try again shortly.");
+      }
+    }
+    return new Response("ok");
+  }
   if (/^\/id(?:@\w+)?$/i.test(message.text)) {
     await telegram(env, chatId, `Your Telegram chat ID is ${chatId}. Send it to the watcher owner so they can authorize you.`);
     return new Response("ok");
@@ -990,10 +1147,8 @@ async function handleUpdate(request, env) {
         await handleWatch(env, chatId, watchCommand[1].trim());
       } else if (stopCommand) {
         await handleNotificationPreference(env, chatId, "stop", stopCommand[1].trim());
-      } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
-        await handleList(env, chatId, await listContext(env, chatId, recipients));
       } else {
-        await telegram(env, chatId, "Use /watch Movie Name to add to your list.\nUse /list to see your movies.\nUse /stop Movie Name or /stop all to stop your alerts.\nUse /start all to resume them.");
+        await telegram(env, chatId, "Use /watch Movie Name to add to your list.\nUse /list to see your movies and /state for your settings.\nUse /stop Movie Name or /stop all to stop your alerts.\nUse /start all to resume them.");
       }
     } catch (error) {
       console.error("Could not process personal watch command:", error);
@@ -1027,16 +1182,8 @@ async function handleUpdate(request, env) {
     const seatInfoCommand = message.text.match(/^\/seatinfo(?:@\w+)?\s+(.+)$/i);
     if (seatInfoCommand) {
       await handleSeatInfo(env, chatId, seatInfoCommand[1].trim());
-    } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
-      try {
-        const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
-        await handleList(env, chatId, await listContext(env, chatId, recipients));
-      } catch (error) {
-        console.error("Could not load watch scope:", error);
-        await telegram(env, chatId, "I could not load the watch list. Please try again shortly.");
-      }
     } else {
-      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchseat CineplexPreviewUrl\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /refreshseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchseat https://www.cineplex.com/ticketing/preview?theatreId=9406&showtimeId=405765\n\nUse /list to see your watched movies.");
+      await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchseat CineplexPreviewUrl\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /refreshseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchseat https://www.cineplex.com/ticketing/preview?theatreId=9406&showtimeId=405765\n\nUse /list to see your watched movies and /state for alert and reminder settings.");
     }
   }
 
