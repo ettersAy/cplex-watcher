@@ -116,8 +116,14 @@ def update_preference(preference, watches, operation, query):
         preference["stoppedAll"] = operation == "stop"
         if operation == "start":
             preference["stoppedWatches"] = []
-        return ("Your watch alerts are back on." if operation == "start" else
-                "Your watch alerts and weekly reminders are paused.\nUse /start all to resume your watches. If you turned off reminders separately, use /start reminder too.")
+            reminder = ("Weekly reminders are still off. Use /start reminder to turn them on."
+                        if preference.get("remindersEnabled") is False else
+                        "Weekly reminders are enabled for active watches.")
+            return f"Your alerts are back on, including any titles you had paused.\n{reminder}"
+        return ("Your movies stay on your list and the bot keeps checking them. "
+                "You won't receive alerts or the weekly reminder until you resume. "
+                "This doesn't affect anyone else.\nUse /start all to resume your alerts. "
+                "If you turned off reminders separately, use /start reminder too.")
     if operation == "start":
         return "Use /start reminder or /start all."
     matches = [watch for watch in watches if command in (watch["key"].casefold(), watch["name"].casefold())]

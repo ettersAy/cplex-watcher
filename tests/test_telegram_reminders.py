@@ -93,7 +93,8 @@ class RemindersTest(unittest.TestCase):
     def test_start_all_does_not_override_separate_reminder_opt_out(self):
         pref = self.preferences[self.friend]
         pref.update(stoppedAll=True, remindersEnabled=False)
-        reminders.update_preference(pref, self.watches, "start", "all")
+        reply = reminders.update_preference(pref, self.watches, "start", "all")
+        self.assertIn("Weekly reminders are still off", reply)
         with redirect_stdout(io.StringIO()) as logs:
             self.deliver()
         self.assertIn("role=friend result=skipped reason=reminders_off", logs.getvalue())
@@ -144,7 +145,9 @@ class RemindersTest(unittest.TestCase):
         preference = self.preferences[self.owner]
         reminders.update_preference(preference, self.watches, "stop", "George Michael")
         self.assertEqual(notification_chat_ids(["owner-id", "friend-id"], self.watches[0]["key"], self.preferences), ["friend-id"])
-        reminders.update_preference(preference, self.watches, "stop", "all")
+        reply = reminders.update_preference(preference, self.watches, "stop", "all")
+        self.assertIn("Your movies stay on your list and the bot keeps checking them", reply)
+        self.assertIn("doesn't affect anyone else", reply)
         self.assertEqual(notification_chat_ids(["owner-id"], "seat:dune", self.preferences), [])
         self.deliver()
         self.assertEqual(self.send.call_count, 1)
