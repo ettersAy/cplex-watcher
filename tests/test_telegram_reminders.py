@@ -5,6 +5,7 @@ import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from contextlib import redirect_stdout
 from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 
@@ -44,7 +45,7 @@ class RemindersTest(unittest.TestCase):
         self.send = Mock()
 
     def deliver(self, now=None):
-        return reminders.send_reminders(self.preferences, self.recipients, self.watches, "test-token", now or self.now, send=self.send)
+        return reminders.send_reminders(self.preferences, self.recipients, self.watches, "test-token", now or self.now, send=self.send, owners=["owner-id"])
 
     def test_only_active_watches_and_correct_recipient_scopes(self):
         self.assertEqual(len(self.watches), 3)
@@ -57,6 +58,46 @@ class RemindersTest(unittest.TestCase):
         self.assertNotIn("Dune", friend.args[2])
         self.assertNotIn("Odyssey", friend.args[2])
         self.assertIn("/stop reminder", friend.args[2])
+        self.assertIn("Watching: You + Friend", owner.args[2])
+        self.assertIn("Watching: You + Owner", friend.args[2])
+        self.assertNotIn("friend-id", owner.args[2])
+        self.assertNotIn("owner-id", friend.args[2])
+
+    def test_paused_friend_is_labeled_for_owner_and_skipped_without_identifier(self):
+        self.preferences[self.friend]["stoppedAll"] = True
+        with redirect_stdout(io.StringIO()) as logs:
+            self.assertEqual(self.deliver(), 0)
+        self.send.assert_called_once()
+        self.assertIn("Watching: You + Friend: paused", self.send.call_args.args[2])
+        self.assertIn("role=owner result=accepted watches=3", logs.getvalue())
+        self.assertIn("role=friend result=skipped reason=all_paused", logs.getvalue())
+        self.assertNotIn("friend-id", logs.getvalue())
+        self.assertNotIn(self.friend[:12], logs.getvalue())
+        self.assertNotIn("lastReminderWeek", self.preferences[self.friend])
+
+    def test_friends_never_see_other_friends_even_for_a_shared_title(self):
+        second = recipient_key("other-friend-id")
+        self.recipients[second] = "other-friend-id"
+        self.preferences[second] = {}
+        self.watches[0]["recipients"].append("other-friend-id")
+        self.assertEqual(self.deliver(), 0)
+        self.assertIn("Watching: You + 2 friends", self.send.call_args_list[0].args[2])
+        for call in self.send.call_args_list[1:]:
+            msg = call.args[2]
+            self.assertIn("Watching: You + Owner", msg)
+            self.assertNotIn("Friend", msg)
+            self.assertNotIn("Odyssey", msg)
+
+    def test_start_all_does_not_override_separate_reminder_opt_out(self):
+        pref = self.preferences[self.friend]
+        pref.update(stoppedAll=True, remindersEnabled=False)
+        reminders.update_preference(pref, self.watches, "start", "all")
+        with redirect_stdout(io.StringIO()) as logs:
+            self.deliver()
+        self.assertIn("role=friend result=skipped reason=reminders_off", logs.getvalue())
+        self.send.assert_called_once()
+        self.assertFalse(pref["stoppedAll"])
+        self.assertFalse(pref["remindersEnabled"])
 
     def test_once_per_week_and_next_saturday(self):
         self.deliver()
@@ -132,9 +173,23 @@ class RemindersTest(unittest.TestCase):
             self.assertNotIn("lastReminderWeek", saved[self.owner])
             self.assertIn("lastReminderWeek", saved[self.friend])
             telegram.reset_mock(side_effect=True)
+            telegram.return_value = {"ok": True}
             reminders.main()
             self.assertEqual(telegram.call_count, 1)
             self.assertEqual(telegram.call_args.args[1]["chat_id"], "owner-id")
+
+    def test_telegram_false_response_is_not_recorded_as_accepted(self):
+        with patch("watcher.request_json", side_effect=[
+                {"ok": False, "description": "private rejection text"}, {"ok": True}
+        ]), redirect_stdout(io.StringIO()) as logs, patch("sys.stderr", new=io.StringIO()) as errors:
+            result = reminders.send_reminders(
+                self.preferences, self.recipients, self.watches, "test-token", self.now, owners=["owner-id"])
+        self.assertEqual(result, 1)
+        self.assertIn("role=owner result=failed type=ValueError", errors.getvalue())
+        self.assertNotIn("private rejection text", errors.getvalue())
+        self.assertNotIn("lastReminderWeek", self.preferences[self.owner])
+        self.assertIn("role=friend result=accepted", logs.getvalue())
+        self.assertIn("lastReminderWeek", self.preferences[self.friend])
 
     def test_unknown_or_ambiguous_watch_changes_nothing(self):
         preference = self.preferences[self.owner]
@@ -181,6 +236,7 @@ class RemindersTest(unittest.TestCase):
             kwargs["notify_watch"]("other", "Another seat alert")
             return {}
         with patch("sys.argv", ["seat_watcher.py", "scan", "--notify", "--root", str(self.root)]), patch.object(seat_watcher, "scan_all", side_effect=scan), patch("watcher.request_json") as telegram, patch("sys.stdout", new=io.StringIO()):
+            telegram.return_value = {"ok": True}
             seat_watcher.main()
         self.assertEqual(telegram.call_count, 1)
         self.assertEqual(telegram.call_args.args[1]["text"], "Another seat alert")

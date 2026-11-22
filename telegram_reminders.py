@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from http.client import HTTPException
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from urllib.error import HTTPError
 
 from notification_preferences import configured_recipients, load_preferences, save_preferences, watches_enabled
 from watcher import (GEORGE_MICHAEL_FAITH_TOUR_SLUG, MONTREAL_CITY, movie_slug,
@@ -43,12 +44,46 @@ def active_watches(root, default, special, now):
                             "detail": f"seats at {watch.get('theatreName') or watch['theatreId']}",
                             "recipients": telegram_chat_ids(default)})
             break
+    owners = telegram_chat_ids(default)
+    for watch in watches:
+        watch["owners"] = owners
     return watches
+
+
+def watch_audience(watch, viewer_key, recipients, preferences):
+    """Show a viewer only their role and the allowed scope of this watch."""
+    viewer_is_owner = recipients[viewer_key] in watch["owners"]
+    active_friends = paused_friends = 0
+    owner_in_scope = False
+    for key, chat_id in recipients.items():
+        if key == viewer_key or chat_id not in watch["recipients"]:
+            continue
+        is_owner = chat_id in watch["owners"]
+        active = watches_enabled(preferences.get(key, {}), watch["key"])
+        if is_owner:
+            owner_in_scope = True
+        elif viewer_is_owner:
+            active_friends += int(active)
+            paused_friends += int(not active)
+
+    labels = ["You"]
+    if viewer_is_owner:
+        if active_friends:
+            labels.append(f"{active_friends} friends" if active_friends > 1 else "Friend")
+        if paused_friends:
+            labels.append(f"{paused_friends} friends: paused" if paused_friends > 1 else "Friend: paused")
+    elif owner_in_scope:
+        labels.append("Owner")
+    return " + ".join(labels)
 
 
 def weekly_message(watches):
     lines = ["<b>Weekly reminder</b>", "", "You're watching:"]
-    lines.extend(f"• {html.escape(watch['name'])} — {html.escape(watch['detail'])}" for watch in watches)
+    lines.extend(
+        f"• {html.escape(watch['name'])} — {html.escape(watch['detail'])}"
+        + (f"\n   Watching: {html.escape(watch['audience'])}" if watch.get("audience") else "")
+        for watch in watches
+    )
     lines.extend(["", "Stop one: <code>/stop Movie Name</code>",
                   "Stop all: <code>/stop all</code>",
                   "Turn off weekly reminders: <code>/stop reminder</code>"])
@@ -80,7 +115,7 @@ def update_preference(preference, watches, operation, query):
         if operation == "start":
             preference["stoppedWatches"] = []
         return ("Your watch alerts are back on." if operation == "start" else
-                "All your watch alerts and weekly reminders are stopped.\nUse /start all to resume your watches.")
+                "Your watch alerts and weekly reminders are paused.\nUse /start all to resume your watches. If you turned off reminders separately, use /start reminder too.")
     if operation == "start":
         return "Use /start reminder or /start all."
     matches = [watch for watch in watches if command in (watch["key"].casefold(), watch["name"].casefold())]
@@ -98,7 +133,7 @@ def update_preference(preference, watches, operation, query):
     return f"Stopped your alerts for {watch['name']} ({watch['detail']}). Other people's watches are unchanged."
 
 
-def send_reminders(preferences, recipients, watches, token, now, send=send_telegram):
+def send_reminders(preferences, recipients, watches, token, now, send=send_telegram, *, owners=()):
     if not token:
         raise ValueError("TELEGRAM_BOT_TOKEN is not configured")
     local = now.astimezone(MONTREAL)
@@ -107,21 +142,38 @@ def send_reminders(preferences, recipients, watches, token, now, send=send_teleg
         saturday -= timedelta(days=7)
     week = saturday.isoformat()
     failures = 0
+    owner_ids = set(owners)
     for key, chat_id in recipients.items():
         preference = preferences[key]
-        personal = [watch for watch in watches if chat_id in watch["recipients"]
+        role = "owner" if chat_id in owner_ids else "friend"
+        personal = [{**watch, "audience": watch_audience(watch, key, recipients, preferences)}
+                    for watch in watches if chat_id in watch["recipients"]
                     and watches_enabled(preference, watch["key"])]
-        if not personal or not preference.get("remindersEnabled", True) or preference.get("lastReminderWeek") == week:
+        if preference.get("stoppedAll", False):
+            reason = "all_paused"
+        elif not preference.get("remindersEnabled", True):
+            reason = "reminders_off"
+        elif preference.get("lastReminderWeek") == week:
+            reason = "already_sent"
+        elif not personal:
+            reason = "no_active_watches"
+        else:
+            reason = None
+        log_prefix = f"telegram_reminders: week={week} role={role}"
+        if reason:
+            print(f"{log_prefix} result=skipped reason={reason}")
             continue
         try:
             for message in weekly_messages(personal):
                 send(token, chat_id, message, parse_mode="HTML")
         except (OSError, HTTPException, ValueError) as error:
             failures += 1
-            detail = str(error).replace(token, "[token]").replace(chat_id, "[recipient]")
-            print(f"telegram_reminders: delivery failed for {key[:12]}: {type(error).__name__}: {detail}", file=sys.stderr)
+            code = f" status={error.code}" if isinstance(error, HTTPError) else ""
+            # Error text and IDs are omitted from public Action logs.
+            print(f"{log_prefix} result=failed type={type(error).__name__}{code}", file=sys.stderr)
             continue
         preference["lastReminderWeek"] = week
+        print(f"{log_prefix} result=accepted watches={len(personal)}")
     return failures
 
 
@@ -156,7 +208,8 @@ def main():
         text = update_preference(preferences[key], personal, args.operation, os.environ["PREFERENCE_QUERY"])
         (args.root / "notification-result.json").write_text(json.dumps({"text": text}) + "\n")
     elif args.operation == "remind":
-        failures = send_reminders(preferences, recipients, watches, os.environ["TELEGRAM_BOT_TOKEN"], now)
+        failures = send_reminders(preferences, recipients, watches, os.environ["TELEGRAM_BOT_TOKEN"], now,
+                                  owners=telegram_chat_ids(default))
     save_preferences(args.root, preferences)
     if failures:
         raise SystemExit(f"telegram_reminders: {failures} delivery failure(s); rerun to retry unsent reminders")

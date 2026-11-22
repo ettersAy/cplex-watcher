@@ -882,7 +882,27 @@ async function handleSeatList(env, chatId) {
   }
 }
 
-function formatWatch(movie, check, stateError, salesStarted = false) {
+function ticketScope(movie, recipientKey) {
+  return movieKey(movie.url) === "george-michael-the-faith-tour" || movie.subscribers?.includes(recipientKey);
+}
+
+function ticketWatchAudience(movie, { viewerKey, ownerKeys, recipients }) {
+  const isPaused = (key) => recipients[key]?.stoppedAll
+    || recipients[key]?.stoppedWatches?.includes(`ticket:${movieKey(movie.url)}`);
+  const labels = [isPaused(viewerKey) ? "You: paused" : "You"];
+  if (!ownerKeys.has(viewerKey)) {
+    if (ownerKeys.size) labels.push("Owner");
+    return labels.join(" + ");
+  }
+  const friends = Object.keys(recipients).filter((key) => !ownerKeys.has(key) && ticketScope(movie, key));
+  const paused = friends.filter(isPaused).length;
+  const active = friends.length - paused;
+  if (active) labels.push(active === 1 ? "Friend" : `${active} friends`);
+  if (paused) labels.push(paused === 1 ? "Friend: paused" : `${paused} friends: paused`);
+  return labels.join(" + ");
+}
+
+function formatWatch(movie, check, stateError, salesStarted = false, audience = "") {
   const name = movie.name || check?.name || nameFromUrl(movie.url);
   const link = `<a href="${escapeHtml(movie.url)}">${escapeHtml(name)}</a>`;
   const hasSalesStarted = salesStarted || check?.hasShowtimes;
@@ -896,35 +916,48 @@ function formatWatch(movie, check, stateError, salesStarted = false) {
     ...(!salesStarted ? [`👁️ ${nextScheduledCheck()}`] : []),
     `${lastCheckIcon} Last check ${formatTimestamp(check?.lastCheckedAt || movie.salesStartedAt)}`,
     ...(error ? [`📢 ${escapeHtml(error)}`] : []),
-  ].join(" ");
+  ].join(" ") + (audience ? `\n   Watching: ${escapeHtml(audience)}` : "");
 }
 
-async function handleList(env, chatId, recipientKey = "", preference = {}) {
+async function handleList(env, chatId, context) {
   try {
     const [salesStarted, movies, stateResult] = await Promise.all([
       getSalesStarted(env),
       getManagedWatches(env),
       getWatchState(env).then((state) => ({ state })).catch((error) => ({ error: error.message })),
     ]);
-    const visible = (movie) => !recipientKey || (
-      (movieKey(movie.url) === "george-michael-the-faith-tour" || movie.subscribers?.includes(recipientKey))
-      && !preference.stoppedAll && !preference.stoppedWatches?.includes(`ticket:${movieKey(movie.url)}`)
-    );
+    const ownerView = context.ownerKeys.has(context.viewerKey);
+    // Pausing alerts does not remove a subscription; keep it visible but labeled paused.
+    const visible = (movie) => ownerView || ticketScope(movie, context.viewerKey);
+    const status = context.recipients[context.viewerKey] || {};
+    const visibleHistory = (movie) => ownerView || (visible(movie) && !status.stoppedAll
+      && !status.stoppedWatches?.includes(`ticket:${movieKey(movie.url)}`));
     const uniqueMovies = [...new Map(movies.filter(visible).map((movie) => [movie.url, movie])).values()];
-    const uniqueSalesStarted = [...new Map(salesStarted.filter(visible).map((movie) => [movie.url, movie])).values()];
+    const uniqueSalesStarted = [...new Map(salesStarted.filter(visibleHistory).map((movie) => [movie.url, movie])).values()];
     console.log(JSON.stringify({ event: "watch_list_requested", activeCount: uniqueMovies.length, salesStartedCount: uniqueSalesStarted.length }));
     const sections = [];
+    if (uniqueMovies.length && (status.stoppedAll || status.remindersEnabled === false)) {
+      sections.push(status.stoppedAll
+        ? "Your alerts and weekly reminders are paused. Use <code>/start all</code> to resume your watches."
+          + (status.remindersEnabled === false ? " Weekly reminders were also turned off separately; use <code>/start reminder</code> to turn them back on." : "")
+        : "Your weekly reminders are off. Use <code>/start reminder</code> to turn them on.");
+    }
     if (uniqueSalesStarted.length) {
       sections.push(`🎉 Sales started:\n${uniqueSalesStarted.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error, true)).join("\n")}`);
     }
     if (uniqueMovies.length) {
-      sections.push(`⏳ \n${uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error)).join("\n")}`);
+      sections.push(`⏳ <b>Active watches</b>\n${uniqueMovies.map((movie) => formatWatch(movie, stateResult.state?.[movieKey(movie.url)], stateResult.error, false, ticketWatchAudience(movie, context))).join("\n")}`);
     }
     await telegram(env, chatId, sections.length ? sections.join("\n\n") : "You are not watching any movies.", { parse_mode: "HTML" });
   } catch (error) {
     console.error("Could not load watched movies:", error);
     await telegram(env, chatId, "I could not load the active watches. Please try again shortly.");
   }
+}
+
+async function listContext(env, chatId, recipients) {
+  const ownerKeys = new Set(await Promise.all([...allowedTelegramChatIds(env)].map((id) => notificationRecipientKey(env, id))));
+  return { ownerKeys, viewerKey: await notificationRecipientKey(env, chatId), recipients };
 }
 
 async function handleUpdate(request, env) {
@@ -958,7 +991,7 @@ async function handleUpdate(request, env) {
       } else if (stopCommand) {
         await handleNotificationPreference(env, chatId, "stop", stopCommand[1].trim());
       } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
-        await handleList(env, chatId, recipientKey, recipients[recipientKey]);
+        await handleList(env, chatId, await listContext(env, chatId, recipients));
       } else {
         await telegram(env, chatId, "Use /watch Movie Name to add to your list.\nUse /list to see your movies.\nUse /stop Movie Name or /stop all to stop your alerts.\nUse /start all to resume them.");
       }
@@ -995,7 +1028,13 @@ async function handleUpdate(request, env) {
     if (seatInfoCommand) {
       await handleSeatInfo(env, chatId, seatInfoCommand[1].trim());
     } else if (/^\/list(?:@\w+)?$/i.test(message.text)) {
-      await handleList(env, chatId);
+      try {
+        const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
+        await handleList(env, chatId, await listContext(env, chatId, recipients));
+      } catch (error) {
+        console.error("Could not load watch scope:", error);
+        await telegram(env, chatId, "I could not load the watch list. Please try again shortly.");
+      }
     } else {
       await telegram(env, chatId, "Use /watch Movie Name\nUse /stopwatch Movie Name\nUse /watchseat CineplexPreviewUrl\nUse /watchshowtime Watch Name ShowtimeId\nUse /stopshowtime Watch Name ShowtimeId\nUse /stopseats Watch Name\nUse /refreshseats Watch Name\nUse /listseats and /seatinfo Watch Name for seat watches\nExample: /watchseat https://www.cineplex.com/ticketing/preview?theatreId=9406&showtimeId=405765\n\nUse /list to see your watched movies.");
     }

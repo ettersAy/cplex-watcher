@@ -84,4 +84,6 @@ Remove the ID from its GitHub secret and from Cloudflare `TELEGRAM_CHAT_IDS` if 
 | `/watch` confirms a movie but says alerts are paused | Their previous `/stop` setting is still active. `/start all` restores their subscribed watches. |
 | Friend can acknowledge a command but it fails later | Inspect the matching Action; confirm GitHub and Worker use the same HMAC key and that the account remains configured. |
 | `/list` is briefly stale | Public movie JSON can be cached. Check the state commit and retry shortly; do not create a second watch. |
-| Friend has no weekly message | Only active, non-stopped watches produce reminders; completed movies remain in `/list` history only. |
+| Friend has no weekly message | Check the weekly job's role/outcome log. Only active, non-paused watches produce reminders. `/stop all` pauses both alerts and reminders; the friend can use `/start all` to resume their watches. If they also used `/stop reminder`, they must separately use `/start reminder`. |
+
+Active movies in `/list` show who is watching. Owners see every movie and generic labels or counts for subscribed friends, including paused subscriptions. Friends see only their own subscriptions, with **You** and **Owner** labels, never other friends. Their active subscriptions remain visible and marked paused when alerts are off. The weekly reminder uses the same role labels but is sent only for active, non-paused watches. It does not change any subscription or notification preference.

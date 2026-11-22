@@ -9,6 +9,8 @@ const source = readFileSync(new URL("../cloudflare-worker/src.js", import.meta.u
 await import(`data:text/javascript,${encodeURIComponent(source)}`);
 const key = (id) => createHmac("sha256", "test-secret").update(id).digest("hex");
 const friend = key("friend-id");
+const secondFriend = key("second-friend-id");
+const owner = key("owner-id");
 const env = {
   TELEGRAM_PREFERENCES_KEY: "test-secret", TELEGRAM_BOT_TOKEN: "test-token",
   TELEGRAM_CHAT_IDS: "owner-id", TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
@@ -20,6 +22,8 @@ const movies = [movie("paper-tiger", "Paper Tiger", [friend]), movie("the-odysse
 const completed = [movie("george-michael-the-faith-tour", "George Michael"),
   movie("runner", "Runner", [friend]), movie("other", "Other Completed")];
 let preference = {};
+let ownerPreference = {};
+let secondPreference = {};
 let stateUnavailable = false;
 let dispatchFails = false;
 const sent = [];
@@ -27,7 +31,7 @@ const dispatched = [];
 globalThis.fetch = async (url, options) => {
   if (url.includes("/contents/notification-preferences.json")) {
     return stateUnavailable ? new Response(null, { status: 503 })
-      : Response.json({ content: Buffer.from(JSON.stringify({ recipients: { [friend]: preference } })).toString("base64") });
+      : Response.json({ content: Buffer.from(JSON.stringify({ recipients: { [friend]: preference, [owner]: ownerPreference, [secondFriend]: secondPreference } })).toString("base64") });
   }
   if (url.endsWith("/movies.json")) return Response.json(movies);
   if (url.endsWith("/sales-started.json")) return Response.json(completed);
@@ -65,18 +69,34 @@ assert.match(sent.at(-1).text, /Paper Tiger/);
 assert.match(sent.at(-1).text, /George Michael/);
 assert.match(sent.at(-1).text, /Runner/);
 assert.doesNotMatch(sent.at(-1).text, /Odyssey|Another Friend|Other Completed/);
+assert.match(sent.at(-1).text, /Watching: You \+ Owner/);
+assert.doesNotMatch(sent.at(-1).text, /friend-id|owner-id|\bFriend\b/);
+await command("/list", "second-friend-id");
+assert.match(sent.at(-1).text, /Another Friend/);
+assert.doesNotMatch(sent.at(-1).text, /Paper Tiger|The Odyssey/);
 await command("/list", "owner-id");
 assert.match(sent.at(-1).text, /Paper Tiger/);
 assert.match(sent.at(-1).text, /Odyssey/);
 assert.match(sent.at(-1).text, /Another Friend/);
+assert.match(sent.at(-1).text, /Paper Tiger[^\n]*\n   Watching: You \+ Friend/);
+assert.match(sent.at(-1).text, /Odyssey[^\n]*\n   Watching: You\n/);
 
 preference = { stoppedWatches: ["ticket:paper-tiger"] };
 await command("/list");
-assert.doesNotMatch(sent.at(-1).text, /Paper Tiger/);
+assert.match(sent.at(-1).text, /Paper Tiger[^\n]*\n   Watching: You: paused \+ Owner/);
 assert.match(sent.at(-1).text, /George Michael/);
 preference.stoppedAll = true;
 await command("/list");
-assert.equal(sent.at(-1).text, "You are not watching any movies.");
+assert.match(sent.at(-1).text, /weekly reminders are paused/);
+assert.match(sent.at(-1).text, /Paper Tiger[^\n]*\n   Watching: You: paused \+ Owner/);
+assert.doesNotMatch(sent.at(-1).text, /Another Friend|Odyssey|George Michael|Runner/);
+await command("/list", "owner-id");
+assert.match(sent.at(-1).text, /Paper Tiger[^\n]*\n   Watching: You \+ Friend: paused/);
+ownerPreference = { stoppedWatches: ["ticket:paper-tiger"] };
+await command("/list");
+assert.match(sent.at(-1).text, /Paper Tiger[^\n]*\n   Watching: You: paused \+ Owner/);
+assert.doesNotMatch(sent.at(-1).text, /Owner: paused/);
+ownerPreference = {};
 await command("/stopwatch Paper Tiger");
 assert.match(dispatched.at(-1).url, /telegram-reminders.yml/);
 assert.equal(dispatched.at(-1).inputs.operation, "stop");

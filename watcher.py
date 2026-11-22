@@ -179,7 +179,9 @@ def send_telegram(token, chat_ids, text, parse_mode=None):
         data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
         if parse_mode:
             data["parse_mode"] = parse_mode
-        request_json(f"https://api.telegram.org/bot{token}/sendMessage", data)
+        result = request_json(f"https://api.telegram.org/bot{token}/sendMessage", data)
+        if not isinstance(result, dict) or result.get("ok") is not True:
+            raise ValueError("Telegram did not confirm the message")
 
 
 def main():
