@@ -16,7 +16,7 @@ on:
         required: false
         type: string
       operation:
-        description: watch, check, remove, or remove_by_title
+        description: watch, check, remove, remove_by_title, unfollow, keep, or cancel
         required: false
         default: watch
         type: string
@@ -30,6 +30,10 @@ on:
         type: string
       chat_id:
         description: Telegram chat to receive this command's final result
+        required: false
+        type: string
+      confirmation_expires:
+        description: Verified confirmation expiry in milliseconds
         required: false
         type: string
       recipient_key:
@@ -125,25 +129,10 @@ jobs:
           sales_started = json.loads(sales_started_path.read_text()) if sales_started_path.exists() else []
           state = json.loads(state_path.read_text()) if state_path.exists() else {"movies": {}}
           if operation == "remove_by_title":
-              def normalise(value):
-                  return "".join(character for character in value.lower() if character.isalnum())
-
-              query = normalise(os.environ["WATCH_TITLE"])
-              candidates = []
-              for movie in movies:
-                  slug = movie["url"].rstrip("/").rsplit("/", 1)[-1]
-                  name = movie.get("name") or state["movies"].get(slug, {}).get("name") or slug.replace("-", " ")
-                  if query and query in normalise(name):
-                      candidates.append({**movie, "name": name})
-              if len(candidates) == 1:
-                  targets = candidates
-                  removal_results = []
-              elif len(candidates) > 1:
-                  targets = []
-                  removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}, "error": "Several active watches match that title. Use the web page to stop the exact movie."}]
-              else:
-                  targets = []
-                  removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]}}]
+              # Retired Telegram route: old Workers must not remove everyone's watch during rollout.
+              targets = []
+              removal_results = [{"removed": False, "movie": {"name": os.environ["WATCH_TITLE"]},
+                                  "error": "Nothing changed. Send the stop command again to receive a confirmation."}]
           else:
               targets = [{"url": os.environ["WATCH_URL"]}]
               removal_results = []
@@ -163,6 +152,31 @@ jobs:
           state_path.write_text(json.dumps(state, indent=2) + "\n")
           Path("removal.json").write_text(json.dumps({"results": removal_results}) + "\n")
           print(f"Removed watches: {sum(item['removed'] for item in removal_results)}")
+          PY
+
+      - name: Apply confirmed personal unfollow
+        id: unfollow
+        if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'unfollow' || inputs.operation == 'keep' || inputs.operation == 'cancel')
+        env:
+          RECIPIENT_KEY: ${{ inputs.recipient_key }}
+          TARGET_SLUG: ${{ inputs.title }}
+          CONFIRMATION_NONCE: ${{ inputs.request_id }}
+          KEEP_WATCH: ${{ inputs.operation == 'keep' }}
+          CANCEL_WATCH: ${{ inputs.operation == 'cancel' }}
+          CONFIRMATION_EXPIRES: ${{ inputs.confirmation_expires }}
+          TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
+          TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from ticket_membership import unfollow
+          outcome = unfollow(Path("."), os.environ["RECIPIENT_KEY"], os.environ["TARGET_SLUG"],
+                             os.environ["CONFIRMATION_NONCE"], int(os.environ["CONFIRMATION_EXPIRES"]),
+                             keep=os.environ["KEEP_WATCH"] == "true", cancel=os.environ["CANCEL_WATCH"] == "true")
+          Path("unfollow-result.json").write_text(json.dumps(outcome))
           PY
 
       - name: Check movies and notify Telegram
@@ -215,6 +229,7 @@ jobs:
           from pathlib import Path
           from watcher import movie_slug, send_telegram
           from notification_preferences import configured_recipients, load_preferences, watches_enabled
+          from ticket_membership import notify_friend_change
 
           key = os.environ["RECIPIENT_KEY"]
           chat_ids = configured_recipients()[2][key] if key else os.environ["COMMAND_CHAT_ID"] or os.environ["TELEGRAM_RECIPIENTS"]
@@ -224,24 +239,83 @@ jobs:
           except (OSError, json.JSONDecodeError) as error:
               result = {"results": [{"status": "error", "error": f"GitHub registration failed: {error}"}]}
           for item in result.get("results", [result]):
-              if os.environ["REGISTRATION_SAVED"] != "true":
+              saved = os.environ["REGISTRATION_SAVED"] == "true"
+              status = item.get("status")
+              if not saved:
                   text = "I could not save your watch. Please try again shortly."
-              elif item.get("status") == "watching":
+              elif status in ("watching", "already_watching"):
                   movie = item["movie"]
-                  text = f"Started watching {movie['name']}.\nNext check: within 30 minutes.\n{movie['url']}"
-              elif item.get("status") == "already_watching":
-                  movie = item["movie"]
-                  text = f"Already watching {movie['name']}.\n{movie['url']}"
-              elif item.get("status") == "already_on_sale":
+                  alerts_on = watches_enabled(preference, f"ticket:{movie_slug(movie['url'])}")
+                  if status == "already_watching":
+                      audience = "ticket alert list" if alerts_on else "watch list"
+                      text = f"{movie['name']} is already being checked. You were already on its {audience}."
+                  elif item.get("membership_added"):
+                      audience = "ticket alerts" if alerts_on else "watch list"
+                      action = "Checking is back on for" if item.get("was_dormant") else "Already checking"
+                      text = f"{action} {movie['name']}. I added you to its {audience}."
+                  else:
+                      text = f"Started watching {movie['name']}.\nNext check: within 30 minutes."
+                  if not alerts_on:
+                      reason = "all alerts are paused" if preference.get("stoppedAll") else "alerts are paused for this title"
+                      text += f"\nYour alerts are paused ({reason}). Use /start all to resume your alerts."
+                  text += f"\n{movie['url']}"
+              elif status == "already_on_sale":
                   movie = item["movie"]
                   text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
               else:
                   text = item.get("error", "I could not complete the Cineplex search.")
-              if (os.environ["REGISTRATION_SAVED"] == "true" and item.get("status") in ("watching", "already_watching")
-                      and not watches_enabled(preference, f"ticket:{movie_slug(item['movie']['url'])}")):
-                  text += "\nYour alerts are paused. Use /start all to resume your watches."
-              send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], chat_ids, text)
-              print(f"Telegram registration result sent: status={item.get('status')}")
+              try:
+                  send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], chat_ids, text)
+                  print(f"Telegram registration result sent: status={item.get('status')}")
+              finally:
+                  if os.environ["REGISTRATION_SAVED"] == "true" and item.get("friend_started"):
+                      notify_friend_change(Path("."), item, os.environ["TELEGRAM_BOT_TOKEN"], send_telegram)
+          PY
+
+      - name: Report personal unfollow after persistence
+        if: github.event_name == 'workflow_dispatch' && (inputs.operation == 'unfollow' || inputs.operation == 'keep' || inputs.operation == 'cancel') && always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_PREFERENCES_KEY: ${{ secrets.TELEGRAM_PREFERENCES_KEY }}
+          TELEGRAM_RECIPIENTS: ${{ secrets.TELEGRAM_CHAT_IDS || secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
+          RECIPIENT_KEY: ${{ inputs.recipient_key }}
+          UNFOLLOW_SAVED: ${{ steps.unfollow.outcome == 'success' && steps.save.outcome == 'success' }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from notification_preferences import configured_recipients
+          from ticket_membership import notify_friend_change
+          from watcher import send_telegram
+
+          token = os.environ["TELEGRAM_BOT_TOKEN"]
+          requester = configured_recipients()[2].get(os.environ["RECIPIENT_KEY"])
+          if not requester:
+              raise SystemExit("Unrecognized recipient")
+          saved = os.environ["UNFOLLOW_SAVED"] == "true"
+          outcome = json.loads(Path("unfollow-result.json").read_text()) if saved else {"status": "failed"}
+          status = outcome["status"]
+          if status != "duplicate":
+              if status == "unfollowed":
+                  text = f"You stopped following {outcome['name']}. Other people's watches did not change."
+              elif status == "kept":
+                  text = f"You're still following {outcome['name']}. Your alert settings did not change."
+              elif status == "cancelled":
+                  text = "Cancelled. Nothing changed."
+              elif status == "expired":
+                  text = "This confirmation expired. Nothing changed."
+              elif status == "unchanged":
+                  text = "You no longer had an active watch for this movie. Nothing changed."
+              else:
+                  text = "I could not save the change. Please try again."
+              # A requester send failure must not block the independent admin notice.
+              try:
+                  send_telegram(token, requester, text)
+              finally:
+                  if status == "unfollowed":
+                      notify_friend_change(Path("."), outcome, token, send_telegram)
           PY
 
       - name: Send removal result to Telegram

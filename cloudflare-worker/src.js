@@ -1,3 +1,71 @@
+// Private Telegram confirmations authenticate the exact bot prompt and account.
+const confirmationLifetimeMs = 10 * 60 * 1000;
+const domain = "cineplex-telegram-command-confirmation-v1";
+const instructions = "\n\nReply Yes within 10 minutes to confirm, or No to cancel.";
+const ownerInstructions = "\n\nReply Stop too to stop your own watch, or Keep watching. No reply keeps your watch. This offer expires in 10 minutes.";
+const base64Url = (bytes) => btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+const decodeBase64Url = (text) => Uint8Array.from(atob(text.replaceAll("-", "+").replaceAll("_", "/")), (c) => c.charCodeAt(0));
+
+async function signatureKey(secret) {
+  if (!secret) throw new Error("Telegram confirmation signing is unavailable");
+  return crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+}
+
+function signedData(chatId, payload) {
+  // Authenticated owner/friend identity is not stored inside the readable token.
+  return new TextEncoder().encode(JSON.stringify([domain, String(chatId), payload]));
+}
+
+function validProposal(proposal) {
+  return proposal && typeof proposal.operation === "string" && /^[a-z_]{1,40}$/.test(proposal.operation)
+    && typeof proposal.target === "string" && proposal.target.length <= 240
+    && typeof proposal.scope === "string" && /^[A-Za-z0-9_-]{0,64}$/.test(proposal.scope)
+    && typeof proposal.prompt === "string" && proposal.prompt.length > 0 && proposal.prompt.length <= 1000;
+}
+
+async function issueConfirmation(secret, chat, proposal, now = Date.now()) {
+  if (chat?.type !== "private" || !/^\d+$/.test(String(chat.id)) || !validProposal(proposal)) {
+    throw new Error("Invalid Telegram confirmation request");
+  }
+  const nonce = base64Url(crypto.getRandomValues(new Uint8Array(16)));
+  const expiresAt = now + confirmationLifetimeMs;
+  // Keep visible consequence only once, and bind it verbatim into the signature.
+  const prompt = proposal.prompt + instructions;
+  const payload = base64Url(new TextEncoder().encode(JSON.stringify([proposal.operation, proposal.target, proposal.scope, nonce, expiresAt])));
+  const mac = base64Url(new Uint8Array(await crypto.subtle.sign(
+    "HMAC", await signatureKey(secret), signedData(chat.id, [payload, prompt])
+  )));
+  return { text: `${prompt}\nConfirmation code: ${payload}.${mac}`, replyMarkup: { force_reply: true } };
+}
+
+async function readConfirmation(secret, botId, message, now = Date.now()) {
+  if (message?.chat?.type !== "private" || !/^\d+$/.test(String(message.chat.id))
+      || !["yes", "no", "stop too", "keep watching"].includes(message.text?.trim().toLowerCase())
+      || message.from?.is_bot !== false || String(message.from?.id) !== String(message.chat.id)) return null;
+  const reply = message.reply_to_message;
+  if (!/^\d+$/.test(String(botId)) || reply?.from?.is_bot !== true || String(reply.from.id) !== String(botId)
+      || String(reply.chat?.id) !== String(message.chat.id) || reply.chat?.type !== "private"
+      || !Number.isSafeInteger(reply.message_id) || typeof reply.text !== "string" || reply.text.length > 3600) return null;
+  const match = reply.text.match(/^([\s\S]+)\nConfirmation code: ([A-Za-z0-9_-]{1,2200})\.([A-Za-z0-9_-]{43})$/);
+  if (!match) return null;
+  const [, prompt, payload, mac] = match;
+  try {
+    const verified = await crypto.subtle.verify("HMAC", await signatureKey(secret), decodeBase64Url(mac),
+      signedData(message.chat.id, [payload, prompt]));
+    if (!verified) return null;
+    const [operation, target, scope, nonce, expiresAt] = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(decodeBase64Url(payload)));
+    const response = message.text.trim().toLowerCase();
+    const offer = operation === "unfollow_owner_offer";
+    const suffix = offer ? ownerInstructions : instructions;
+    if ((!offer && response !== "yes" && response !== "no") || !prompt.endsWith(suffix)
+        || !validProposal({ operation, target, scope, prompt: prompt.slice(0, -suffix.length) }) || !/^[A-Za-z0-9_-]{22}$/.test(nonce)
+        || !Number.isSafeInteger(expiresAt) || expiresAt <= now || expiresAt > now + confirmationLifetimeMs) return null;
+    return { operation, target, scope, nonce, expiresAt, keep: offer && response === "keep watching", cancel: response === "no" };
+  } catch {
+    return null;
+  }
+}
+
 const CINEPLEX_NEXT_BUILD_ID = "sutiBBvJ_DUSdtn7Z8k2n";
 
 async function telegram(env, chatId, text, options = {}) {
@@ -162,23 +230,18 @@ async function dispatchRemoval(env, url, requestId) {
   if (!response.ok) throw new Error(`GitHub Actions removal dispatch failed: ${await response.text()}`);
 }
 
-async function dispatchStopWatch(env, title, requestId, chatId = "") {
-  if (!env.GITHUB_ACTIONS_TOKEN || !env.GITHUB_REPOSITORY) {
-    throw new Error("GitHub Actions dispatch is not configured");
-  }
-
+async function dispatchConfirmedTicket(env, confirmation, recipientKey) {
   const response = await fetch(`https://api.github.com/repos/${env.GITHUB_REPOSITORY}/actions/workflows/check-tickets.yml/dispatches`, {
     method: "POST",
     headers: {
-      accept: "application/vnd.github+json",
-      authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
-      "content-type": "application/json",
-      "user-agent": "CineplexTicketWatcher",
+      accept: "application/vnd.github+json", authorization: `Bearer ${env.GITHUB_ACTIONS_TOKEN}`,
+      "content-type": "application/json", "user-agent": "CineplexTicketWatcher",
       "x-github-api-version": "2022-11-28",
     },
-    body: JSON.stringify({ ref: "main", inputs: { title, operation: "remove_by_title", request_id: requestId, chat_id: chatId } }),
+    body: JSON.stringify({ ref: "main", inputs: { operation: confirmation.cancel ? "cancel" : confirmation.keep ? "keep" : "unfollow", title: confirmation.target,
+      request_id: confirmation.nonce, recipient_key: recipientKey, confirmation_expires: String(confirmation.expiresAt) } }),
   });
-  if (!response.ok) throw new Error(`GitHub Actions stop-watch dispatch failed: ${await response.text()}`);
+  if (!response.ok) throw new Error(`Ticket confirmation dispatch failed: HTTP ${response.status}`);
 }
 
 async function dispatchSeatWatch(env, operation, watchId, payload, requestId, chatId) {
@@ -485,19 +548,72 @@ async function handleWatch(env, chatId, title) {
   return telegram(env, chatId, `Searching Cineplex for ${title}. I will reply when the watch is registered.`);
 }
 
-async function handleStopWatch(env, chatId, title) {
-  if (!title) return telegram(env, chatId, "Please provide a movie name. Example: /stopwatch Runner");
-
-  const requestId = crypto.randomUUID();
-  console.log(JSON.stringify({ event: "stop_watch_requested", requestId, title }));
-  try {
-    await dispatchStopWatch(env, title, requestId, chatId);
-    console.log(JSON.stringify({ event: "stop_watch_dispatch_accepted", requestId }));
-  } catch (error) {
-    console.error("Could not dispatch GitHub Actions stop watch:", error);
-    return telegram(env, chatId, "I could not start the stop-watching search. Please try again shortly.");
+async function proposeStop(env, message, query, command) {
+  const chatId = String(message.chat.id);
+  const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
+  const context = await listContext(env, chatId, recipients);
+  if (!Object.hasOwn(recipients, context.viewerKey)) return;
+  if (!query || query.length > 200) {
+    return telegram(env, chatId, "Use /stop Movie Name, /stop all, or /stop reminder.");
   }
-  return telegram(env, chatId, `Searching active watches for ${title}. I will reply when the watch is stopped.`);
+  const preference = recipients[context.viewerKey];
+  const setting = command === "stop" ? query.toLowerCase() : "";
+  let proposal;
+  if (setting === "all" || setting === "reminder") {
+    if (setting === "all" ? preference.stoppedAll : preference.remindersEnabled === false) {
+      return telegram(env, chatId, setting === "all" ? "Your alerts are already paused. Nothing changed." : "Your weekly reminder is already off. Nothing changed.");
+    }
+    proposal = { operation: "pause_preferences", target: setting, scope: "",
+      prompt: setting === "all"
+        ? "This will pause your ticket and seat alerts and the weekly reminder. Your movies stay on your list and checks continue. Nobody else's alerts change."
+        : "This will turn off only your weekly reminder. Your ticket and seat alerts and everyone else's settings stay unchanged." };
+  } else {
+    const normalized = (value) => String(value).toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]/gu, "");
+    const requested = normalized(query.replace(/^ticket:/i, ""));
+    const owner = context.ownerKeys.has(context.viewerKey);
+    const watched = (await getManagedWatches(env)).filter((movie) => ticketScope(movie, context.viewerKey, owner));
+    const exact = watched.filter((movie) => requested && [movieKey(movie.url), movie.name].some((value) => value && normalized(value) === requested));
+    const matches = exact.length ? exact : watched.filter((movie) => requested && normalized(movie.name || movieKey(movie.url)).includes(requested));
+    if (matches.length !== 1) return telegram(env, chatId, matches.length
+      ? "Several of your active movies match. Use the exact movie name from /list. Nothing changed."
+      : "No matching active movie on your list. Nothing changed.");
+    const movie = matches[0];
+    const name = String(movie.name || nameFromUrl(movie.url)).replace(/\s+/g, " ").slice(0, 120);
+    const privateAdmins = [...allowedTelegramChatIds(env)].filter((id) => /^[1-9][0-9]*$/.test(id));
+    let adminNote = "";
+    if (!owner && privateAdmins.length === 1) {
+      const adminKey = await notificationRecipientKey(env, privateAdmins[0]);
+      adminNote = ticketScope(movie, adminKey, true)
+        ? " The admin will be notified; their own watch will keep running unless they stop it."
+        : " The admin will be notified. Their watch settings will not change.";
+    }
+    proposal = { operation: "unfollow_ticket", target: movieKey(movie.url), scope: "",
+      prompt: `This will remove ${name} from your followed movies. You will stop receiving ticket alerts and weekly reminders for this movie. Other people can keep following it.` + adminNote };
+  }
+  const pending = await issueConfirmation(env.TELEGRAM_PREFERENCES_KEY, message.chat, proposal);
+  await telegram(env, chatId, pending.text, { reply_markup: pending.replyMarkup });
+}
+
+async function applyTelegramApproval(env, message) {
+  const chatId = String(message.chat.id);
+  const response = message.text.trim().toLowerCase();
+  const recipients = await getSeatWatcherFile(env, "notification-preferences.json", "recipients");
+  const context = await listContext(env, chatId, recipients);
+  if (!Object.hasOwn(recipients, context.viewerKey)) return;
+  const botId = String(env.TELEGRAM_BOT_TOKEN || "").split(":")[0];
+  const confirmation = await readConfirmation(env.TELEGRAM_PREFERENCES_KEY, botId, message);
+  if (!confirmation) {
+    if (response !== "keep watching") await telegram(env, chatId, "No valid confirmation found. Reply directly to the latest confirmation message before it expires. Nothing changed.");
+    return;
+  }
+  if (confirmation.operation === "unfollow_owner_offer" && !context.ownerKeys.has(context.viewerKey)) return;
+  if (confirmation.operation === "unfollow_ticket" || confirmation.operation === "unfollow_owner_offer") {
+    await dispatchConfirmedTicket(env, confirmation, context.viewerKey);
+  } else if (confirmation.operation === "pause_preferences" && ["all", "reminder"].includes(confirmation.target)) {
+    await dispatchNotificationWorkflow(env, { operation: "stop", query: confirmation.target, recipient_key: context.viewerKey,
+      request_id: confirmation.nonce, confirmation_expires: String(confirmation.expiresAt),
+      confirmation_cancel: confirmation.cancel ? "true" : "" });
+  }
 }
 
 async function handleWatchShowtime(env, chatId, value) {
@@ -883,8 +999,9 @@ async function handleSeatList(env, chatId) {
   }
 }
 
-function ticketScope(movie, recipientKey) {
-  return movieKey(movie.url) === "george-michael-the-faith-tour" || movie.subscribers?.includes(recipientKey);
+function ticketScope(movie, recipientKey, owner = false) {
+  return !movie.unfollowers?.includes(recipientKey)
+    && (owner || movieKey(movie.url) === "george-michael-the-faith-tour" || movie.subscribers?.includes(recipientKey));
 }
 
 function alertStatus(preference = {}, watchKey) {
@@ -933,11 +1050,11 @@ function ticketListEntry(movie, state, unavailable, context, labels) {
   details.push(base);
   if (check?.lastCheckedAt) details.push(`Last ${ticketLabel(check, unavailable) === "Last check failed" ? "attempt" : "scan"}: ${formatTimestamp(check.lastCheckedAt)}`);
   if (context.ownerKeys.has(context.viewerKey)) {
-    const scope = [...labels.entries()].filter(([key]) => context.ownerKeys.has(key) || ticketScope(movie, key));
+    const scope = [...labels.entries()].filter(([key]) => ticketScope(movie, key, context.ownerKeys.has(key)));
     const shown = scope.slice(0, 12);
     const more = scope.length > shown.length ? `; ${scope.length - shown.length} more in /state` : "";
-    details.push(`Following: ${shown.map(([, label]) => label).join(" and ")}${more}`);
-    details.push(`Ticket alerts: ${shown.map(([key, label]) => `${label} ${alertStatus(context.recipients[key], watchKey)}`).join("; ")}${more}`);
+    details.push(`Following: ${shown.map(([, label]) => label).join(" and ") || "No one"}${more}`);
+    details.push(`Ticket alerts: ${shown.map(([key, label]) => `${label} ${alertStatus(context.recipients[key], watchKey)}`).join("; ") || "No recipients"}${more}`);
   } else {
     details.push(`Your ticket alerts: ${alertStatus(context.recipients[context.viewerKey], watchKey)}`);
   }
@@ -1028,7 +1145,7 @@ function activeSeatScope(seats, now) {
 function accountState(label, key, context, movies, seats, now) {
   const preference = context.recipients[key] || {};
   const isOwner = context.ownerKeys.has(key);
-  const scoped = isOwner ? movies : movies.filter((movie) => ticketScope(movie, key));
+  const scoped = movies.filter((movie) => ticketScope(movie, key, isOwner));
   const ticketOn = scoped.filter((movie) => alertStatus(preference, `ticket:${movieKey(movie.url)}`) === "on").length;
   const seatOn = isOwner && seats ? seats.filter(([id]) => alertStatus(preference, `seat:${id}`) === "on").length : 0;
   const eligible = isOwner && seats === null && !preference.stoppedAll && !ticketOn ? null : ticketOn + seatOn;
@@ -1055,7 +1172,7 @@ function ticketDashboardCard(movie, check, unavailable, context, labels, isOwner
   if (check?.lastCheckedAt) lines.push(`${result === "Last check failed" ? "Last attempt" : "Last scan"}: ${stateDate(check.lastCheckedAt)}`);
   if (isOwner) {
     lines.push(`Scope: ${slug === "george-michael-the-faith-tour" ? "Montréal" : "Canada-wide"}`);
-    const followers = [...labels.entries()].filter(([recipient]) => context.ownerKeys.has(recipient) || ticketScope(movie, recipient));
+    const followers = [...labels.entries()].filter(([recipient]) => ticketScope(movie, recipient, context.ownerKeys.has(recipient)));
     const alertSetting = ([recipient]) => alertStatus(context.recipients[recipient], key);
     const alerts = followers.filter((row) => alertSetting(row) === "on");
     const muted = followers.filter((row) => alertSetting(row) !== "on");
@@ -1112,7 +1229,9 @@ async function handleList(env, chatId, context, command) {
     ]);
     const { state, unavailable } = stateResult;
     const preference = context.recipients[context.viewerKey] || {};
-    const visible = (movie) => isOwner || ticketScope(movie, context.viewerKey);
+    const visible = (movie) => isOwner
+      ? [...new Set([...context.ownerKeys, ...Object.keys(context.recipients)])].some((key) => ticketScope(movie, key, context.ownerKeys.has(key)))
+      : ticketScope(movie, context.viewerKey);
     const visibleHistory = (movie) => isOwner || (visible(movie) && alertStatus(preference, `ticket:${movieKey(movie.url)}`) === "on");
     const unique = (rows) => [...new Map(rows.map((movie) => [movie.url, movie])).values()];
     const pending = unique(movies.filter(visible));
@@ -1196,13 +1315,25 @@ async function handleUpdate(request, env) {
     await telegram(env, chatId, `Your Telegram chat ID is ${chatId}. Send it to the watcher owner so they can authorize you.`);
     return new Response("ok");
   }
-  const preferenceCommand = message.text.trim().match(/^\/(stop|start)(?:@\w+)?(?:\s+(.+))?$/i);
-  if (preferenceCommand && (preferenceCommand[1].toLowerCase() === "stop" || preferenceCommand[2])) {
-    await handleNotificationPreference(env, chatId, preferenceCommand[1].toLowerCase(), (preferenceCommand[2] || "").trim());
+  const stopRequest = message.text.trim().match(/^\/(stop|stopwatch)(?:@\w+)?(?:\s+(.+))?$/i);
+  const approval = /^(yes|no|stop too|keep watching)$/i.test(message.text.trim());
+  if (stopRequest || approval) {
+    if (message.chat.type !== "private" || message.from?.is_bot !== false || String(message.from.id) !== chatId) return new Response("ok");
+    try {
+      if (stopRequest) await proposeStop(env, message, (stopRequest[2] || "").trim(), stopRequest[1].toLowerCase());
+      else await applyTelegramApproval(env, message);
+    } catch (error) {
+      console.error("Could not process confirmation:", error instanceof Error ? error.name : "unknown");
+      await telegram(env, chatId, "I could not process that request. Please try again shortly.");
+    }
+    return new Response("ok");
+  }
+  const startPreference = message.text.trim().match(/^\/start(?:@\w+)?\s+(.+)$/i);
+  if (startPreference) {
+    await handleNotificationPreference(env, chatId, "start", startPreference[1].trim());
     return new Response("ok");
   }
   const watchCommand = message.text.match(/^\/watch(?:@\w+)?\s+(.+)$/i);
-  const stopCommand = message.text.match(/^\/stopwatch(?:@\w+)?\s+(.+)$/i);
   if (!allowedTelegramChatIds(env).has(chatId)) {
     try {
       const recipientKey = await notificationRecipientKey(env, chatId);
@@ -1210,10 +1341,9 @@ async function handleUpdate(request, env) {
       if (!Object.hasOwn(recipients, recipientKey)) return new Response("ok");
       if (watchCommand) {
         await handleWatch(env, chatId, watchCommand[1].trim());
-      } else if (stopCommand) {
-        await handleNotificationPreference(env, chatId, "stop", stopCommand[1].trim());
+
       } else {
-        await telegram(env, chatId, "Use /watch Movie Name to add to your list.\nUse /list to see your movies and /state for your settings.\nUse /stop Movie Name or /stop all to stop your alerts.\nUse /start all to resume them.");
+        await telegram(env, chatId, "Use /watch Movie Name to add to your list.\nUse /list to see your movies and /state for your settings.\nUse /stop Movie Name to unfollow one movie, or /stop all to pause your alerts.\nUse /start all to resume them.");
       }
     } catch (error) {
       console.error("Could not process personal watch command:", error);
@@ -1239,8 +1369,7 @@ async function handleUpdate(request, env) {
     await handleRefreshSeats(env, chatId, refreshSeatsCommand[1].trim());
   } else if (watchCommand) {
     await handleWatch(env, chatId, watchCommand[1].trim());
-  } else if (stopCommand) {
-    await handleStopWatch(env, chatId, stopCommand[1].trim());
+
   } else if (/^\/listseats(?:@\w+)?$/i.test(message.text)) {
     await handleSeatList(env, chatId);
   } else {

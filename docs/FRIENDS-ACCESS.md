@@ -89,3 +89,9 @@ Remove the ID from its GitHub secret and from Cloudflare `TELEGRAM_CHAT_IDS` if 
 In a private Telegram chat, `/list` separates ticket status, who follows a title, and who actually gets alerts. The owner sees the shared list and generic friend labels. A friend sees only their subscribed titles and their own settings, including paused alerts. Other users and group chats do not get these views.
 
 `/state` separates ticket and seat alert settings from the weekly reminder preference. Owners see per-account scopes and the most recent successful ticket result or failed attempt. Friends see only their own titles and settings. A reminder marked accepted means Telegram accepted the request, not that someone read it. No reminder is sent when there are no eligible active watches. A global pause blocks reminders even if their own setting is enabled. Use `/start all` to resume watches and clear title pauses; use `/start reminder` separately if reminders were explicitly disabled.
+
+### Private Telegram confirmations
+
+- `/stop Movie Name` and `/stopwatch Movie Name` stop only your own ticket follow. Reply **Yes** to the exact preview within ten minutes or **No** to cancel. Other subscribers are unchanged. `/watch Movie Name` follows again without changing your independent alert and weekly preferences.
+- `/stop all` still pauses your messages without removing your movies. `/stop reminder` disables only your weekly reminder. Both use the same reply-to-confirm step.
+- The sole configured private admin receives a note after a friend actually starts or stops following a movie. On a stop, the admin can choose **Keep watching** or **Stop too** for their own watch only. No response keeps it unchanged. Distinct seat-management commands and web controls are unchanged.

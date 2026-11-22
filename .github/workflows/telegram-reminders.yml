@@ -20,6 +20,14 @@ on:
         description: Worker request identifier
         type: string
 
+      confirmation_expires:
+        description: Confirmation expiry time in milliseconds
+        type: string
+
+      confirmation_cancel:
+        description: Consume the confirmation without applying the change
+        type: string
+
 permissions:
   contents: write
 
@@ -37,6 +45,10 @@ jobs:
       TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS: ${{ secrets.TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS }}
       RECIPIENT_KEY: ${{ inputs.recipient_key }}
       PREFERENCE_QUERY: ${{ inputs.query }}
+      CONFIRMATION_NONCE: ${{ inputs.request_id }}
+      CONFIRMATION_EXPIRES: ${{ inputs.confirmation_expires }}
+      CONFIRMATION_CANCEL: ${{ inputs.confirmation_cancel }}
+      REQUIRE_STOP_CONFIRMATION: "true"
     steps:
       - uses: actions/checkout@v4
         with:

@@ -5,6 +5,7 @@ import argparse
 import html
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta
 from http.client import HTTPException
@@ -26,7 +27,7 @@ def active_watches(root, default, special, now):
         slug = movie_slug(movie["url"])
         detail = f"ticket sales in {MONTREAL_CITY}" if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG else "ticket sales"
         watches.append({"key": f"ticket:{slug}", "name": movie.get("name") or slug.replace("-", " "),
-                        "detail": detail, "recipients": sale_alert_chat_ids(movie["url"], default, special, movie.get("subscribers", []))})
+                        "detail": detail, "recipients": sale_alert_chat_ids(movie["url"], default, special, movie.get("subscribers", []), movie.get("unfollowers", []))})
     for watch_id, watch in json.loads((root / "seat-watches.json").read_text())["watches"].items():
         if not watch["enabled"]:
             continue
@@ -86,7 +87,7 @@ def weekly_message(watches):
     for watch in watches:
         lines.append(f"• {html.escape(watch['name'][:120])} — {html.escape(watch['detail'][:200])}")
         lines.extend(f"   {html.escape(detail)}" for detail in watch.get("audience", []))
-    lines.extend(["", "Pause an alert: <code>/stop Movie Name</code>",
+    lines.extend(["", "Stop following a movie: <code>/stop Movie Name</code>",
                   "Turn off only this reminder: <code>/stop reminder</code>",
                   "Manage alert and reminder settings: <code>/state</code>"])
     return "\n".join(lines)
@@ -185,6 +186,26 @@ def send_reminders(preferences, recipients, watches, token, now, send=send_teleg
     return failures
 
 
+def confirmed_pause(preference, watches, query, nonce, expires, now_ms, *, cancel=False):
+    """Consume a confirmation under the preference workflow's shared write queue."""
+    if query not in ("all", "reminder") or not re.fullmatch(r"[A-Za-z0-9_-]{22}", nonce):
+        raise ValueError("Invalid alert pause confirmation")
+    if expires <= now_ms or expires > now_ms + 10 * 60 * 1000:
+        return "This confirmation expired. Nothing changed."
+    receipts = {key: value for key, value in preference.get("confirmationReceipts", {}).items() if value > now_ms}
+    if nonce in receipts:
+        return None
+    receipts[nonce] = expires
+    preference["confirmationReceipts"] = receipts
+    if cancel:
+        return "Cancelled. Nothing changed."
+    if query == "all" and preference.get("stoppedAll"):
+        return "Your alerts were already paused. Nothing changed."
+    if query == "reminder" and preference.get("remindersEnabled") is False:
+        return "Your weekly reminder was already off. Nothing changed."
+    return update_preference(preference, watches, "stop", query)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("operation", choices=("remind", "initialize", "stop", "start", "reply"))
@@ -198,7 +219,8 @@ def main():
         text = (json.loads((args.root / "notification-result.json").read_text())["text"]
                 if os.getenv("PREFERENCE_SAVED") == "true" else
                 "I could not save your notification preference. Please try again shortly.")
-        send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], recipients[key], text)
+        if text is not None:
+            send_telegram(os.environ["TELEGRAM_BOT_TOKEN"], recipients[key], text)
         return
     preferences = load_preferences(args.root)
     # Explicit initialization also revokes accounts removed from the secrets.
@@ -213,7 +235,15 @@ def main():
         watches = active_watches(args.root, default, special, now)
     if args.operation in ("stop", "start"):
         personal = [watch for watch in watches if recipients[key] in watch["recipients"]]
-        text = update_preference(preferences[key], personal, args.operation, os.environ["PREFERENCE_QUERY"])
+        expiry = os.getenv("CONFIRMATION_EXPIRES")
+        query = os.environ["PREFERENCE_QUERY"]
+        if args.operation == "stop" and not expiry and os.getenv("REQUIRE_STOP_CONFIRMATION") == "true":
+            text = "Nothing changed. Send the stop command again to receive a confirmation."
+        elif args.operation == "stop" and expiry:
+            text = confirmed_pause(preferences[key], personal, query, os.environ["CONFIRMATION_NONCE"], int(expiry),
+                                   int(now.timestamp() * 1000), cancel=os.getenv("CONFIRMATION_CANCEL") == "true")
+        else:
+            text = update_preference(preferences[key], personal, args.operation, query)
         (args.root / "notification-result.json").write_text(json.dumps({"text": text}) + "\n")
     elif args.operation == "remind":
         failures = send_reminders(preferences, recipients, watches, os.environ["TELEGRAM_BOT_TOKEN"], now,

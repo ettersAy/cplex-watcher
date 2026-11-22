@@ -8,17 +8,17 @@ const source = readFileSync(new URL("../cloudflare-worker/src.js", import.meta.u
   .replace("export default {", "globalThis.__worker = {");
 await import(`data:text/javascript,${encodeURIComponent(source)}`);
 const key = (id) => createHmac("sha256", "test-secret").update(id).digest("hex");
-const friend = key("friend-id");
-const secondFriend = key("second-friend-id");
-const owner = key("owner-id");
+const friend = key("101");
+const secondFriend = key("102");
+const owner = key("201");
 const env = {
-  TELEGRAM_PREFERENCES_KEY: "test-secret", TELEGRAM_BOT_TOKEN: "test-token",
-  TELEGRAM_CHAT_IDS: "owner-id", TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
+  TELEGRAM_PREFERENCES_KEY: "test-secret", TELEGRAM_BOT_TOKEN: "999:synthetic",
+  TELEGRAM_CHAT_IDS: "201", TELEGRAM_WEBHOOK_SECRET: "webhook-secret",
   GITHUB_REPOSITORY: "owner/repo", GITHUB_ACTIONS_TOKEN: "test-github-token", TICKET_SCHEDULER_ENABLED: "true",
 };
 const movie = (slug, name, subscribers = []) => ({ url: `https://www.cineplex.com/movie/${slug}`, name, subscribers });
 const movies = [movie("paper-tiger", "Paper Tiger", [friend]), movie("the-odyssey", "The Odyssey"),
-  movie("another-film", "Another Friend's Film", [key("second-friend-id")])];
+  movie("another-film", "Another Friend's Film", [key("102")])];
 const completed = [movie("george-michael-the-faith-tour", "George Michael"),
   movie("runner", "Runner", [friend]), movie("other", "Other Completed")];
 let preference = {};
@@ -58,23 +58,23 @@ globalThis.fetch = async (url, options) => {
   }
   throw new Error(`Unexpected fetch: ${url}`);
 };
-async function command(text, id = "friend-id", type = "private", secret = "webhook-secret") {
+async function command(text, id = "101", type = "private", secret = "webhook-secret", reply) {
   return globalThis.__worker.fetch(new Request("https://worker.test/telegram", {
     method: "POST", headers: { "X-Telegram-Bot-Api-Secret-Token": secret },
-    body: JSON.stringify({ message: { chat: { id, type }, text } }),
+    body: JSON.stringify({ message: { chat: { id, type }, from: { id, is_bot: false }, text, reply_to_message: reply } }),
   }), env);
 }
 
-await command("/watch Paper Tiger", "stranger-id");
+await command("/watch Paper Tiger", "301");
 assert.equal(dispatched.length, 0);
 assert.equal(sent.length, 0);
 await command("/watch@cplxwatcher_bot Paper Tiger");
 assert.equal(dispatched[0].inputs.recipient_key, friend);
 assert.equal(dispatched[0].inputs.title, "Paper Tiger");
-assert.ok(!JSON.stringify(dispatched).includes("friend-id"));
+assert.ok(!JSON.stringify(dispatched).includes("101"));
 assert.match(sent.at(-1).text, /Searching Cineplex/);
-await command("/watch Paper Tiger", "owner-id");
-assert.equal(dispatched.at(-1).inputs.recipient_key, key("owner-id"));
+await command("/watch Paper Tiger", "201");
+assert.equal(dispatched.at(-1).inputs.recipient_key, key("201"));
 
 await command("/list");
 assert.match(sent.at(-1).text, /Paper Tiger<\/a> · Tickets not on sale/);
@@ -84,7 +84,7 @@ assert.match(sent.at(-1).text, /George Michael/);
 assert.match(sent.at(-1).text, /Runner/);
 assert.doesNotMatch(sent.at(-1).text, /Odyssey|Another Friend|Other Completed|Friend|Owner|Following/);
 
-await command("/list", "owner-id");
+await command("/list", "201");
 const ownerList = sent.at(-1).text;
 assert.match(ownerList, /Following: You and Friend [12]/);
 assert.match(ownerList, /Ticket alerts: You on; Friend [12] on/);
@@ -109,9 +109,9 @@ await command("/state@cplxwatcher_bot");
 assert.match(sent.at(-1).text, /Weekly setting: <b>ON<\/b> · scheduled reminder: ⏸ <b>BLOCKED<\/b> · all alerts paused/);
 assert.match(sent.at(-1).text, /Last accepted week: 2026-11-14 \(not receipt\)/);
 assert.match(sent.at(-1).text, /\/start all/);
-await command("/list", "owner-id");
+await command("/list", "201");
 assert.match(sent.at(-1).text, /Ticket alerts: You on; Friend [12] off \(all alerts paused\)/);
-await command("/state", "owner-id");
+await command("/state", "201");
 const adminState = sent.at(-1).text;
 assert.match(adminState, /3 active ticket watches · 3 sales recorded/);
 assert.match(adminState, /Latest success: Sun, Nov 22, 2:30 PM/);
@@ -122,20 +122,20 @@ assert.match(adminState, /Latest failure: Sun, Nov 22, 3:00 PM/);
 assert.match(adminState, /Seat alerts: 1\/1 active watches on/);
 assert.match(adminState, /Friend 1/);
 assert.match(adminState, /Friend 2/);
-assert.doesNotMatch(adminState, /friend-id|owner-id|[a-f0-9]{64}/);
+assert.doesNotMatch(adminState, /101|201|[a-f0-9]{64}/);
 
 const visibilityBefore = sent.length;
 for (const type of ["group", "supergroup", "channel", ""]) {
-  await command("/state", "owner-id", type);
-  await command("/list", "owner-id", type);
+  await command("/state", "201", type);
+  await command("/list", "201", type);
 }
-await command("/state", "stranger-id");
-await command("/state", "owner-id", "private", "wrong");
+await command("/state", "301");
+await command("/state", "201", "private", "wrong");
 assert.equal(sent.length, visibilityBefore);
 
 seatStateUnavailable = true;
 ticketStateUnavailable = true;
-await command("/state", "owner-id");
+await command("/state", "201");
 assert.match(sent.at(-1).text, /<b>UNKNOWN<\/b> · ticket scan state unavailable/);
 assert.match(sent.at(-1).text, /scheduled reminder:/);
 assert.match(sent.at(-1).text, /Seat alerts: ❔ <b>UNKNOWN<\/b>/);
@@ -155,11 +155,33 @@ assert.doesNotMatch(chunks[0].text, /<&/);
 assert.equal(dispatchCount, 2, "read commands do not dispatch workflow");
 movies.splice(originalLength);
 await command("/stopwatch Paper Tiger");
-assert.match(dispatched.at(-1).url, /telegram-reminders.yml/);
-assert.equal(dispatched.at(-1).inputs.operation, "stop");
+assert.equal(dispatched.length, 2, "no stop until approval");
+assert.match(sent.at(-1).text, /remove Paper Tiger from your followed movies/);
+assert.match(sent.at(-1).text, /admin will be notified/);
+assert.equal(sent.at(-1).reply_markup.force_reply, true);
+const prompt = { from: { id: "999", is_bot: true }, chat: { id: "101", type: "private" }, message_id: 11, text: sent.at(-1).text };
+await command("Yes");
+assert.equal(dispatched.length, 2, "unbound Yes cannot stop any movie");
+await command("Yes", "201", "private", "webhook-secret", prompt);
+assert.equal(dispatched.length, 2, "cross-user Yes cannot stop any movie");
+await command("Yes", "101", "private", "webhook-secret", prompt);
+assert.match(dispatched.at(-1).url, /check-tickets.yml/);
+assert.equal(dispatched.at(-1).inputs.operation, "unfollow");
+assert.equal(dispatched.at(-1).inputs.title, "paper-tiger");
 assert.equal(dispatched.at(-1).inputs.recipient_key, friend);
-await command("/stopwatch Paper Tiger", "owner-id");
-assert.equal(dispatched.at(-1).inputs.operation, "remove_by_title");
+assert.match(dispatched.at(-1).inputs.confirmation_expires, /^\d+$/);
+movies[0].unfollowers = [friend];
+await command("/list");
+assert.doesNotMatch(sent.at(-1).text, /Paper Tiger/);
+await command("/list", "201");
+assert.match(sent.at(-1).text, /Paper Tiger[^\n]*\nLast scan:[^\n]*\nFollowing: You\nTicket alerts: You on/);
+delete movies[0].unfollowers;
+await command("/stopwatch Paper Tiger", "201");
+assert.equal(dispatched.length, 3);
+const ownerPrompt = { ...prompt, chat: { ...prompt.chat, id: "201" }, text: sent.at(-1).text };
+await command("Yes", "201", "private", "webhook-secret", ownerPrompt);
+assert.equal(dispatched.at(-1).inputs.operation, "unfollow");
+assert.equal(dispatched.at(-1).inputs.recipient_key, owner);
 const count = dispatched.length;
 for (const text of ["/watchseat URL", "/watchshowtime Film 123", "/stopseats Film", "/refreshseats Film", "/listseats"]) {
   await command(text);

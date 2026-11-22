@@ -132,10 +132,44 @@ class PersonalWatchesTest(unittest.TestCase):
         self.assertEqual(watcher.notification_chat_ids(["owner-id", "friend-id"], "ticket:paper-tiger", preferences), ["owner-id"])
         self.assertEqual(len(self.read("movies.json")), 2)
 
+    def test_saved_registration_reply_distinguishes_membership_join_from_repeat(self):
+        workflow = (ROOT / ".github/workflows/check-tickets.yml").read_text()
+        step = workflow.split("- name: Send registration result to Telegram", 1)[1].split("- name: Report personal unfollow", 1)[0]
+        source = textwrap.dedent(step.split("python - <<'PY'\n", 1)[1].rsplit("          PY", 1)[0])
+        save_preferences(self.root, {self.friend: {"stoppedWatches": ["ticket:paper-tiger"]}})
+        old_cwd = Path.cwd()
+        self.addCleanup(os.chdir, old_cwd)
+        os.chdir(self.root)
+        with patch.dict(os.environ, {"RECIPIENT_KEY": self.friend, "REGISTRATION_SAVED": "true"}), \
+                patch.object(watcher, "send_telegram") as send, patch("ticket_membership.notify_friend_change") as notice:
+            self.write("registration.json", {"status": "watching", "movie": MOVIE, "already_tracked": True,
+                                            "membership_added": True, "friend_started": True})
+            exec(compile(source, "check-tickets.yml reply", "exec"), {})
+            self.assertIn("I added you to its watch list", send.call_args.args[2])
+            self.assertIn("alerts are paused for this title", send.call_args.args[2])
+            notice.assert_called_once()
+            self.write("registration.json", {"status": "already_watching", "movie": MOVIE})
+            exec(compile(source, "check-tickets.yml reply", "exec"), {})
+            self.assertIn("You were already on its watch list", send.call_args.args[2])
+            notice.assert_called_once()
+            save_preferences(self.root, {self.friend: {}})
+            exec(compile(source, "check-tickets.yml reply", "exec"), {})
+            self.assertIn("You were already on its ticket alert list", send.call_args.args[2])
+            self.write("registration.json", {"status": "watching", "movie": MOVIE, "membership_added": True,
+                                            "was_dormant": True})
+            exec(compile(source, "check-tickets.yml reply", "exec"), {})
+            self.assertIn("Checking is back on for Paper Tiger. I added you to its ticket alerts.", send.call_args.args[2])
+            notice.assert_called_once()
+            os.environ["REGISTRATION_SAVED"] = "false"
+            self.write("registration.json", {"status": "watching", "movie": MOVIE, "friend_started": True})
+            exec(compile(source, "check-tickets.yml reply", "exec"), {})
+            self.assertIn("could not save", send.call_args.args[2])
+            notice.assert_called_once()
+
     def test_actual_workflow_reply_requires_saved_state_and_reports_paused_alerts(self):
         workflow = (ROOT / ".github/workflows/check-tickets.yml").read_text()
         self.assertLess(workflow.index("- name: Save alert state"), workflow.index("- name: Send registration result"))
-        step = workflow.split("- name: Send registration result to Telegram", 1)[1].split("- name: Send removal result", 1)[0]
+        step = workflow.split("- name: Send registration result to Telegram", 1)[1].split("- name: Report personal unfollow", 1)[0]
         source = textwrap.dedent(step.split("python - <<'PY'\n", 1)[1].rsplit("          PY", 1)[0])
         self.write("registration.json", {"status": "watching", "movie": MOVIE})
         save_preferences(self.root, {self.friend: {"stoppedAll": True}})

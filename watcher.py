@@ -157,28 +157,26 @@ def rearm_montreal_watch(movies, sales_started, state):
     if existing is None:
         return False
     if not any(movie_slug(movie["url"]) == key for movie in movies):
-        movies.append({"url": existing["url"], "name": existing["name"]})
+        movies.append({key: existing[key] for key in ("url", "name", "subscribers", "unfollowers") if key in existing})
     sales_started[:] = [movie for movie in sales_started if movie_slug(movie["url"]) != key]
     state["movies"][key] = {"city": MONTREAL_CITY}
     print("Rearmed George Michael for Montréal ticket sales")
     return True
 
 
-def sale_alert_chat_ids(url, default_chat_ids, secondary_chat_ids, subscribers=()):
-    """Owners get every movie; secondary accounts get their subscriptions."""
-    recipients = telegram_chat_ids(default_chat_ids)
-    slug = movie_slug(url)
-    for chat_id in telegram_chat_ids(secondary_chat_ids):
-        if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG or (subscribers and recipient_key(chat_id) in subscribers):
-            recipients.append(chat_id)
-    return list(dict.fromkeys(recipients))
+def sale_alert_chat_ids(url, default_chat_ids, secondary_chat_ids, subscribers=(), unfollowers=()):
+    """Owners get every movie unless they unfollow; friends get their followed movies."""
+    from ticket_membership import effective_ticket_recipients
+    return effective_ticket_recipients(url, default_chat_ids, secondary_chat_ids, subscribers, unfollowers)
 
 
-def send_telegram(token, chat_ids, text, parse_mode=None):
+def send_telegram(token, chat_ids, text, parse_mode=None, reply_markup=None):
     for chat_id in telegram_chat_ids(chat_ids):
         data = {"chat_id": chat_id, "text": text, "disable_web_page_preview": "true"}
         if parse_mode:
             data["parse_mode"] = parse_mode
+        if reply_markup:
+            data["reply_markup"] = json.dumps(reply_markup)
         result = request_json(f"https://api.telegram.org/bot{token}/sendMessage", data)
         if not isinstance(result, dict) or result.get("ok") is not True:
             raise ValueError("Telegram did not confirm the message")
@@ -198,6 +196,12 @@ def main():
     for movie in movies:
         url = movie["url"]
         key = movie_slug(url)
+        if movie.get("unfollowers") and (chat_ids or george_michael_chat_ids) and not sale_alert_chat_ids(
+            url, chat_ids, george_michael_chat_ids, movie.get("subscribers", []), movie["unfollowers"]
+        ):
+            # Retain the exclusions so a future watch does not revive another person's subscription.
+            active_movies.append(movie)
+            continue
         previous = state["movies"].get(key, {})
         try:
             current = get_movie(url)
@@ -230,7 +234,7 @@ def main():
         # when Telegram is connected for the first time.
         if current["hasShowtimes"] and not previous.get("alerted"):
             try:
-                alert_chat_ids = sale_alert_chat_ids(url, chat_ids, george_michael_chat_ids, movie.get("subscribers", []))
+                alert_chat_ids = sale_alert_chat_ids(url, chat_ids, george_michael_chat_ids, movie.get("subscribers", []), movie.get("unfollowers", []))
                 if not token or not alert_chat_ids:
                     raise ValueError("Telegram alert credentials are missing; keeping the watch for retry")
                 alert_chat_ids = notification_chat_ids(alert_chat_ids, f"ticket:{key}", preferences)
@@ -269,6 +273,10 @@ def main():
                 print("  Moved to sales-started list")
             if movie.get("subscribers"):
                 completed["subscribers"] = list(dict.fromkeys(completed.get("subscribers", []) + movie["subscribers"]))
+            if movie.get("unfollowers"):
+                completed["unfollowers"] = list(movie["unfollowers"])
+            else:
+                completed.pop("unfollowers", None)
             continue
 
         active_movies.append(movie)
