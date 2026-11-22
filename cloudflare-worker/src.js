@@ -931,7 +931,7 @@ function ticketListEntry(movie, state, unavailable, context, labels) {
   const details = [];
   const base = `• ${ticketLink(movie, check)} · ${ticketLabel(check, unavailable)}`;
   details.push(base);
-  if (check?.lastCheckedAt) details.push(`Last ${ticketLabel(check, unavailable) === "Last check failed" ? "attempt" : "scan"}: ${formatTimestamp(check.lastCheckedAt)} Montréal time`);
+  if (check?.lastCheckedAt) details.push(`Last ${ticketLabel(check, unavailable) === "Last check failed" ? "attempt" : "scan"}: ${formatTimestamp(check.lastCheckedAt)}`);
   if (context.ownerKeys.has(context.viewerKey)) {
     const scope = [...labels.entries()].filter(([key]) => context.ownerKeys.has(key) || ticketScope(movie, key));
     const shown = scope.slice(0, 12);
@@ -984,18 +984,28 @@ function nextReminderDate(now) {
   return new Intl.DateTimeFormat("en-CA", { month: "short", day: "numeric", timeZone: "UTC" }).format(date);
 }
 
-function weeklyState(preference, eligible, now) {
-  const disabled = preference.remindersEnabled === false;
-  const reason = disabled ? "Disabled by preference" : preference.stoppedAll
-    ? "Enabled, but not sent while all alerts are paused"
-    : eligible === null ? "Enabled, eligibility unavailable"
-    : !eligible ? "Enabled, but no eligible active watches"
-    : `Enabled · ${eligible} eligible · Next usual slot: Sat ${nextReminderDate(now)}, noon Montréal`;
+const stateClock = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Toronto", weekday: "short", month: "short", day: "numeric",
+  hour: "numeric", minute: "2-digit", hour12: true,
+});
+
+function stateDate(value) {
+  return Number.isFinite(Date.parse(value)) ? stateClock.format(new Date(value)) : "not recorded";
+}
+
+function weeklyState(preference, eligible, now, seatsUnknown = false) {
+  const enabled = preference.remindersEnabled !== false;
+  const status = !enabled ? "🔕 <b>OFF</b> · disabled by preference"
+    : preference.stoppedAll ? "⏸ <b>BLOCKED</b> · all alerts paused"
+    : eligible === null ? "❔ <b>UNKNOWN</b> · active seat data unavailable"
+    : !eligible ? "⏸ <b>BLOCKED</b> · no active watches with alerts on"
+    : `🟢 <b>ON</b> · ${eligible}${seatsUnknown ? "+ eligible (seat status unknown)" : " eligible"} · next Sat ${nextReminderDate(now)}, noon`;
   const last = /^\d{4}-\d{2}-\d{2}$/.test(preference.lastReminderWeek || "")
     ? preference.lastReminderWeek : "";
-  const pending = !disabled && !preference.stoppedAll && eligible > 0 && last !== reminderWeek(now);
-  return [`Weekly reminders: ${reason}`, last ? `Last accepted by Telegram: week of ${last}` : "No accepted weekly reminder recorded",
-    ...(pending ? ["No acceptance recorded for the most recent scheduled slot."] : [])];
+  return [
+    `Weekly setting: <b>${enabled ? "ON" : "OFF"}</b> · scheduled reminder: ${status}`,
+    last ? `Last accepted week: ${last} (not receipt)` : "Last accepted week: none recorded",
+  ];
 }
 
 function activeSeatScope(seats, now) {
@@ -1021,21 +1031,73 @@ function accountState(label, key, context, movies, seats, now) {
   const scoped = isOwner ? movies : movies.filter((movie) => ticketScope(movie, key));
   const ticketOn = scoped.filter((movie) => alertStatus(preference, `ticket:${movieKey(movie.url)}`) === "on").length;
   const seatOn = isOwner && seats ? seats.filter(([id]) => alertStatus(preference, `seat:${id}`) === "on").length : 0;
-  const eligible = isOwner && seats === null && !preference.stoppedAll ? null : ticketOn + seatOn;
-  const lines = [`<b>${label}${isOwner ? " (owner)" : ""}</b>`,
-    `Overall alert setting: ${preference.stoppedAll ? "all alerts paused" : "not paused globally"}`,
-    `Ticket subscriptions: ${scoped.length} · alerts on for ${ticketOn}`];
-  for (const movie of scoped) lines.push(`• ${titleName(movie)}: ${alertStatus(preference, `ticket:${movieKey(movie.url)}`)}`);
-  if (isOwner && seats === null) lines.push("Seat alert status temporarily unavailable.");
-  if (isOwner && seats) {
-    lines.push(`Seat subscriptions: ${seats.length} · alerts on for ${seatOn} · <code>/listseats</code> for details`);
-    for (const [id, watch] of seats) {
-      if (alertStatus(preference, `seat:${id}`) !== "on") lines.push(`• ${titleText(watch.name)} seat alerts: ${alertStatus(preference, `seat:${id}`)}`);
-    }
-  }
-  lines.push(...weeklyState(preference, eligible, now));
+  const eligible = isOwner && seats === null && !preference.stoppedAll && !ticketOn ? null : ticketOn + seatOn;
+  const lines = [
+    `👤 <b>${label}${isOwner ? " (owner)" : ""}</b>`,
+    preference.stoppedAll ? "🔕 <b>Alerts off</b> · all alerts paused" : "🔔 <b>Alerts enabled</b> · individual pauses may apply",
+    `Ticket alerts: ${ticketOn}/${scoped.length} subscribed titles on`,
+  ];
+  if (isOwner) lines.push(seats === null ? "Seat alerts: ❔ <b>UNKNOWN</b>"
+    : `Seat alerts: ${seatOn}/${seats.length} active watches on`);
+  lines.push(...weeklyState(preference, eligible, now, isOwner && seats === null));
   if (key === context.viewerKey) lines.push(...watchHints(preference));
   return lines.join("\n");
+}
+
+function ticketDashboardCard(movie, check, unavailable, context, labels, isOwner, now) {
+  const slug = movieKey(movie.url);
+  const key = `ticket:${slug}`;
+  const result = ticketLabel(check, unavailable);
+  const icon = result === "Last check failed" ? "⚠️" : result === "Ticket status unknown" ? "❔"
+    : result === "Tickets on sale" ? "🟢" : "⏳";
+  const stale = result.startsWith("Tickets ") && now.getTime() - Date.parse(check?.lastCheckedAt) > 60 * 60_000;
+  const lines = [`${icon} <b>${ticketLink(movie, check)}</b> · ${result}${stale ? " (last known)" : ""}`];
+  if (check?.lastCheckedAt) lines.push(`${result === "Last check failed" ? "Last attempt" : "Last scan"}: ${stateDate(check.lastCheckedAt)}`);
+  if (isOwner) {
+    lines.push(`Scope: ${slug === "george-michael-the-faith-tour" ? "Montréal" : "Canada-wide"}`);
+    const followers = [...labels.entries()].filter(([recipient]) => context.ownerKeys.has(recipient) || ticketScope(movie, recipient));
+    const alertSetting = ([recipient]) => alertStatus(context.recipients[recipient], key);
+    const alerts = followers.filter((row) => alertSetting(row) === "on");
+    const muted = followers.filter((row) => alertSetting(row) !== "on");
+    // Wrap labels on separate complete lines so a large registry cannot exceed Telegram's message limit.
+    for (const [audience, title] of [[followers, "Following"], [alerts, "Ticket alerts on"], [muted, "Ticket alerts off"]]) {
+      if (!audience.length) lines.push(`${title}: none`);
+      for (let i = 0; i < audience.length; i += 25) {
+        lines.push(`${i ? "  " : title + ": "}${audience.slice(i, i + 25).map((row) => row[1] + (audience === muted ? " " + alertSetting(row).slice(4) : "")).join(", ")}`);
+      }
+    }
+  } else {
+    const status = alertStatus(context.recipients[context.viewerKey], key);
+    lines.push(status === "on" ? "🔔 Your ticket alerts: <b>ON</b>" : `🔕 Your ticket alerts: <b>OFF</b> ${status.slice(4)}`);
+  }
+  return lines.join("\n");
+}
+
+function ticketHeartbeat(pending, state, unavailable, now) {
+  if (unavailable) return "❔ <b>UNKNOWN</b> · ticket scan state unavailable";
+  if (!pending.length) return "⚪ <b>IDLE</b> · no active ticket watches";
+  const maxAge = 60 * 60_000;
+  const checks = pending.map((movie) => state[movieKey(movie.url)]);
+  const dated = checks.filter((check) => Number.isFinite(Date.parse(check?.lastCheckedAt)));
+  const latest = (rows) => rows.sort((a, b) => Date.parse(b.lastCheckedAt) - Date.parse(a.lastCheckedAt))[0]?.lastCheckedAt;
+  const successes = dated.filter((check) => ticketLabel(check, false).startsWith("Tickets "));
+  const failures = dated.filter((check) => ticketLabel(check, false) === "Last check failed");
+  const recent = successes.filter((check) => now.getTime() - Date.parse(check.lastCheckedAt) <= maxAge).length;
+  const stale = successes.length - recent;
+  const unknown = pending.length - successes.length - failures.length;
+  const success = latest(successes), failed = latest(failures), newest = latest(dated);
+  const result = failures.length ? "⚠️ <b>CHECK FAILED</b> · at least one latest result failed"
+    : stale ? "⚠️ <b>STALE</b> · some saved results are over an hour old"
+    : unknown ? "❔ <b>UNKNOWN</b> · some titles have no confirmed result"
+    : "🟢 <b>RECENT</b> · all active titles have a saved result within an hour";
+  return [result, `${recent} recent · ${stale} stale · ${failures.length} failed · ${unknown} unknown`,
+    ...(newest && newest === success ? [`Last attempt succeeded: ${stateDate(success)}`]
+      : [`Last attempt: ${stateDate(newest)}`, `Latest success: ${stateDate(success)}`]),
+    ...(failed ? [`Latest failure: ${stateDate(failed)}`] : [])].join("\n");
+}
+
+function stateCount(count, singular) {
+  return `${count} ${singular}${count === 1 ? "" : singular.endsWith("watch") ? "es" : "s"}`;
 }
 
 async function handleList(env, chatId, context, command) {
@@ -1045,8 +1107,7 @@ async function handleList(env, chatId, context, command) {
     const [salesStarted, movies, stateResult, seatResult] = await Promise.all([
       command === "state" && !isOwner ? [] : getSalesStarted(env).catch(() => null),
       getManagedWatches(env),
-      command === "state" && !isOwner ? { state: {} }
-        : getWatchState(env).then((state) => ({ state })).catch(() => ({ state: {}, unavailable: true })),
+      getWatchState(env).then((state) => ({ state })).catch(() => ({ state: {}, unavailable: true })),
       command === "state" && isOwner ? getSeatWatches(env).then((seats) => activeSeatScope(seats, now)).catch(() => null) : null,
     ]);
     const { state, unavailable } = stateResult;
@@ -1059,17 +1120,21 @@ async function handleList(env, chatId, context, command) {
     const labels = isOwner ? accountLabels(context) : new Map([[context.viewerKey, "You"]]);
     const sections = [];
     if (command === "state") {
-      sections.push(`<b>${isOwner ? "Watcher state" : "Your watcher state"}</b>`);
+      sections.push(isOwner ? "🎬 <b>Watcher dashboard</b>" : "🎬 <b>Your watcher settings</b>");
       if (isOwner) {
-        const checks = pending.map((movie) => state[movieKey(movie.url)]).filter((check) => Number.isFinite(Date.parse(check?.lastCheckedAt)));
-        const latest = (filter) => checks.filter(filter).sort((a, b) => Date.parse(b.lastCheckedAt) - Date.parse(a.lastCheckedAt))[0]?.lastCheckedAt;
-        const success = latest((check) => check.lastCheckStatus === "success" && !check.lastError);
-        const failed = latest((check) => check.lastCheckStatus === "failed" || check.lastError);
-        sections.push(`Active ticket watches: ${pending.length} · ticket-sale history: ${salesStarted === null ? "unavailable" : started.length}
-${unavailable ? "Ticket scan state temporarily unavailable." : `Latest successful result: ${success ? formatTimestamp(success) + " Montréal time" : "none in current results"}${failed ? "\nLatest failed attempt: " + formatTimestamp(failed) + " Montréal time" : ""}`}`);
+        const paused = [...labels.keys()].filter((key) => context.recipients[key]?.stoppedAll).length;
+        const remindersOff = [...labels.keys()].filter((key) => context.recipients[key]?.remindersEnabled === false).length;
+        sections.push([`📊 <b>Overview</b>`, `🎟 ${stateCount(pending.length, "active ticket watch")} · ${salesStarted === null ? "sales history unavailable" : `${stateCount(started.length, "sale")} recorded`}`,
+          `🪑 ${seatResult === null ? "Seat status unavailable" : stateCount(seatResult.length, "active seat watch")} · <code>/listseats</code>`,
+          ...(paused || remindersOff ? [`🔕 ${stateCount(paused, "all-alert pause")} · ${stateCount(remindersOff, "separate weekly opt-out")}. Each account manages its own settings.`] : [])].join("\n"));
+        sections.push("📡 <b>Ticket checks</b>\n" + ticketHeartbeat(pending, state, unavailable, now));
+        sections.push("👥 <b>Per-account settings</b>");
       }
       for (const [key, label] of labels) sections.push(accountState(label, key, context, pending, seatResult, now));
-      sections.push("Use <code>/list</code> for ticket status.");
+      sections.push(isOwner ? "🎟 <b>Active ticket watches</b>" : "🎟 <b>Your active tickets</b>");
+      for (const movie of pending) sections.push(ticketDashboardCard(movie, state[movieKey(movie.url)], unavailable, context, labels, isOwner, now));
+      if (!pending.length) sections.push("No active ticket watches.");
+      sections.push("Use <code>/list</code> for the watchlist and recent sales.");
     } else {
       sections.push("<b>Ticket watchlist</b>");
       if (pending.length && env.TICKET_SCHEDULER_ENABLED === "true") sections.push(`Next expected ticket scan: ${nextScheduledCheck()}`);
@@ -1081,7 +1146,7 @@ ${unavailable ? "Ticket scan state temporarily unavailable." : `Latest successfu
         sections.push("<b>Recent ticket sales</b>");
         started.sort((a, b) => (Date.parse(b.salesStartedAt) || 0) - (Date.parse(a.salesStartedAt) || 0));
         for (const movie of started.slice(0, 6)) {
-          const when = Number.isFinite(Date.parse(movie.salesStartedAt)) ? ` · ${formatTimestamp(movie.salesStartedAt)} Montréal time` : "";
+          const when = Number.isFinite(Date.parse(movie.salesStartedAt)) ? ` · ${formatTimestamp(movie.salesStartedAt)}` : "";
           sections.push(`• ${ticketLink(movie, state[movieKey(movie.url)])}${when}`);
         }
       }
