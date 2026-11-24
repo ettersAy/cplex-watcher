@@ -58,7 +58,7 @@
       "releaseDate": "2026-11-20T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/paper-tiger",
-      "lastCheckedAt": "2026-11-24T09:00:31.009674+00:00",
+      "lastCheckedAt": "2026-11-24T09:30:29.399797+00:00",
       "lastCheckStatus": "success"
     },
     "josephine": {
@@ -66,9 +66,9 @@
       "releaseDate": "2026-11-27T00:00:00",
       "hasShowtimes": false,
       "url": "https://www.cineplex.com/movie/josephine",
-      "lastCheckedAt": "2026-11-24T09:00:31.494242+00:00",
+      "lastCheckedAt": "2026-11-24T09:30:29.661156+00:00",
       "lastCheckStatus": "success"
     }
   },
-  "lastTicketCheckSlot": 997506
+  "lastTicketCheckSlot": 997507
 }
