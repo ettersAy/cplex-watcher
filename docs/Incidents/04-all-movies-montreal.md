@@ -41,9 +41,19 @@ These are supplementary checks. Direct live lookups from this checkout additiona
 
 ## Deployment and live recovery
 
-Pending at the time of implementation; record the actual commit, Worker version, request ID, Action, two-recipient Telegram result, and saved state below after completion.
+Published and verified on November 25, 2026:
 
-Recovery sequence:
+- Implementation commit: `fe1ca110e3dfdd3ba33c7bd67c7ee855d5e4299c` on `main`.
+- Worker version: `8b31db09-1b3e-42b4-85aa-acb808927af9`, keeping `*/5 * * * *` and `TICKET_SCHEDULER_ENABLED=true`.
+- Real owner command: `/watch Josephine` at 09:51:03 Montréal (14:51:03 UTC). Worker request `b4a9904f-10bf-4255-8d4c-e28d4efd6a80` logged the accepted GitHub dispatch.
+- [Action 45638569334](https://github.com/ettersAy/cplex-watcher/actions/runs/45638569334) completed successfully on the implementation commit. At 14:51:16 UTC it logged `Josephine in Montréal: Not Yet`, then `Telegram nationalAlerted sent to 2 recipient(s)`. Each send had a successful Telegram API response.
+- The Action persisted state in `04927752b176481f169e8a2e0c7ad997ebeeb3fd` before sending the registration confirmation. The exact local checkout was fast-forwarded to that commit.
+- Readback confirmed Josephine is active exactly once and absent from the completed list; its friend subscriber and exclusions are unchanged, all eight other completed movies are preserved, and notification preferences are unchanged. Saved state has `city: Montréal`, `nationalHasShowtimes: true`, `hasShowtimes: false`, `nationalAlerted: true`, successful check status, and no final `alerted` flag.
+- The owner's actual Telegram Web chat showed the progress notice and successful registration at 09:51. The 09:52 `/list` reply showed `Tickets not on sale in Montréal · sales started elsewhere`, `Following: You and Friend`, and both ticket alerts on. Screenshot: `/Users/Ayoub/Developer/missions/cineplex-seat-finder-app/references/2026-11-25-josephine-montreal.jpg`.
+
+Both notifications were accepted by Telegram; the owner's receipt was directly observed. The friend's private chat/read status was not accessed. The normal `/watch` flow performed recovery; no production JSON or personal preferences were manually overwritten. Repeated-check suppression was tested locally; this recovery run alone is not proof of a later automatic check.
+
+Repeatable recovery sequence:
 
 1. Push the tested Python/workflow change, then deploy the Worker from `cloudflare-worker/`.
 2. Start `npx wrangler tail cplex-watcher --format pretty`.
