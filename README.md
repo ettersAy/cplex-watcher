@@ -13,7 +13,7 @@ Personal Cineplex movie-availability watcher with Telegram notifications and a s
 2. The Cloudflare Worker starts a GitHub Actions lookup.
 3. The Action finds the official Cineplex movie URL and deduplicates watches by URL.
 4. The Cloudflare timer targets one GitHub Actions scan per half hour; GitHub's own offset schedule is a backup.
-5. When Cineplex reports ticket sales started, the Action alerts the owner and friends subscribed to that movie, respecting personal opt-outs.
+5. Every movie is watched for Montréal. If sales start elsewhere first, subscribers receive one progress notice and the movie stays active. The ticket alert and completion happen only when a Montréal session is bookable.
 6. Every Saturday at noon Montréal time, accounts with active watches receive their own weekly watch list.
 
 The app uses GitHub Actions for Cineplex requests because Cineplex blocks Cloudflare Worker requests.

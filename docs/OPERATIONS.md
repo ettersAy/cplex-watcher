@@ -1,6 +1,6 @@
 # Cineplex Ticket Watcher operations guide
 
-This guide documents the deployed watcher, including the Montréal ticket-sale rule verified on 2026-11-14. Old Cloudflare KV watch records and the GitHub-Action-to-Worker callback are retired.
+This guide documents the deployed watcher, including the Montréal ticket-sale rule generalized to every movie on 2026-11-25. Old Cloudflare KV watch records and the GitHub-Action-to-Worker callback are retired.
 
 ## Architecture
 
@@ -165,21 +165,22 @@ node scripts/test-ticket-schedule.mjs
 node scripts/test-reminder-schedule.mjs
 ```
 
-`watcher.py` uses Cineplex's national `hasShowtimes` value for ordinary watches. The George Michael Montréal rule below replaces that value with a local bookable-session check.
+`watcher.py` uses the national movie-page flag as the first stage, then checks actual Montréal availability for **every movie**. Both scheduled scans and `/watch` registration use the same `get_movie()` implementation.
 
-| `hasShowtimes` | Displayed sales status | Telegram alert |
+| National sales | Montréal sales (`hasShowtimes`) | Result |
 |---|---|---|
-| `false` | Not Yet | No alert. |
-| `true` | Started | Sends one alert, moves the movie to `sales-started.json`, then removes it from `movies.json`. |
-| Check error | Unable to determine | No sale alert; stores the error. |
+| `false` | `false` | Keep watching; no theatre/date requests or alert. |
+| `true` | `false` | Send one notice that sales started elsewhere and Montréal is now being watched. Save `nationalAlerted: true`; keep the movie active. |
+| `true` | `true` | Send the Montréal ticket alert with theatre/time, save `alerted: true`, and archive the movie. No separate national notice is needed. |
+| API/check error | Unknown | Retain the active watch and logged error; do not claim local availability or absence. |
 
 The alert is sent directly from GitHub Actions with its Telegram secrets. This avoids the previous Worker callback HTTP 403 issue.
 
-### George Michael — Montréal only
+### Every movie — Montréal only
 
-**Deployed and verified on 2026-11-14.**
+Originally implemented for George Michael on 2026-11-14; generalized after Josephine's national-only alert on 2026-11-25. See [the incident, tests and live recovery record](Incidents/04-all-movies-montreal.md).
 
-For the `george-michael-the-faith-tour` URL, `get_movie()` reads the current Cineplex film ID, then checks these public theatrical API endpoints:
+Once the national flag is true, `get_movie()` reads the movie's current Cineplex film ID, then checks these public theatrical API endpoints:
 
 1. `theatres?language=en&filmId={filmId}`: find theatres showing that movie, and match their `location.city` to Montréal (accent-insensitive).
 2. For matching theatres, `dates/bookable?language=en&filmId={filmId}&locationId={theatreId}`: get actual available dates.
@@ -189,13 +190,13 @@ The search stops at the first bookable Montréal session. With no Montréal thea
 
 This means Montréal city, not the wider metropolitan area: Laval, Brossard, Kirkland, and Mont-Royal are separate cities in Cineplex's directory. The theatre IDs are not hardcoded.
 
-`state.json` records `city`, the original `nationalHasShowtimes`, and the first matching `showtime`; its existing `hasShowtimes` field now means Montréal availability for this movie. Both scheduled checks and `/watch` registration use `get_movie()`, so a national sale does not reject a new Montréal watch. Telegram sale messages include Montréal, the theatre, and the local screening time. Existing recipients, including `TELEGRAM_GEORGE_MICHAEL_ALERT_CHAT_IDS`, are preserved.
+`state.json` records `city`, the original `nationalHasShowtimes`, and the first matching `showtime`; `hasShowtimes` means Montréal availability for every newly checked movie. A national sale cannot reject a new Montréal watch. `/list`, `/state`, registration replies and weekly reminders name Montréal. Recipient subscriptions, exclusions and personal alert preferences are preserved.
 
-On the first updated run, `rearm_montreal_watch()` moves the old national result back into the active queue and clears its national alert flag. The saved `city` marks that correction as complete, so later successful Montréal alerts stay completed. A movie absent from both the active and completed lists is not recreated. Other movie records are preserved.
+An explicit `/watch Movie Name` can restore an old national-only completed movie. Registration moves its saved entry back to `movies.json`, retains subscribers/unfollowers, and clears only that movie's old check/notification state. Other completed movies are not automatically reopened. Active legacy checks also discard an old national `alerted` flag when adopting the Montréal scope. The historical `rearm_montreal_watch()` correction remains limited to the original George Michael migration.
 
 API failures are saved as failed checks and leave the movie active. Missing Telegram configuration or failed delivery also retains the movie for retry while allowing other movies to run. A partial failure across multiple Telegram recipients can resend to an earlier successful recipient on retry; per-recipient delivery state is not tracked.
 
-Verification on 2026-11-14:
+Historical George Michael verification on 2026-11-14:
 
 - The changed `get_movie()` returned `nationalHasShowtimes: true`, `hasShowtimes: false`, `city: Montréal`, and no local session for the supplied George Michael URL.
 - A positive control in Toronto returned theatre `7400`, session `314899`, December 9 at 19:00. This was a read-only API check; no ticket purchase or Telegram message was sent.

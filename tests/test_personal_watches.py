@@ -99,6 +99,22 @@ class PersonalWatchesTest(unittest.TestCase):
         self.assertEqual(len(sales), 1)
         self.assertEqual(sales[0]["subscribers"], [self.friend])
 
+    def test_rewatching_national_archive_restores_friends_and_exclusions(self):
+        archived = {**MOVIE, "subscribers": [self.friend, self.second],
+                    "unfollowers": [self.second], "salesStartedAt": "2026-11-25"}
+        self.write("sales-started.json", [archived, OTHER])
+        self.write("state.json", {"lastTicketCheckSlot": 123, "movies": {
+            "paper-tiger": {"city": "Montréal", "alerted": True, "nationalAlerted": True},
+            "the-odyssey": {"lastCheckStatus": "success"}}})
+        self.register(self.owner)
+        restored = self.read("movies.json")[-1]
+        self.assertEqual(restored["subscribers"], [self.friend, self.second])
+        self.assertEqual(restored["unfollowers"], [self.second])
+        self.assertNotIn("salesStartedAt", restored)
+        self.assertEqual(self.read("sales-started.json"), [OTHER])
+        self.assertEqual(self.read("state.json"), {"lastTicketCheckSlot": 123,
+                         "movies": {"the-odyssey": {"lastCheckStatus": "success"}}})
+
     def test_sale_sends_to_owner_and_subscriber_and_preserves_history(self):
         self.register()
         # Another friend can register after sales begin, before the checker archives it.

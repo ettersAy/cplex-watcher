@@ -50,15 +50,15 @@ def response(body, status=200):
     return result
 
 
-def movie_result(url=GEORGE_MICHAEL_URL, on_sale=False):
-    result = {"url": url, "name": "George Michael: The Faith Tour", "hasShowtimes": on_sale}
-    if watcher.movie_slug(url) == watcher.GEORGE_MICHAEL_FAITH_TOUR_SLUG:
-        result.update({"city": "Montréal", "nationalHasShowtimes": True, "showtime": None})
-        if on_sale:
-            result["showtime"] = {
-                "theatreId": 9406, "theatreName": "Cinéma Banque Scotia Montréal",
-                "showtimeId": SESSION["vistaSessionId"], "startsAt": SESSION["showStartDateTime"],
-            }
+def movie_result(url=GEORGE_MICHAEL_URL, on_sale=False, national_sales=None):
+    result = {"url": url, "name": "George Michael: The Faith Tour", "hasShowtimes": on_sale,
+              "city": "Montréal", "nationalHasShowtimes": on_sale if national_sales is None else national_sales,
+              "showtime": None}
+    if on_sale:
+        result["showtime"] = {
+            "theatreId": 9406, "theatreName": "Cinéma Banque Scotia Montréal",
+            "showtimeId": SESSION["vistaSessionId"], "startsAt": SESSION["showStartDateTime"],
+        }
     return result
 
 
@@ -150,15 +150,45 @@ class MontrealAvailabilityTest(unittest.TestCase):
         self.assertEqual(movie["city"], "Montréal")
         city_check.assert_called_once_with(FILM_ID, "Montréal")
 
+    @patch("watcher.find_city_showtime", return_value=None)
+    @patch("watcher.urlopen")
+    def test_every_movie_requires_montreal_even_when_national_sales_started(self, open_url, city_check):
+        details = {"id": 62258, "title": "Josephine", "hasShowtimes": True}
+        open_url.return_value = response(f'<script id="__NEXT_DATA__">{json.dumps(details)}</script>')
+        movie = watcher.get_movie("https://www.cineplex.com/movie/josephine")
+        self.assertFalse(movie["hasShowtimes"])
+        self.assertTrue(movie["nationalHasShowtimes"])
+        self.assertEqual(movie["city"], "Montréal")
+        city_check.assert_called_once_with(62258, "Montréal")
+
     @patch("watcher.find_city_showtime")
     @patch("watcher.urlopen")
-    def test_other_movies_keep_the_existing_national_check(self, open_url, city_check):
-        details = {"title": "The Odyssey", "hasShowtimes": True}
+    def test_no_national_sales_skips_city_requests(self, open_url, city_check):
+        details = {"title": "The Odyssey", "hasShowtimes": False}
         open_url.return_value = response(f'<script id="__NEXT_DATA__">{json.dumps(details)}</script>')
-        self.assertTrue(watcher.get_movie(OTHER_MOVIE_URL)["hasShowtimes"])
+        movie = watcher.get_movie(OTHER_MOVIE_URL)
+        self.assertFalse(movie["hasShowtimes"])
+        self.assertFalse(movie["nationalHasShowtimes"])
+        self.assertEqual(movie["city"], "Montréal")
         city_check.assert_not_called()
 
-    @patch("register_watch.get_movie", return_value=movie_result())
+    @patch("watcher.find_city_showtime", return_value={"showtimeId": 123})
+    @patch("watcher.urlopen")
+    def test_general_movie_accepts_confirmed_montreal_session(self, open_url, city_check):
+        details = {"id": 62258, "title": "Josephine", "hasShowtimes": True}
+        open_url.return_value = response(f'<script id="__NEXT_DATA__">{json.dumps(details)}</script>')
+        movie = watcher.get_movie("https://www.cineplex.com/movie/josephine")
+        self.assertTrue(movie["hasShowtimes"])
+        self.assertEqual(movie["showtime"], {"showtimeId": 123})
+
+    @patch("watcher.urlopen")
+    def test_missing_film_id_is_an_error_not_no_montreal_sales(self, open_url):
+        details = {"title": "Josephine", "hasShowtimes": True}
+        open_url.return_value = response(f'<script id="__NEXT_DATA__">{json.dumps(details)}</script>')
+        with self.assertRaisesRegex(ValueError, "film ID"):
+            watcher.get_movie("https://www.cineplex.com/movie/josephine")
+
+    @patch("register_watch.get_movie", return_value=movie_result(national_sales=True))
     @patch("register_watch.urlopen")
     def test_registration_accepts_watch_while_only_national_sales_exist(self, open_url, get_movie):
         open_url.return_value = response(f"<urlset><url><loc>{GEORGE_MICHAEL_URL}</loc></url></urlset>")
@@ -296,6 +326,54 @@ class WatchLifecycleTest(unittest.TestCase):
         watcher.main()
         self.get_movie.assert_not_called()
         self.assertEqual(self.read("movies.json"), [])
+
+    def test_national_notice_once_then_montreal_alert_once_for_both_followers(self):
+        movie = {"url": OTHER_MOVIE_URL, "subscribers": [recipient_key("friend-id")]}
+        self.seed([movie], state={"movies": {"the-odyssey": {"alerted": True}}})
+        self.get_movie.side_effect = lambda url: movie_result(url, national_sales=True)
+        watcher.main()
+        watcher.main()
+        self.send.assert_called_once()
+        self.assertEqual(self.send.call_args.args[1], "owner-id,friend-id")
+        self.assertIn("but not in Montréal", self.send.call_args.args[2])
+        self.assertIn("I'm now watching", self.send.call_args.args[2])
+        self.assertEqual(self.read("movies.json"), [movie])
+        self.assertEqual(self.read("sales-started.json"), [])
+        saved = self.read("state.json")["movies"]["the-odyssey"]
+        self.assertTrue(saved["nationalAlerted"])
+        self.assertFalse(saved.get("alerted", False))
+
+        self.get_movie.side_effect = lambda url: movie_result(url, on_sale=True)
+        watcher.main()
+        watcher.main()
+        self.assertEqual(self.send.call_count, 2)
+        self.assertIn("Tickets are now on sale in Montréal", self.send.call_args.args[2])
+        self.assertIn("Cinéma Banque Scotia Montréal", self.send.call_args.args[2])
+        self.assertEqual(self.read("movies.json"), [])
+        self.assertEqual(self.read("sales-started.json")[0]["subscribers"], movie["subscribers"])
+
+    def test_failed_national_notice_is_retried_and_other_movies_still_checked(self):
+        self.seed([{"url": OTHER_MOVIE_URL}, {"url": GEORGE_MICHAEL_URL}])
+        self.get_movie.side_effect = lambda url: movie_result(url, national_sales=True)
+        self.send.side_effect = [URLError("Telegram unavailable"), None]
+        watcher.main()
+        state = self.read("state.json")["movies"]
+        self.assertFalse(state["the-odyssey"].get("nationalAlerted", False))
+        self.assertEqual(state["the-odyssey"]["lastCheckStatus"], "failed")
+        self.assertTrue(state[watcher.GEORGE_MICHAEL_FAITH_TOUR_SLUG]["nationalAlerted"])
+        self.assertEqual(len(self.read("movies.json")), 2)
+        self.send.reset_mock(side_effect=True)
+        watcher.main()
+        self.send.assert_called_once()
+        self.assertTrue(self.read("state.json")["movies"]["the-odyssey"]["nationalAlerted"])
+
+    def test_simultaneous_montreal_and_national_sales_only_send_local_alert(self):
+        self.seed([{"url": OTHER_MOVIE_URL}])
+        self.get_movie.side_effect = lambda url: movie_result(url, on_sale=True)
+        watcher.main()
+        self.send.assert_called_once()
+        self.assertNotIn("but not", self.send.call_args.args[2])
+        self.assertNotIn("nationalAlerted", self.read("state.json")["movies"]["the-odyssey"])
 
     def test_api_failure_keeps_watch_and_continues_other_movies(self):
         movies = [{"url": GEORGE_MICHAEL_URL}, {"url": OTHER_MOVIE_URL}]

@@ -9,6 +9,8 @@ There are two access levels:
 
 One shared movie check serves everyone. Friends never receive the owner's unrelated movies or another friend's movies unless they subscribe to the same movie themselves. Their weekly reminders follow the same rule. Personal opt-outs always apply.
 
+All ticket watches target Montréal. Sales elsewhere produce one progress notice; the movie stays watched until a Montréal session is bookable. Rewatching a movie previously completed under the national rule restores its existing followers and exclusions.
+
 ## Everyday commands
 
 ```text
@@ -21,7 +23,7 @@ One shared movie check serves everyone. Friends never receive the owner's unrela
 /start reminder
 ```
 
-A friend's `/watch` adds the movie to their list and the owner's shared list. It also works when the owner already watches that movie. The final confirmation goes to the sender after the Action saves the subscription. Movies already on sale get an immediate result and appear in personal sales history, without creating an active watch.
+A friend's `/watch` adds the movie to their list and the owner's shared list. It also works when the owner already watches that movie. The final confirmation goes to the sender after the Action saves the subscription. Movies already on sale in Montréal get an immediate result and appear in personal sales history, without creating an active watch.
 
 `/stop Movie Name` and `/stop all` affect only the sender. The owner's watch remains. `/stop reminder` disables only the weekly message. Adding a movie does not undo an existing stop setting; the reply explains how to resume paused alerts.
 

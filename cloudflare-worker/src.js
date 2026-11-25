@@ -1038,7 +1038,9 @@ function ticketLabel(check, unavailable) {
   if (unavailable || !check?.lastCheckedAt) return "Ticket status unknown";
   if (check.lastCheckStatus === "failed" || check.lastError) return "Last check failed";
   if (check.lastCheckStatus !== "success" || typeof check.hasShowtimes !== "boolean") return "Ticket status unknown";
-  return check.hasShowtimes ? "Tickets on sale" : "Tickets not on sale";
+  const location = check.city ? ` in ${escapeHtml(check.city)}` : "";
+  const progress = !check.hasShowtimes && check.nationalHasShowtimes ? " · sales started elsewhere" : "";
+  return (check.hasShowtimes ? "Tickets on sale" : "Tickets not on sale") + location + progress;
 }
 
 function ticketListEntry(movie, state, unavailable, context, labels) {
@@ -1166,12 +1168,12 @@ function ticketDashboardCard(movie, check, unavailable, context, labels, isOwner
   const key = `ticket:${slug}`;
   const result = ticketLabel(check, unavailable);
   const icon = result === "Last check failed" ? "⚠️" : result === "Ticket status unknown" ? "❔"
-    : result === "Tickets on sale" ? "🟢" : "⏳";
+    : result.startsWith("Tickets on sale") ? "🟢" : "⏳";
   const stale = result.startsWith("Tickets ") && now.getTime() - Date.parse(check?.lastCheckedAt) > 60 * 60_000;
   const lines = [`${icon} <b>${ticketLink(movie, check)}</b> · ${result}${stale ? " (last known)" : ""}`];
   if (check?.lastCheckedAt) lines.push(`${result === "Last check failed" ? "Last attempt" : "Last scan"}: ${stateDate(check.lastCheckedAt)}`);
   if (isOwner) {
-    lines.push(`Scope: ${slug === "george-michael-the-faith-tour" ? "Montréal" : "Canada-wide"}`);
+    lines.push("Scope: Montréal");
     const followers = [...labels.entries()].filter(([recipient]) => ticketScope(movie, recipient, context.ownerKeys.has(recipient)));
     const alertSetting = ([recipient]) => alertStatus(context.recipients[recipient], key);
     const alerts = followers.filter((row) => alertSetting(row) === "on");

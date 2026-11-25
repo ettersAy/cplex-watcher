@@ -42,7 +42,8 @@ globalThis.fetch = async (url, options) => {
   if (url.endsWith("/movies.json")) return Response.json(movies);
   if (url.endsWith("/sales-started.json")) return Response.json(completed);
   if (url.endsWith("/state.json")) return ticketStateUnavailable ? new Response(null, { status: 503 }) : Response.json({ movies: {
-    "paper-tiger": { lastCheckedAt: "2026-11-22T19:30:00Z", lastCheckStatus: "success", hasShowtimes: false },
+    "paper-tiger": { lastCheckedAt: "2026-11-22T19:30:00Z", lastCheckStatus: "success", hasShowtimes: false,
+      city: "Montréal", nationalHasShowtimes: true },
     "the-odyssey": { lastCheckedAt: "2026-11-22T20:00:00Z", lastCheckStatus: "failed", lastError: "internal error detail" },
   } });
   if (url.includes("/contents/seat-watches.json")) return seatStateUnavailable ? new Response(null, { status: 503 })
@@ -78,6 +79,7 @@ assert.equal(dispatched.at(-1).inputs.recipient_key, key("201"));
 
 await command("/list");
 assert.match(sent.at(-1).text, /Paper Tiger<\/a> · Tickets not on sale/);
+assert.match(sent.at(-1).text, /Tickets not on sale in Montréal · sales started elsewhere/);
 assert.match(sent.at(-1).text, /Your ticket alerts: on/);
 assert.match(sent.at(-1).text, /Recent ticket sales/);
 assert.match(sent.at(-1).text, /George Michael/);
@@ -115,7 +117,8 @@ await command("/state", "201");
 const adminState = sent.at(-1).text;
 assert.match(adminState, /3 active ticket watches · 3 sales recorded/);
 assert.match(adminState, /Latest success: Sun, Nov 22, 2:30 PM/);
-assert.match(adminState, /Scope: Canada-wide/);
+assert.match(adminState, /Scope: Montréal/);
+assert.match(adminState, /Tickets not on sale in Montréal · sales started elsewhere/);
 assert.match(adminState, /Ticket alerts on: You/);
 assert.doesNotMatch(ownerList, /Montréal time/);
 assert.match(adminState, /Latest failure: Sun, Nov 22, 3:00 PM/);

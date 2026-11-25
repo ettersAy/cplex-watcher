@@ -258,10 +258,10 @@ jobs:
                   if not alerts_on:
                       reason = "all alerts are paused" if preference.get("stoppedAll") else "alerts are paused for this title"
                       text += f"\nYour alerts are paused ({reason}). Use /start all to resume your alerts."
-                  text += f"\n{movie['url']}"
+                  text += f"\nWatching for tickets in Montréal.\n{movie['url']}"
               elif status == "already_on_sale":
                   movie = item["movie"]
-                  text = f"Tickets are already on sale for {movie['name']}.\n{movie['url']}"
+                  text = f"Tickets are already on sale in Montréal for {movie['name']}.\n{movie['url']}"
               else:
                   text = item.get("error", "I could not complete the Cineplex search.")
               try:

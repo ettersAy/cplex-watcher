@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from watcher import get_movie
+from watcher import get_movie, movie_slug
 from ticket_membership import effective_ticket_recipients, follows
 from notification_preferences import configured_recipients, telegram_chat_ids
 
@@ -82,7 +82,18 @@ def save_registration(root, registration, recipient_key=""):
             result["was_dormant"] = not effective_ticket_recipients(
                 existing["url"], default, special, existing.get("subscribers", []), existing["unfollowers"])
         if new_movie:
-            existing = {"url": movie["url"], "name": movie["name"]}
+            archived = next((entry for entry in sales if entry["url"] == movie["url"]), None)
+            if result["status"] == "watching" and archived:
+                # Rewatching an old national sale keeps everyone's follows and exclusions.
+                existing = dict(archived)
+                existing.pop("salesStartedAt", None)
+                sales.remove(archived)
+                state_path = root / "state.json"
+                state = json.loads(state_path.read_text())
+                state["movies"].pop(movie_slug(movie["url"]), None)
+                state_path.write_text(json.dumps(state, indent=2) + "\n")
+            else:
+                existing = {"url": movie["url"], "name": movie["name"]}
             if result["status"] == "already_on_sale":
                 existing["salesStartedAt"] = datetime.now(timezone.utc).isoformat()
             target.append(existing)

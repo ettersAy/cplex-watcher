@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 from urllib.error import HTTPError
 
 from notification_preferences import configured_recipients, load_preferences, save_preferences, watches_enabled
-from watcher import (GEORGE_MICHAEL_FAITH_TOUR_SLUG, MONTREAL_CITY, movie_slug,
+from watcher import (MONTREAL_CITY, movie_slug,
                      sale_alert_chat_ids, send_telegram, telegram_chat_ids)
 
 ROOT = Path(__file__).parent
@@ -25,7 +25,7 @@ def active_watches(root, default, special, now):
     watches = []
     for movie in json.loads((root / "movies.json").read_text()):
         slug = movie_slug(movie["url"])
-        detail = f"ticket sales in {MONTREAL_CITY}" if slug == GEORGE_MICHAEL_FAITH_TOUR_SLUG else "ticket sales"
+        detail = f"ticket sales in {MONTREAL_CITY}"
         watches.append({"key": f"ticket:{slug}", "name": movie.get("name") or slug.replace("-", " "),
                         "detail": detail, "recipients": sale_alert_chat_ids(movie["url"], default, special, movie.get("subscribers", []), movie.get("unfollowers", []))})
     for watch_id, watch in json.loads((root / "seat-watches.json").read_text())["watches"].items():

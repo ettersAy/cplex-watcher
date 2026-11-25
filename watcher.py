@@ -129,23 +129,22 @@ def get_movie(url):
     if not details:
         raise ValueError("Cineplex page did not contain movie ticket status")
 
-    movie = {
-        "name": details.get("title") or details.get("movieTitle") or url.rsplit("/", 1)[-1],
-        "releaseDate": details.get("releaseDate"),
-        "hasShowtimes": bool(details["hasShowtimes"]),
-        "url": url,
-    }
-    if movie_slug(url) == GEORGE_MICHAEL_FAITH_TOUR_SLUG:
+    national_sales = bool(details["hasShowtimes"])
+    showtime = None
+    # Before national sales start there is no need to request theatres and dates.
+    if national_sales:
         if not details.get("id"):
             raise ValueError("Cineplex movie details did not contain a film ID for the Montréal check")
         showtime = find_city_showtime(details["id"], MONTREAL_CITY)
-        movie.update({
-            "city": MONTREAL_CITY,
-            "nationalHasShowtimes": movie["hasShowtimes"],
-            "hasShowtimes": showtime is not None,
-            "showtime": showtime,
-        })
-    return movie
+    return {
+        "name": details.get("title") or details.get("movieTitle") or url.rsplit("/", 1)[-1],
+        "releaseDate": details.get("releaseDate"),
+        "city": MONTREAL_CITY,
+        "nationalHasShowtimes": national_sales,
+        "hasShowtimes": showtime is not None,
+        "showtime": showtime,
+        "url": url,
+    }
 
 
 def rearm_montreal_watch(movies, sales_started, state):
@@ -223,6 +222,9 @@ def main():
         location = f" in {current['city']}" if current.get("city") else ""
         print(f"{current['name']}{location}: {status}")
 
+        if current.get("city") == MONTREAL_CITY and previous.get("city") != MONTREAL_CITY:
+            # An old national alert must not suppress the eventual Montréal alert.
+            previous.pop("alerted", None)
         previous.update(current)
         previous["lastCheckedAt"] = datetime.now(timezone.utc).isoformat()
         previous["lastCheckStatus"] = "success"
@@ -230,16 +232,19 @@ def main():
         state["movies"][key] = previous
         changed = True
 
-        # Send one alert only. This also alerts if tickets were already on sale
-        # when Telegram is connected for the first time.
-        if current["hasShowtimes"] and not previous.get("alerted"):
+        # National sales are a progress notice. Only Montréal availability completes a watch.
+        waiting_for_montreal = current.get("nationalHasShowtimes") and not current["hasShowtimes"]
+        alert_key = "nationalAlerted" if waiting_for_montreal else "alerted"
+        if (current["hasShowtimes"] or waiting_for_montreal) and not previous.get(alert_key):
             try:
                 alert_chat_ids = sale_alert_chat_ids(url, chat_ids, george_michael_chat_ids, movie.get("subscribers", []), movie.get("unfollowers", []))
                 if not token or not alert_chat_ids:
                     raise ValueError("Telegram alert credentials are missing; keeping the watch for retry")
                 alert_chat_ids = notification_chat_ids(alert_chat_ids, f"ticket:{key}", preferences)
-                message = ("Go run buy your ticket for the movie "
-                           f"<a href=\"{html.escape(current['url'], quote=True)}\">{html.escape(current['name'])}</a>{html.escape(location)}.")
+                link = f"<a href=\"{html.escape(current['url'], quote=True)}\">{html.escape(current['name'])}</a>"
+                message = (f"Ticket sales have started for {link}, but not in Montréal. "
+                           "I'm now watching for Montréal tickets." if waiting_for_montreal else
+                           f"Tickets are now on sale{html.escape(location)} for {link}.")
                 showtime = current.get("showtime")
                 if showtime:
                     when = datetime.fromisoformat(showtime["startsAt"]).strftime("%b %d at %I:%M %p")
@@ -257,8 +262,9 @@ def main():
                 print(f"WARNING: watcher.main could not notify for {url}: {error}", file=sys.stderr)
                 active_movies.append(movie)
                 continue
-            previous["alerted"] = True
-            print("  Telegram alert sent" if alert_chat_ids else "  All recipients opted out; no alert sent")
+            previous[alert_key] = True
+            print(f"  Telegram {alert_key} sent to {len(alert_chat_ids)} recipient(s)" if alert_chat_ids
+                  else "  All recipients opted out; no alert sent")
 
         if current["hasShowtimes"]:
             completed = next((existing for existing in sales_started if existing["url"] == url), None)
