@@ -70,10 +70,10 @@
       "hasShowtimes": false,
       "showtime": null,
       "url": "https://www.cineplex.com/movie/josephine",
-      "lastCheckedAt": "2026-11-25T19:30:30.703192+00:00",
+      "lastCheckedAt": "2026-11-25T20:00:28.606360+00:00",
       "lastCheckStatus": "success",
       "nationalAlerted": true
     }
   },
-  "lastTicketCheckSlot": 997575
+  "lastTicketCheckSlot": 997576
 }
