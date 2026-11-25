@@ -65,11 +65,14 @@
     "josephine": {
       "name": "Josephine",
       "releaseDate": "2026-11-27T00:00:00",
-      "hasShowtimes": true,
+      "city": "Montr\u00e9al",
+      "nationalHasShowtimes": true,
+      "hasShowtimes": false,
+      "showtime": null,
       "url": "https://www.cineplex.com/movie/josephine",
-      "lastCheckedAt": "2026-11-25T08:00:31.219622+00:00",
+      "lastCheckedAt": "2026-11-25T14:51:15.446906+00:00",
       "lastCheckStatus": "success",
-      "alerted": true
+      "nationalAlerted": true
     }
   },
   "lastTicketCheckSlot": 997565
